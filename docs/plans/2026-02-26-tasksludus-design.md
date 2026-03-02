@@ -236,7 +236,31 @@ campaign_tasks
   PRIMARY KEY (campaign_id, task_id)
 ```
 
-### 3.5 Performance
+### 3.5 Client / Projetos
+
+```sql
+-- Projetos (agrupa tarefas-mae para um client)
+projects
+  id (UUID, PK)
+  organization_id (FK -> organizations)
+  client_id (FK -> users)           -- user com role 'client'
+  name (VARCHAR)
+  description (TEXT)
+  status (VARCHAR)                   -- active, paused, completed
+  created_by (FK -> users)           -- gestor que criou
+  created_at (TIMESTAMP)
+  updated_at (TIMESTAMP)
+
+-- Vinculo projeto <-> tarefas
+project_tasks
+  project_id (FK -> projects)
+  task_id (FK -> tasks)
+  PRIMARY KEY (project_id, task_id)
+```
+
+**Nota sobre client:** Client e uma role (level 0) vinculada a projetos. Ve progresso macro, prazos, entregas e pode comentar. Nao ve time tracking individual, performance de produtores ou subtarefas internas. Auth via convite WhatsApp + Google OAuth.
+
+### 3.6 Performance
 
 ```sql
 performance_scores
@@ -448,6 +472,19 @@ POST   /api/campaigns/:id/tasks
 DELETE /api/campaigns/:id/tasks/:taskId
 ```
 
+### Projects (Client Portal)
+```
+GET    /api/projects                 -- listar projetos (client ve os dele, gestor ve todos)
+POST   /api/projects                 -- criar projeto (gestor)
+GET    /api/projects/:id             -- detalhes do projeto
+PUT    /api/projects/:id             -- editar projeto
+PATCH  /api/projects/:id/status      -- mudar status
+POST   /api/projects/:id/tasks       -- vincular tarefa ao projeto
+DELETE /api/projects/:id/tasks/:taskId
+GET    /api/dashboard/client          -- dashboard do client
+POST   /api/invites/client            -- enviar convite WhatsApp + link Google OAuth
+```
+
 ### Performance
 ```
 GET    /api/performance/dashboard
@@ -510,6 +547,8 @@ POST   /api/whatsapp/webhook           -- receber eventos
 - `/feed` -- feed de atividades
 - `/notifications` -- central de notificacoes
 - `/settings` -- perfil, organizacao, roles, WhatsApp, integracoes
+- `/portal` -- dashboard do client (projetos, progresso, entregas, metricas)
+- `/portal/projects/:id` -- detalhe do projeto (tarefas macro, timeline, comentarios)
 
 ### Componentes Compartilhados
 - Sidebar (navegacao, colapsavel)
@@ -632,6 +671,7 @@ tasksludus/
 | designer | 1 | Cria imagens e ativos criativos |
 | web_designer | 1 | Cria websites e landing pages |
 | social_media_producer | 1 | Cria posts, copies, calendario editorial |
+| client | 0 | Visualiza projetos vinculados, comenta entregas, ve metricas de progresso |
 
 ---
 
