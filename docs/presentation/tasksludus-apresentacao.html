@@ -216,13 +216,26 @@
   }
 
   /* Content slides */
-  .slide-content {
-    align-items: flex-start;
-  }
-
   .slide-content .inner {
     max-width: 960px;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .slide-content .inner h2,
+  .slide-content .inner p {
+    text-align: center;
+  }
+
+  .slide-content .inner.left {
+    align-items: flex-start;
+  }
+
+  .slide-content .inner.left h2,
+  .slide-content .inner.left p {
+    text-align: left;
   }
 
   /* Cards grid */
@@ -640,7 +653,7 @@
 
   <!-- Slide 2: O que e -->
   <div class="slide slide-content" data-slide="1">
-    <div class="inner">
+    <div class="inner left">
       <div class="animate-in label">Visao Geral</div>
       <h2 class="animate-in">O que e o TasksLudus?</h2>
       <p class="animate-in" style="margin-bottom: 2rem;">
@@ -669,7 +682,7 @@
 
   <!-- Slide 3: Como funciona -->
   <div class="slide slide-content" data-slide="2">
-    <div class="inner">
+    <div class="inner left">
       <div class="animate-in label">Passo a Passo</div>
       <h2 class="animate-in">Como funciona na pratica?</h2>
       <p class="animate-in" style="margin-bottom: 1.5rem;">
@@ -711,10 +724,10 @@
 
   <!-- Slide 4: O modelo de salario -->
   <div class="slide slide-content" data-slide="3">
-    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+    <div class="inner">
       <div class="animate-in label">O Grande Diferencial</div>
-      <h2 class="animate-in" style="text-align: center;">Seu salario vai alem do fixo</h2>
-      <p class="animate-in" style="text-align: center; margin-bottom: 2rem;">
+      <h2 class="animate-in">Seu salario vai alem do fixo</h2>
+      <p class="animate-in" style="margin-bottom: 2rem;">
         Voce continua recebendo seu salario base normalmente. Mas agora, cada entrega que voce faz
         gera um bonus extra. E o melhor: quanto mais voce entrega, <strong>maior o valor de cada entrega</strong>.
       </p>
@@ -741,10 +754,10 @@
 
   <!-- Slide 5: A Curva -->
   <div class="slide slide-content" data-slide="4">
-    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+    <div class="inner">
       <div class="animate-in label">A Curva de Bonificacao</div>
-      <h2 class="animate-in" style="text-align: center;">Quanto mais voce entrega, mais rapido voce ganha</h2>
-      <p class="animate-in" style="text-align: center; margin-bottom: 0.5rem;">
+      <h2 class="animate-in">Quanto mais voce entrega, mais rapido voce ganha</h2>
+      <p class="animate-in" style="margin-bottom: 0.5rem;">
         A bonificacao segue uma <strong>curva progressiva</strong>: no comeco o ganho cresce devagar,
         mas depois de bater a meta minima, ele <strong>acelera rapidamente</strong>.
       </p>
@@ -817,10 +830,10 @@
 
   <!-- Slide 6: Tabela de faixas -->
   <div class="slide slide-content" data-slide="5">
-    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+    <div class="inner">
       <div class="animate-in label">Faixas de Bonificacao</div>
-      <h2 class="animate-in" style="text-align: center;">Como as faixas funcionam</h2>
-      <p class="animate-in" style="text-align: center; margin-bottom: 1rem;">
+      <h2 class="animate-in">Como as faixas funcionam</h2>
+      <p class="animate-in" style="margin-bottom: 1rem;">
         Cada faixa de entregas tem um multiplicador diferente. Os valores sao exemplos &mdash;
         cada funcao tem sua propria meta e curva configurada pelo gestor.
       </p>
@@ -883,10 +896,10 @@
 
   <!-- Slide 7: Exemplo pratico -->
   <div class="slide slide-content" data-slide="6">
-    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+    <div class="inner">
       <div class="animate-in label">Exemplo Pratico</div>
-      <h2 class="animate-in" style="text-align: center;">Na pratica, quanto voce pode ganhar?</h2>
-      <p class="animate-in" style="text-align: center; margin-bottom: 1rem;">
+      <h2 class="animate-in">Na pratica, quanto voce pode ganhar?</h2>
+      <p class="animate-in" style="margin-bottom: 1rem;">
         Veja um exemplo de um designer com salario base de R$ 2.000 e meta de 20 entregas/mes.
       </p>
       <div class="example-box animate-in">
@@ -924,7 +937,7 @@
 
   <!-- Slide 8: O que voce vai ver -->
   <div class="slide slide-content" data-slide="7">
-    <div class="inner">
+    <div class="inner left">
       <div class="animate-in label">Sua Experiencia</div>
       <h2 class="animate-in">O que voce vai ver ao abrir o app</h2>
       <p class="animate-in" style="margin-bottom: 1.5rem;">
@@ -967,10 +980,10 @@
 
   <!-- Slide 9: Quem ve o que -->
   <div class="slide slide-content" data-slide="8">
-    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+    <div class="inner">
       <div class="animate-in label">Quem Ve o Que</div>
-      <h2 class="animate-in" style="text-align: center;">Cada pessoa ve o que precisa</h2>
-      <p class="animate-in" style="text-align: center; margin-bottom: 1.5rem;">
+      <h2 class="animate-in">Cada pessoa ve o que precisa</h2>
+      <p class="animate-in" style="margin-bottom: 1.5rem;">
         O app se adapta ao seu perfil. Cada funcao tem sua propria visao.
       </p>
       <div class="roles-grid animate-in">
@@ -1010,7 +1023,7 @@
 
   <!-- Slide 10: Portal do cliente -->
   <div class="slide slide-content" data-slide="9">
-    <div class="inner">
+    <div class="inner left">
       <div class="split">
         <div class="split-left">
           <div class="animate-in label">Portal do Cliente</div>
@@ -1061,10 +1074,10 @@
 
   <!-- Slide 11: Planos de cliente -->
   <div class="slide slide-content" data-slide="10">
-    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+    <div class="inner">
       <div class="animate-in label">Controle de Planos</div>
-      <h2 class="animate-in" style="text-align: center;">Cada cliente tem seu plano</h2>
-      <p class="animate-in" style="text-align: center; margin-bottom: 1.5rem;">
+      <h2 class="animate-in">Cada cliente tem seu plano</h2>
+      <p class="animate-in" style="margin-bottom: 1.5rem;">
         O app controla quantas entregas estao incluidas no plano de cada cliente.
         Se ultrapassar, o excedente e calculado automaticamente.
       </p>
@@ -1091,9 +1104,9 @@
 
   <!-- Slide 12: Resumo -->
   <div class="slide slide-content" data-slide="11">
-    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+    <div class="inner">
       <div class="animate-in label">Resumo</div>
-      <h2 class="animate-in" style="text-align: center;">Tudo em um so lugar</h2>
+      <h2 class="animate-in">Tudo em um so lugar</h2>
       <div class="cards animate-in" style="max-width: 800px;">
         <div class="card" style="border-left: 3px solid var(--accent);">
           <h4>Para produtores</h4>
