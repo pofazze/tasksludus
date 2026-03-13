@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TasksLudus — Apresentacao</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #FAFAF8;
+    --bg-warm: #F5F0EB;
+    --text: #1A1A1A;
+    --text-soft: #6B6560;
+    --accent: #E8621A;
+    --accent-light: #FFF0E8;
+    --accent-glow: #FF8A4C;
+    --green: #2D8A56;
+    --green-light: #E8F5EE;
+    --blue: #2563EB;
+    --blue-light: #EFF6FF;
+    --gold: #D4A017;
+    --gold-light: #FFF8E1;
+    --border: #E8E4DF;
+    --shadow: 0 2px 40px rgba(0,0,0,0.06);
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-body: 'DM Sans', -apple-system, sans-serif;
+  }
+
+  html { font-size: 16px; scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* Slide container */
+  .deck {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 4rem 6rem;
+    opacity: 0;
+    transform: translateX(60px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: none;
+    overflow-y: auto;
+  }
+
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
+  }
+
+  .slide.exit-left {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+
+  /* Navigation */
+  .nav {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    z-index: 100;
+    background: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 100px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    border: 1px solid var(--border);
+  }
+
+  .nav button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: var(--text-soft);
+    transition: all 0.2s;
+  }
+
+  .nav button:hover {
+    background: var(--bg-warm);
+    color: var(--text);
+  }
+
+  .nav button:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  .nav-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .nav-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: all 0.3s;
+    cursor: pointer;
+    border: none;
+  }
+
+  .nav-dot.active {
+    background: var(--accent);
+    width: 24px;
+    border-radius: 4px;
+  }
+
+  .slide-counter {
+    font-size: 0.8rem;
+    color: var(--text-soft);
+    font-variant-numeric: tabular-nums;
+    min-width: 3rem;
+    text-align: center;
+  }
+
+  /* Slide typography */
+  .slide h1 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 1.15;
+  }
+
+  .slide h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 2.6rem;
+    line-height: 1.2;
+    margin-bottom: 1.5rem;
+  }
+
+  .slide h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 1.6rem;
+    line-height: 1.3;
+    margin-bottom: 1rem;
+  }
+
+  .slide p {
+    font-size: 1.15rem;
+    line-height: 1.7;
+    color: var(--text-soft);
+    max-width: 720px;
+  }
+
+  .slide .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Title slide */
+  .slide-title {
+    text-align: center;
+    background: linear-gradient(160deg, #FAFAF8 0%, #F5F0EB 50%, #FFF0E8 100%);
+  }
+
+  .slide-title h1 {
+    font-size: 5rem;
+    margin-bottom: 1rem;
+    color: var(--text);
+  }
+
+  .slide-title h1 span {
+    color: var(--accent);
+  }
+
+  .slide-title .subtitle {
+    font-size: 1.4rem;
+    color: var(--text-soft);
+    font-weight: 300;
+    margin-bottom: 3rem;
+  }
+
+  .slide-title .tag {
+    display: inline-block;
+    padding: 0.5rem 1.5rem;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 0.85rem;
+    color: var(--text-soft);
+  }
+
+  /* Content slides */
+  .slide-content {
+    align-items: flex-start;
+  }
+
+  .slide-content .inner {
+    max-width: 960px;
+    width: 100%;
+  }
+
+  /* Cards grid */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+    width: 100%;
+  }
+
+  .card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.75rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+  }
+
+  .card .icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+  }
+
+  .card .icon.orange { background: var(--accent-light); }
+  .card .icon.green { background: var(--green-light); }
+  .card .icon.blue { background: var(--blue-light); }
+  .card .icon.gold { background: var(--gold-light); }
+
+  .card h4 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .card p {
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: var(--text-soft);
+  }
+
+  /* Curve visualization */
+  .curve-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 1.5rem auto 0;
+    background: white;
+    border-radius: 20px;
+    padding: 2rem 2.5rem;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+
+  .curve-chart {
+    position: relative;
+    height: 320px;
+    width: 100%;
+    margin-top: 1rem;
+  }
+
+  .curve-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Table */
+  .table-wrap {
+    width: 100%;
+    max-width: 800px;
+    margin-top: 1.5rem;
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .table-wrap th {
+    background: var(--bg-warm);
+    padding: 0.85rem 1.25rem;
+    text-align: left;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-soft);
+    font-weight: 600;
+  }
+
+  .table-wrap td {
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.95rem;
+  }
+
+  .table-wrap tr:hover td {
+    background: #FDFCFB;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.65rem;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .badge.low { background: #FEE2E2; color: #991B1B; }
+  .badge.mid { background: #FEF3C7; color: #92400E; }
+  .badge.high { background: #D1FAE5; color: #065F46; }
+  .badge.max { background: var(--accent-light); color: var(--accent); }
+
+  /* Example box */
+  .example-box {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 800px;
+    margin-top: 1.5rem;
+    box-shadow: var(--shadow);
+  }
+
+  .example-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .example-row:last-child { border-bottom: none; }
+
+  .example-row .label-left {
+    font-size: 1rem;
+    color: var(--text-soft);
+  }
+
+  .example-row .value {
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+
+  .example-row .value.accent { color: var(--accent); }
+  .example-row .value.green { color: var(--green); }
+
+  .divider-row {
+    border-bottom: 2px solid var(--accent) !important;
+  }
+
+  .total-row .label-left {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .total-row .value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  /* Steps / flow */
+  .flow {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+  }
+
+  .flow-step {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .flow-step.active-step {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .flow-arrow {
+    color: var(--border);
+    font-size: 1.2rem;
+  }
+
+  /* Highlights */
+  .highlight-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+    width: 100%;
+    max-width: 800px;
+  }
+
+  .highlight-box {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .highlight-box .number {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+
+  .highlight-box .desc {
+    font-size: 0.95rem;
+    color: var(--text-soft);
+  }
+
+  /* Split layout */
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    width: 100%;
+    max-width: 960px;
+    align-items: start;
+  }
+
+  .split-left h2 { font-size: 2.2rem; }
+
+  /* List styled */
+  .styled-list {
+    list-style: none;
+    margin-top: 1rem;
+  }
+
+  .styled-list li {
+    padding: 0.65rem 0;
+    font-size: 1.05rem;
+    color: var(--text-soft);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    line-height: 1.5;
+  }
+
+  .styled-list .bullet {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  /* Slide-specific: roles */
+  .roles-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 1.5rem;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .role-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+
+  .role-card:hover { transform: translateY(-2px); }
+
+  .role-card .role-icon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .role-card h4 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 1.05rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .role-card p {
+    font-size: 0.85rem;
+    color: var(--text-soft);
+    line-height: 1.45;
+  }
+
+  /* Animate in children */
+  .slide.active .animate-in {
+    animation: fadeInUp 0.5s ease forwards;
+    opacity: 0;
+  }
+
+  .slide.active .animate-in:nth-child(1) { animation-delay: 0.1s; }
+  .slide.active .animate-in:nth-child(2) { animation-delay: 0.2s; }
+  .slide.active .animate-in:nth-child(3) { animation-delay: 0.3s; }
+  .slide.active .animate-in:nth-child(4) { animation-delay: 0.4s; }
+  .slide.active .animate-in:nth-child(5) { animation-delay: 0.5s; }
+  .slide.active .animate-in:nth-child(6) { animation-delay: 0.6s; }
+  .slide.active .animate-in:nth-child(7) { animation-delay: 0.7s; }
+  .slide.active .animate-in:nth-child(8) { animation-delay: 0.8s; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Curve animation */
+  .curve-path {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+  }
+
+  .slide.active .curve-path {
+    animation: drawCurve 1.5s ease forwards 0.4s;
+  }
+
+  @keyframes drawCurve {
+    to { stroke-dashoffset: 0; }
+  }
+
+  .curve-dot {
+    opacity: 0;
+  }
+
+  .slide.active .curve-dot {
+    animation: popIn 0.3s ease forwards;
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* Final slide */
+  .slide-final {
+    text-align: center;
+    background: linear-gradient(160deg, #FFF0E8 0%, #FAFAF8 50%, #F5F0EB 100%);
+  }
+
+  .slide-final h1 {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .slide-final h1 span { color: var(--accent); }
+
+  .slide-final p {
+    text-align: center;
+    max-width: 560px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .slide { padding: 2rem 1.5rem; }
+    .slide-title h1 { font-size: 3rem; }
+    .slide h2 { font-size: 1.8rem; }
+    .split { grid-template-columns: 1fr; gap: 1.5rem; }
+    .roles-grid { grid-template-columns: 1fr 1fr; }
+    .highlight-grid { grid-template-columns: 1fr; }
+    .cards { grid-template-columns: 1fr; }
+    .curve-container { padding: 1.25rem; }
+    .curve-chart { height: 240px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- Slide 1: Title -->
+  <div class="slide slide-title active" data-slide="0">
+    <div class="animate-in label">Apresentacao Interna</div>
+    <h1 class="animate-in">Tasks<span>Ludus</span></h1>
+    <p class="animate-in subtitle">Seu desempenho valorizado. Suas metas, seu bonus.</p>
+    <div class="animate-in tag">Novo sistema de metas e bonificacao</div>
+  </div>
+
+  <!-- Slide 2: O que e -->
+  <div class="slide slide-content" data-slide="1">
+    <div class="inner">
+      <div class="animate-in label">Visao Geral</div>
+      <h2 class="animate-in">O que e o TasksLudus?</h2>
+      <p class="animate-in" style="margin-bottom: 2rem;">
+        E um painel inteligente que acompanha tudo o que voce produz no dia a dia. Ele se conecta ao ClickUp
+        e automaticamente conta suas entregas, calcula seu bonus e mostra seu progresso em tempo real.
+      </p>
+      <div class="cards">
+        <div class="card animate-in">
+          <div class="icon orange">&#127919;</div>
+          <h4>Metas claras</h4>
+          <p>Voce sabe exatamente quantas entregas precisa fazer no mes e quanto vai ganhar por cada uma.</p>
+        </div>
+        <div class="card animate-in">
+          <div class="icon green">&#128176;</div>
+          <h4>Bonus automatico</h4>
+          <p>Suas entregas sao contadas automaticamente. Quanto mais voce produz, maior o seu bonus.</p>
+        </div>
+        <div class="card animate-in">
+          <div class="icon blue">&#128200;</div>
+          <h4>Tudo transparente</h4>
+          <p>Voce acompanha em tempo real suas entregas, ranking e quanto ja acumulou de bonus no mes.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 3: Como funciona -->
+  <div class="slide slide-content" data-slide="2">
+    <div class="inner">
+      <div class="animate-in label">Passo a Passo</div>
+      <h2 class="animate-in">Como funciona na pratica?</h2>
+      <p class="animate-in" style="margin-bottom: 1.5rem;">
+        O fluxo continua o mesmo que voce ja conhece no ClickUp. A diferenca e que agora cada entrega vale algo a mais.
+      </p>
+      <div class="flow animate-in">
+        <div class="flow-step">Voce recebe a tarefa</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">Trabalha normalmente no ClickUp</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step active-step">Entrega concluida</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">TasksLudus conta automaticamente</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step" style="background: var(--green-light); border-color: var(--green); color: var(--green);">Bonus acumulado</div>
+      </div>
+      <div style="margin-top: 2.5rem;">
+        <ul class="styled-list animate-in">
+          <li>
+            <span class="bullet">1</span>
+            <span>Sua meta mensal e definida pelo gestor no inicio do mes</span>
+          </li>
+          <li>
+            <span class="bullet">2</span>
+            <span>Cada vez que uma tarefa e concluida no ClickUp, o sistema registra como entrega</span>
+          </li>
+          <li>
+            <span class="bullet">3</span>
+            <span>O tipo de conteudo (Reel, Carrossel, Design, etc.) e identificado automaticamente</span>
+          </li>
+          <li>
+            <span class="bullet">4</span>
+            <span>No final do mes, o bonus e calculado com base na curva progressiva</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 4: O modelo de salario -->
+  <div class="slide slide-content" data-slide="3">
+    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+      <div class="animate-in label">O Grande Diferencial</div>
+      <h2 class="animate-in" style="text-align: center;">Seu salario vai alem do fixo</h2>
+      <p class="animate-in" style="text-align: center; margin-bottom: 2rem;">
+        Voce continua recebendo seu salario base normalmente. Mas agora, cada entrega que voce faz
+        gera um bonus extra. E o melhor: quanto mais voce entrega, <strong>maior o valor de cada entrega</strong>.
+      </p>
+      <div class="highlight-grid animate-in">
+        <div class="highlight-box">
+          <div class="number">Base</div>
+          <div class="desc">Seu salario fixo garantido todo mes, independente da producao</div>
+        </div>
+        <div class="highlight-box">
+          <div class="number" style="color: var(--green);">+ Bonus</div>
+          <div class="desc">Valor extra calculado automaticamente pela quantidade de entregas</div>
+        </div>
+        <div class="highlight-box">
+          <div class="number" style="color: var(--blue); font-size: 2.4rem;">Progressivo</div>
+          <div class="desc">O valor por entrega <strong>sobe</strong> conforme voce produz mais</div>
+        </div>
+        <div class="highlight-box">
+          <div class="number" style="font-size: 2.4rem;">ate 3x</div>
+          <div class="desc">Seu salario pode chegar a ate <strong>tres vezes</strong> o valor base</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 5: A Curva -->
+  <div class="slide slide-content" data-slide="4">
+    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+      <div class="animate-in label">A Curva de Bonificacao</div>
+      <h2 class="animate-in" style="text-align: center;">Quanto mais voce entrega, mais rapido voce ganha</h2>
+      <p class="animate-in" style="text-align: center; margin-bottom: 0.5rem;">
+        A bonificacao segue uma <strong>curva progressiva</strong>: no comeco o ganho cresce devagar,
+        mas depois de bater a meta minima, ele <strong>acelera rapidamente</strong>.
+      </p>
+      <div class="curve-container animate-in">
+        <div class="curve-chart">
+          <svg class="curve-svg" viewBox="0 0 700 280" preserveAspectRatio="xMidYMid meet">
+            <!-- Grid lines -->
+            <line x1="60" y1="250" x2="680" y2="250" stroke="#E8E4DF" stroke-width="1"/>
+            <line x1="60" y1="190" x2="680" y2="190" stroke="#E8E4DF" stroke-width="0.5" stroke-dasharray="4"/>
+            <line x1="60" y1="130" x2="680" y2="130" stroke="#E8E4DF" stroke-width="0.5" stroke-dasharray="4"/>
+            <line x1="60" y1="70" x2="680" y2="70" stroke="#E8E4DF" stroke-width="0.5" stroke-dasharray="4"/>
+            <line x1="60" y1="250" x2="60" y2="30" stroke="#E8E4DF" stroke-width="1"/>
+
+            <!-- Y axis labels -->
+            <text x="50" y="254" text-anchor="end" fill="#6B6560" font-size="11" font-family="DM Sans">0%</text>
+            <text x="50" y="194" text-anchor="end" fill="#6B6560" font-size="11" font-family="DM Sans">1x</text>
+            <text x="50" y="134" text-anchor="end" fill="#6B6560" font-size="11" font-family="DM Sans">2x</text>
+            <text x="50" y="74" text-anchor="end" fill="#6B6560" font-size="11" font-family="DM Sans">3x</text>
+
+            <!-- X axis labels -->
+            <text x="60" y="272" text-anchor="middle" fill="#6B6560" font-size="10" font-family="DM Sans">0</text>
+            <text x="184" y="272" text-anchor="middle" fill="#6B6560" font-size="10" font-family="DM Sans">5</text>
+            <text x="308" y="272" text-anchor="middle" fill="#6B6560" font-size="10" font-family="DM Sans">10</text>
+            <text x="432" y="272" text-anchor="middle" fill="#6B6560" font-size="10" font-family="DM Sans">15</text>
+            <text x="556" y="272" text-anchor="middle" fill="#6B6560" font-size="10" font-family="DM Sans">20</text>
+            <text x="660" y="272" text-anchor="middle" fill="#6B6560" font-size="10" font-family="DM Sans">25</text>
+
+            <!-- X axis title -->
+            <text x="370" y="295" text-anchor="middle" fill="#6B6560" font-size="12" font-family="DM Sans" font-weight="500">Entregas no mes</text>
+
+            <!-- Gradient under curve -->
+            <defs>
+              <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#E8621A" stop-opacity="0.15"/>
+                <stop offset="100%" stop-color="#E8621A" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+
+            <!-- Area fill -->
+            <path d="M60,250 L60,250 L125,246 L184,240 L235,232 L290,222 L340,208 L390,190 L432,168 L475,140 L520,108 L556,80 L600,58 L660,38 L660,250 Z"
+                  fill="url(#curveGrad)"/>
+
+            <!-- The J-curve -->
+            <path class="curve-path"
+                  d="M60,250 Q125,248 184,240 Q235,232 290,222 Q340,208 390,190 Q432,168 475,140 Q520,108 556,80 Q600,58 660,38"
+                  stroke="#E8621A" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+            <!-- Meta minima line -->
+            <line x1="308" y1="250" x2="308" y2="30" stroke="#E8621A" stroke-width="1" stroke-dasharray="6,4" opacity="0.4"/>
+            <text x="308" y="22" text-anchor="middle" fill="#E8621A" font-size="11" font-family="DM Sans" font-weight="600">Meta minima</text>
+
+            <!-- Dots -->
+            <circle class="curve-dot" cx="184" cy="240" r="5" fill="#E8621A" style="animation-delay: 0.8s"/>
+            <circle class="curve-dot" cx="308" cy="222" r="5" fill="#E8621A" style="animation-delay: 1.1s"/>
+            <circle class="curve-dot" cx="432" cy="168" r="5" fill="#E8621A" style="animation-delay: 1.4s"/>
+            <circle class="curve-dot" cx="556" cy="80" r="5" fill="#E8621A" style="animation-delay: 1.7s"/>
+            <circle class="curve-dot" cx="660" cy="38" r="6" fill="#E8621A" style="animation-delay: 2.0s"/>
+
+            <!-- Labels on dots -->
+            <text class="curve-dot" x="184" y="228" text-anchor="middle" fill="#E8621A" font-size="11" font-family="DM Sans" font-weight="600" style="animation-delay: 0.8s">0.3x</text>
+            <text class="curve-dot" x="308" y="210" text-anchor="middle" fill="#E8621A" font-size="11" font-family="DM Sans" font-weight="600" style="animation-delay: 1.1s">0.6x</text>
+            <text class="curve-dot" x="432" y="156" text-anchor="middle" fill="#E8621A" font-size="11" font-family="DM Sans" font-weight="600" style="animation-delay: 1.4s">1.5x</text>
+            <text class="curve-dot" x="556" y="68" text-anchor="middle" fill="#E8621A" font-size="11" font-family="DM Sans" font-weight="600" style="animation-delay: 1.7s">2x</text>
+            <text class="curve-dot" x="660" y="26" text-anchor="middle" fill="#E8621A" font-size="12" font-family="DM Sans" font-weight="700" style="animation-delay: 2.0s">3x</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 6: Tabela de faixas -->
+  <div class="slide slide-content" data-slide="5">
+    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+      <div class="animate-in label">Faixas de Bonificacao</div>
+      <h2 class="animate-in" style="text-align: center;">Como as faixas funcionam</h2>
+      <p class="animate-in" style="text-align: center; margin-bottom: 1rem;">
+        Cada faixa de entregas tem um multiplicador diferente. Os valores sao exemplos &mdash;
+        cada funcao tem sua propria meta e curva configurada pelo gestor.
+      </p>
+      <div class="table-wrap animate-in">
+        <table>
+          <thead>
+            <tr>
+              <th>Entregas no mes</th>
+              <th>Multiplicador</th>
+              <th>O que significa</th>
+              <th>Nivel</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>0 a 5</td>
+              <td><strong>0.3x</strong></td>
+              <td>Abaixo da meta minima</td>
+              <td><span class="badge low">Baixo</span></td>
+            </tr>
+            <tr>
+              <td>6 a 10</td>
+              <td><strong>0.6x</strong></td>
+              <td>Chegando na meta</td>
+              <td><span class="badge mid">Medio</span></td>
+            </tr>
+            <tr>
+              <td>11 a 15</td>
+              <td><strong>1.0x</strong></td>
+              <td>Meta batida!</td>
+              <td><span class="badge high">Bom</span></td>
+            </tr>
+            <tr>
+              <td>16 a 18</td>
+              <td><strong>1.5x</strong></td>
+              <td>Acima da meta</td>
+              <td><span class="badge high">Otimo</span></td>
+            </tr>
+            <tr>
+              <td>19 a 20</td>
+              <td><strong>2.0x</strong></td>
+              <td>Excelente desempenho</td>
+              <td><span class="badge max">Excelente</span></td>
+            </tr>
+            <tr>
+              <td>21+</td>
+              <td><strong>3.0x</strong></td>
+              <td>Producao extraordinaria</td>
+              <td><span class="badge max">Maximo</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="animate-in" style="text-align: center; margin-top: 1.25rem; font-size: 0.95rem;">
+        <strong>Nota:</strong> As faixas ficam mais proximas conforme voce avanca.
+        Depois de bater a meta, cada entrega vale muito mais.
+      </p>
+    </div>
+  </div>
+
+  <!-- Slide 7: Exemplo pratico -->
+  <div class="slide slide-content" data-slide="6">
+    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+      <div class="animate-in label">Exemplo Pratico</div>
+      <h2 class="animate-in" style="text-align: center;">Na pratica, quanto voce pode ganhar?</h2>
+      <p class="animate-in" style="text-align: center; margin-bottom: 1rem;">
+        Veja um exemplo de um designer com salario base de R$ 2.000 e meta de 20 entregas/mes.
+      </p>
+      <div class="example-box animate-in">
+        <div class="example-row">
+          <span class="label-left">Salario base</span>
+          <span class="value">R$ 2.000</span>
+        </div>
+        <div class="example-row">
+          <span class="label-left">Meta do mes</span>
+          <span class="value">20 designs</span>
+        </div>
+        <div class="example-row">
+          <span class="label-left">Entregas realizadas</span>
+          <span class="value accent">22 designs</span>
+        </div>
+        <div class="example-row">
+          <span class="label-left">Faixa atingida</span>
+          <span class="value accent">3.0x (maximo!)</span>
+        </div>
+        <div class="example-row divider-row">
+          <span class="label-left">Bonus calculado</span>
+          <span class="value accent">R$ 2.000 x 3.0 = R$ 6.000</span>
+        </div>
+        <div class="example-row total-row">
+          <span class="label-left">Total no mes</span>
+          <span class="value green">R$ 8.000</span>
+        </div>
+      </div>
+      <p class="animate-in" style="text-align: center; margin-top: 1.25rem; font-size: 0.95rem; color: var(--text-soft);">
+        Neste exemplo, o designer que entregou 22 trabalhos ganhou <strong>4 vezes mais</strong> do que o salario base.
+        Os valores reais serao configurados individualmente.
+      </p>
+    </div>
+  </div>
+
+  <!-- Slide 8: O que voce vai ver -->
+  <div class="slide slide-content" data-slide="7">
+    <div class="inner">
+      <div class="animate-in label">Sua Experiencia</div>
+      <h2 class="animate-in">O que voce vai ver ao abrir o app</h2>
+      <p class="animate-in" style="margin-bottom: 1.5rem;">
+        Cada produtor tera seu proprio painel com tudo o que precisa saber sobre seu desempenho.
+      </p>
+      <div class="cards">
+        <div class="card animate-in">
+          <div class="icon orange">&#127919;</div>
+          <h4>Suas metas do mes</h4>
+          <p>Quantas entregas faltam, quanto ja produziu, e em qual faixa voce esta agora.</p>
+        </div>
+        <div class="card animate-in">
+          <div class="icon green">&#128176;</div>
+          <h4>Bonus acumulado</h4>
+          <p>Veja em tempo real quanto voce ja ganhou de bonus e quanto pode ganhar se continuar.</p>
+        </div>
+        <div class="card animate-in">
+          <div class="icon blue">&#127942;</div>
+          <h4>Ranking</h4>
+          <p>Veja sua posicao em relacao aos outros. Uma competicao saudavel para motivar todos.</p>
+        </div>
+        <div class="card animate-in">
+          <div class="icon gold">&#128302;</div>
+          <h4>Simulador</h4>
+          <p>"Se eu entregar mais 3, quanto vou ganhar?" Simule cenarios e planeje seu mes.</p>
+        </div>
+        <div class="card animate-in">
+          <div class="icon orange">&#128197;</div>
+          <h4>Historico</h4>
+          <p>Consulte meses anteriores: quantas entregas fez, quanto ganhou, como evoluiu.</p>
+        </div>
+        <div class="card animate-in">
+          <div class="icon green">&#128241;</div>
+          <h4>No celular</h4>
+          <p>Acesse pelo celular como se fosse um app. Sem precisar instalar nada da loja.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 9: Quem ve o que -->
+  <div class="slide slide-content" data-slide="8">
+    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+      <div class="animate-in label">Quem Ve o Que</div>
+      <h2 class="animate-in" style="text-align: center;">Cada pessoa ve o que precisa</h2>
+      <p class="animate-in" style="text-align: center; margin-bottom: 1.5rem;">
+        O app se adapta ao seu perfil. Cada funcao tem sua propria visao.
+      </p>
+      <div class="roles-grid animate-in">
+        <div class="role-card">
+          <div class="role-icon">&#128081;</div>
+          <h4>CEO</h4>
+          <p>Ve tudo. Define salarios, metas, curvas e configuracoes do sistema.</p>
+        </div>
+        <div class="role-card">
+          <div class="role-icon">&#128188;</div>
+          <h4>Diretor</h4>
+          <p>Ve tudo. Define metas para toda a equipe. Nao altera salarios.</p>
+        </div>
+        <div class="role-card">
+          <div class="role-icon">&#128203;</div>
+          <h4>Gerente</h4>
+          <p>Ve toda a equipe. Define metas. Acompanha entregas e desempenho.</p>
+        </div>
+        <div class="role-card">
+          <div class="role-icon">&#129309;</div>
+          <h4>Gestor de Conta</h4>
+          <p>Ve seus clientes e as entregas. Faz a ponte entre cliente e equipe.</p>
+        </div>
+        <div class="role-card">
+          <div class="role-icon">&#127912;</div>
+          <h4>Produtor</h4>
+          <p>Ve suas metas, entregas, bonus, ranking e simulador. Foco em produzir.</p>
+        </div>
+        <div class="role-card">
+          <div class="role-icon">&#128100;</div>
+          <h4>Cliente</h4>
+          <p>Ve o andamento dos seus conteudos, calendario e o que ja foi publicado.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 10: Portal do cliente -->
+  <div class="slide slide-content" data-slide="9">
+    <div class="inner">
+      <div class="split">
+        <div class="split-left">
+          <div class="animate-in label">Portal do Cliente</div>
+          <h2 class="animate-in">Transparencia total para quem contratou</h2>
+          <p class="animate-in" style="margin-bottom: 1.5rem;">
+            Os clientes (medicos, experts) terao acesso a um painel simplificado
+            onde podem acompanhar tudo sobre a producao de conteudo deles.
+          </p>
+          <ul class="styled-list animate-in">
+            <li>
+              <span class="bullet">&#10003;</span>
+              <span><strong>Status de producao</strong> &mdash; em que etapa cada conteudo esta</span>
+            </li>
+            <li>
+              <span class="bullet">&#10003;</span>
+              <span><strong>Calendario</strong> &mdash; quando cada conteudo sera publicado</span>
+            </li>
+            <li>
+              <span class="bullet">&#10003;</span>
+              <span><strong>Galeria</strong> &mdash; tudo que ja foi produzido e publicado</span>
+            </li>
+            <li>
+              <span class="bullet">&#10003;</span>
+              <span><strong>Metricas do Instagram</strong> &mdash; curtidas, alcance, engajamento de cada post</span>
+            </li>
+          </ul>
+        </div>
+        <div class="animate-in" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div class="card">
+            <div class="icon blue">&#128197;</div>
+            <h4>Proximo conteudo</h4>
+            <p>Reel sobre "5 dicas de postura" &mdash; em edicao de video, previsao: 18/Mar</p>
+          </div>
+          <div class="card">
+            <div class="icon green">&#9989;</div>
+            <h4>Publicado hoje</h4>
+            <p>Carrossel "Mitos sobre dieta" &mdash; 1.2k curtidas, 89 salvamentos</p>
+          </div>
+          <div class="card">
+            <div class="icon orange">&#128202;</div>
+            <h4>Resumo do mes</h4>
+            <p>12 conteudos entregues de 15 planejados. 80% concluido.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 11: Planos de cliente -->
+  <div class="slide slide-content" data-slide="10">
+    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+      <div class="animate-in label">Controle de Planos</div>
+      <h2 class="animate-in" style="text-align: center;">Cada cliente tem seu plano</h2>
+      <p class="animate-in" style="text-align: center; margin-bottom: 1.5rem;">
+        O app controla quantas entregas estao incluidas no plano de cada cliente.
+        Se ultrapassar, o excedente e calculado automaticamente.
+      </p>
+      <div class="highlight-grid animate-in">
+        <div class="highlight-box">
+          <div class="number" style="font-size: 2.2rem;">Planos</div>
+          <div class="desc">Crie planos diferentes: basico, premium, personalizado. Cada um com seus limites.</div>
+        </div>
+        <div class="highlight-box">
+          <div class="number" style="font-size: 2.2rem; color: var(--blue);">Limites</div>
+          <div class="desc">Defina: 8 Reels + 4 Carrosseis + 2 Banners por mes, por exemplo.</div>
+        </div>
+        <div class="highlight-box">
+          <div class="number" style="font-size: 2.2rem; color: var(--gold);">Excedente</div>
+          <div class="desc">Entregas alem do plano sao calculadas automaticamente com preco por unidade.</div>
+        </div>
+        <div class="highlight-box">
+          <div class="number" style="font-size: 2.2rem; color: var(--green);">Cobranca</div>
+          <div class="desc">O valor excedente e salvo e cobrado junto da proxima mensalidade.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 12: Resumo -->
+  <div class="slide slide-content" data-slide="11">
+    <div class="inner" style="display: flex; flex-direction: column; align-items: center;">
+      <div class="animate-in label">Resumo</div>
+      <h2 class="animate-in" style="text-align: center;">Tudo em um so lugar</h2>
+      <div class="cards animate-in" style="max-width: 800px;">
+        <div class="card" style="border-left: 3px solid var(--accent);">
+          <h4>Para produtores</h4>
+          <p>Metas claras, bonus progressivo, ranking, simulador e historico. Quanto mais voce produz, mais voce ganha.</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--blue);">
+          <h4>Para gestores</h4>
+          <p>Definicao de metas, acompanhamento de entregas, calculo de bonus e gestao de planos de clientes.</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--green);">
+          <h4>Para clientes</h4>
+          <p>Portal transparente com status, calendario, galeria e metricas do Instagram.</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--gold);">
+          <h4>Para a empresa</h4>
+          <p>Controle de planos, excedentes, performance da equipe e metricas combinadas.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 13: Final -->
+  <div class="slide slide-final" data-slide="12">
+    <div class="animate-in label">Vamos Comecar</div>
+    <h1 class="animate-in">Seu trabalho <span>vale mais</span>.</h1>
+    <p class="animate-in" style="font-size: 1.3rem; margin-bottom: 2rem;">
+      O TasksLudus existe para que cada entrega sua seja reconhecida e recompensada de forma justa e transparente.
+    </p>
+    <div class="animate-in tag" style="font-size: 1rem; padding: 0.65rem 2rem;">
+      TasksLudus &mdash; Metas, performance e resultados
+    </div>
+  </div>
+
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <button id="prevBtn" onclick="navigate(-1)">&larr; Anterior</button>
+  <div class="nav-dots" id="navDots"></div>
+  <span class="slide-counter" id="slideCounter">1 / 13</span>
+  <button id="nextBtn" onclick="navigate(1)">Proximo &rarr;</button>
+</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const dotsContainer = document.getElementById('navDots');
+  const counter = document.getElementById('slideCounter');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  // Create dots
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('button');
+    dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+    dot.onclick = () => goTo(i);
+    dotsContainer.appendChild(dot);
+  }
+
+  function goTo(index) {
+    if (index < 0 || index >= total || index === current) return;
+
+    const prev = slides[current];
+    const next = slides[index];
+
+    // Direction
+    const goingForward = index > current;
+
+    prev.classList.remove('active');
+    prev.classList.add(goingForward ? 'exit-left' : '');
+    setTimeout(() => prev.classList.remove('exit-left'), 500);
+
+    next.style.transform = goingForward ? 'translateX(60px)' : 'translateX(-60px)';
+    next.classList.add('active');
+
+    // Update dots
+    dotsContainer.children[current].classList.remove('active');
+    dotsContainer.children[index].classList.add('active');
+
+    current = index;
+    counter.textContent = `${current + 1} / ${total}`;
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current === total - 1;
+  }
+
+  function navigate(dir) {
+    goTo(current + dir);
+  }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); navigate(1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); navigate(-1); }
+    if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+    if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+  });
+
+  // Touch support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; });
+  document.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].screenX;
+    if (Math.abs(diff) > 50) navigate(diff > 0 ? 1 : -1);
+  });
+
+  // Init
+  prevBtn.disabled = true;
+</script>
+
+</body>
+</html>
