@@ -15,9 +15,9 @@
     --bg-warm: #F5F0EB;
     --text: #1A1A1A;
     --text-soft: #6B6560;
-    --accent: #E8621A;
-    --accent-light: #FFF0E8;
-    --accent-glow: #FF8A4C;
+    --accent: #9A48EA;
+    --accent-light: #F5EFFE;
+    --accent-glow: #B87DF0;
     --green: #2D8A56;
     --green-light: #E8F5EE;
     --blue: #2563EB;
@@ -185,7 +185,7 @@
   /* Title slide */
   .slide-title {
     text-align: center;
-    background: linear-gradient(160deg, #FAFAF8 0%, #F5F0EB 50%, #FFF0E8 100%);
+    background: linear-gradient(160deg, #FAFAF8 0%, #F0ECFA 50%, #F5EFFE 100%);
   }
 
   .slide-title h1 {
@@ -594,7 +594,7 @@
   /* Final slide */
   .slide-final {
     text-align: center;
-    background: linear-gradient(160deg, #FFF0E8 0%, #FAFAF8 50%, #F5F0EB 100%);
+    background: linear-gradient(160deg, #F5EFFE 0%, #FAFAF8 50%, #F0ECFA 100%);
   }
 
   .slide-final h1 {
@@ -629,6 +629,9 @@
 
   <!-- Slide 1: Title -->
   <div class="slide slide-title active" data-slide="0">
+    <div class="animate-in" style="margin-bottom: 2rem;">
+      <img src="assets/ludus-logo.svg" alt="Ludus" style="height: 56px; width: auto;">
+    </div>
     <div class="animate-in label">Apresentacao Interna</div>
     <h1 class="animate-in">Tasks<span>Ludus</span></h1>
     <p class="animate-in subtitle">Seu desempenho valorizado. Suas metas, seu bonus.</p>
@@ -775,8 +778,8 @@
             <!-- Gradient under curve -->
             <defs>
               <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#E8621A" stop-opacity="0.15"/>
-                <stop offset="100%" stop-color="#E8621A" stop-opacity="0"/>
+                <stop offset="0%" stop-color="#9A48EA" stop-opacity="0.15"/>
+                <stop offset="100%" stop-color="#9A48EA" stop-opacity="0"/>
               </linearGradient>
             </defs>
 
@@ -787,25 +790,25 @@
             <!-- The J-curve -->
             <path class="curve-path"
                   d="M60,250 Q125,248 184,240 Q235,232 290,222 Q340,208 390,190 Q432,168 475,140 Q520,108 556,80 Q600,58 660,38"
-                  stroke="#E8621A" stroke-width="3" fill="none" stroke-linecap="round"/>
+                  stroke="#9A48EA" stroke-width="3" fill="none" stroke-linecap="round"/>
 
             <!-- Meta minima line -->
-            <line x1="308" y1="250" x2="308" y2="30" stroke="#E8621A" stroke-width="1" stroke-dasharray="6,4" opacity="0.4"/>
-            <text x="308" y="22" text-anchor="middle" fill="#E8621A" font-size="11" font-family="DM Sans" font-weight="600">Meta minima</text>
+            <line x1="308" y1="250" x2="308" y2="30" stroke="#9A48EA" stroke-width="1" stroke-dasharray="6,4" opacity="0.4"/>
+            <text x="308" y="22" text-anchor="middle" fill="#9A48EA" font-size="11" font-family="DM Sans" font-weight="600">Meta minima</text>
 
             <!-- Dots -->
-            <circle class="curve-dot" cx="184" cy="240" r="5" fill="#E8621A" style="animation-delay: 0.8s"/>
-            <circle class="curve-dot" cx="308" cy="222" r="5" fill="#E8621A" style="animation-delay: 1.1s"/>
-            <circle class="curve-dot" cx="432" cy="168" r="5" fill="#E8621A" style="animation-delay: 1.4s"/>
-            <circle class="curve-dot" cx="556" cy="80" r="5" fill="#E8621A" style="animation-delay: 1.7s"/>
-            <circle class="curve-dot" cx="660" cy="38" r="6" fill="#E8621A" style="animation-delay: 2.0s"/>
+            <circle class="curve-dot" cx="184" cy="240" r="5" fill="#9A48EA" style="animation-delay: 0.8s"/>
+            <circle class="curve-dot" cx="308" cy="222" r="5" fill="#9A48EA" style="animation-delay: 1.1s"/>
+            <circle class="curve-dot" cx="432" cy="168" r="5" fill="#9A48EA" style="animation-delay: 1.4s"/>
+            <circle class="curve-dot" cx="556" cy="80" r="5" fill="#9A48EA" style="animation-delay: 1.7s"/>
+            <circle class="curve-dot" cx="660" cy="38" r="6" fill="#9A48EA" style="animation-delay: 2.0s"/>
 
             <!-- Labels on dots -->
-            <text class="curve-dot" x="184" y="228" text-anchor="middle" fill="#E8621A" font-size="11" font-family="DM Sans" font-weight="600" style="animation-delay: 0.8s">0.3x</text>
-            <text class="curve-dot" x="308" y="210" text-anchor="middle" fill="#E8621A" font-size="11" font-family="DM Sans" font-weight="600" style="animation-delay: 1.1s">0.6x</text>
-            <text class="curve-dot" x="432" y="156" text-anchor="middle" fill="#E8621A" font-size="11" font-family="DM Sans" font-weight="600" style="animation-delay: 1.4s">1.5x</text>
-            <text class="curve-dot" x="556" y="68" text-anchor="middle" fill="#E8621A" font-size="11" font-family="DM Sans" font-weight="600" style="animation-delay: 1.7s">2x</text>
-            <text class="curve-dot" x="660" y="26" text-anchor="middle" fill="#E8621A" font-size="12" font-family="DM Sans" font-weight="700" style="animation-delay: 2.0s">3x</text>
+            <text class="curve-dot" x="184" y="228" text-anchor="middle" fill="#9A48EA" font-size="11" font-family="DM Sans" font-weight="600" style="animation-delay: 0.8s">0.3x</text>
+            <text class="curve-dot" x="308" y="210" text-anchor="middle" fill="#9A48EA" font-size="11" font-family="DM Sans" font-weight="600" style="animation-delay: 1.1s">0.6x</text>
+            <text class="curve-dot" x="432" y="156" text-anchor="middle" fill="#9A48EA" font-size="11" font-family="DM Sans" font-weight="600" style="animation-delay: 1.4s">1.5x</text>
+            <text class="curve-dot" x="556" y="68" text-anchor="middle" fill="#9A48EA" font-size="11" font-family="DM Sans" font-weight="600" style="animation-delay: 1.7s">2x</text>
+            <text class="curve-dot" x="660" y="26" text-anchor="middle" fill="#9A48EA" font-size="12" font-family="DM Sans" font-weight="700" style="animation-delay: 2.0s">3x</text>
           </svg>
         </div>
       </div>
@@ -1156,16 +1159,32 @@
 
     const prev = slides[current];
     const next = slides[index];
-
-    // Direction
     const goingForward = index > current;
 
-    prev.classList.remove('active');
-    prev.classList.add(goingForward ? 'exit-left' : '');
-    setTimeout(() => prev.classList.remove('exit-left'), 500);
+    // Remove active from current slide
+    prev.classList.remove('active', 'exit-left', 'exit-right');
+    prev.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    prev.style.opacity = '0';
+    prev.style.transform = goingForward ? 'translateX(-60px)' : 'translateX(60px)';
 
+    // Prepare next slide off-screen (no transition yet)
+    next.style.transition = 'none';
+    next.style.opacity = '0';
     next.style.transform = goingForward ? 'translateX(60px)' : 'translateX(-60px)';
+
+    // Force reflow then animate in
+    next.offsetHeight;
+    next.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    next.style.opacity = '1';
+    next.style.transform = 'translateX(0)';
     next.classList.add('active');
+
+    // Cleanup previous after animation
+    setTimeout(() => {
+      prev.style.transition = '';
+      prev.style.opacity = '';
+      prev.style.transform = '';
+    }, 500);
 
     // Update dots
     dotsContainer.children[current].classList.remove('active');
