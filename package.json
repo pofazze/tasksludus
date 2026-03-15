@@ -1,0 +1,21 @@
+{
+  "name": "tasksludus",
+  "version": "2.0.0",
+  "private": true,
+  "description": "ClickUp companion app for goals, performance tracking, and client portal",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "migrate": "cd server && npx knex migrate:latest",
+    "migrate:rollback": "cd server && npx knex migrate:rollback",
+    "migrate:make": "cd server && npx knex migrate:make",
+    "seed": "cd server && npx knex seed:run",
+    "lint": "concurrently \"npm run lint:server\" \"npm run lint:client\"",
+    "lint:server": "cd server && npm run lint",
+    "lint:client": "cd client && npm run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
