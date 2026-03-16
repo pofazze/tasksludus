@@ -18,7 +18,7 @@ async function authenticate(req, res, next) {
 
     const user = await db('users')
       .where({ id: payload.sub, is_active: true })
-      .select('id', 'name', 'email', 'role', 'producer_type', 'is_active', 'base_salary', 'auto_calc_enabled', 'avatar_url')
+      .select('id', 'name', 'email', 'role', 'producer_type', 'is_active', 'base_salary', 'auto_calc_enabled', 'avatar_url', 'whatsapp', 'clickup_id')
       .first();
 
     if (!user) {

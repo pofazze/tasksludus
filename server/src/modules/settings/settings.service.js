@@ -1,4 +1,5 @@
 const db = require('../../config/db');
+const env = require('../../config/env');
 
 class SettingsService {
   async listSettings() {
@@ -45,6 +46,48 @@ class SettingsService {
       throw Object.assign(new Error('Integration not found'), { status: 404 });
     }
     return updated;
+  }
+  async testClickUp() {
+    const token = env.clickup.apiToken;
+    if (!token) {
+      return { connected: false, error: 'CLICKUP_API_TOKEN não configurado no .env' };
+    }
+    try {
+      const res = await fetch('https://api.clickup.com/api/v2/user', {
+        headers: { Authorization: token },
+      });
+      if (!res.ok) {
+        return { connected: false, error: `ClickUp retornou ${res.status}` };
+      }
+      const data = await res.json();
+      await db('integrations').where({ type: 'clickup' }).update({ last_sync_at: new Date() });
+      return { connected: true, user: data.user?.username, email: data.user?.email };
+    } catch (err) {
+      return { connected: false, error: err.message };
+    }
+  }
+
+  async testInstagram(accessToken) {
+    const integration = await db('integrations').where({ type: 'instagram' }).first();
+    const token = accessToken || integration?.config?.access_token || env.instagram.accessToken;
+    if (!token) {
+      return { connected: false, error: 'Token não configurado' };
+    }
+    try {
+      const res = await fetch(`https://graph.instagram.com/me?fields=id,username&access_token=${token}`);
+      if (!res.ok) {
+        return { connected: false, error: `Instagram retornou ${res.status}` };
+      }
+      const data = await res.json();
+      await db('integrations').where({ type: 'instagram' }).update({ last_sync_at: new Date() });
+      return { connected: true, username: data.username, id: data.id };
+    } catch (err) {
+      return { connected: false, error: err.message };
+    }
+  }
+
+  async getIntegrationByType(type) {
+    return db('integrations').where({ type }).first();
   }
 }
 

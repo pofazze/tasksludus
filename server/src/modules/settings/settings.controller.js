@@ -40,6 +40,23 @@ class SettingsController {
       next(err);
     }
   }
+  async testClickUp(req, res, next) {
+    try {
+      const result = await settingsService.testClickUp();
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async testInstagram(req, res, next) {
+    try {
+      const result = await settingsService.testInstagram(req.body?.access_token);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new SettingsController();

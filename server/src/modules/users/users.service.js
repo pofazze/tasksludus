@@ -3,7 +3,7 @@ const db = require('../../config/db');
 class UsersService {
   async list(filters = {}) {
     const query = db('users')
-      .select('id', 'name', 'email', 'role', 'producer_type', 'is_active', 'base_salary', 'auto_calc_enabled', 'avatar_url', 'created_at')
+      .select('id', 'name', 'email', 'role', 'producer_type', 'is_active', 'base_salary', 'auto_calc_enabled', 'avatar_url', 'whatsapp', 'clickup_id', 'created_at')
       .orderBy('name');
 
     if (filters.role) query.where('role', filters.role);

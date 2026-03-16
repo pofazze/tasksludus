@@ -54,6 +54,23 @@ class ClientsController {
       next(err);
     }
   }
+  async getInstagramPosts(req, res, next) {
+    try {
+      const posts = await clientsService.getInstagramPosts(req.params.id);
+      res.json(posts);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async syncInstagram(req, res, next) {
+    try {
+      const result = await clientsService.syncInstagramPosts(req.params.id);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new ClientsController();

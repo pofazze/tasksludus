@@ -9,9 +9,9 @@ if (!process.env.DATABASE_URL) {
 }
 
 module.exports = {
-  port: process.env.PORT || 3000,
+  port: process.env.PORT || 4400,
   nodeEnv: process.env.NODE_ENV || 'development',
-  clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  clientUrl: process.env.CLIENT_URL || 'http://localhost:4401',
 
   db: {
     url: process.env.DATABASE_URL,
@@ -33,15 +33,11 @@ module.exports = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
 
-  google: {
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackUrl: process.env.GOOGLE_CALLBACK_URL,
-  },
-
   clickup: {
     apiToken: process.env.CLICKUP_API_TOKEN,
     webhookSecret: process.env.CLICKUP_WEBHOOK_SECRET,
+    clientId: process.env.CLICKUP_CLIENT_ID,
+    clientSecret: process.env.CLICKUP_CLIENT_SECRET,
   },
 
   instagram: {

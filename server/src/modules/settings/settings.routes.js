@@ -11,5 +11,7 @@ router.put('/:key', ceoOnly, settingsController.updateSetting.bind(settingsContr
 
 router.get('/integrations', settingsController.listIntegrations.bind(settingsController));
 router.put('/integrations/:id', ceoOnly, settingsController.updateIntegration.bind(settingsController));
+router.post('/integrations/test/clickup', ceoOnly, settingsController.testClickUp.bind(settingsController));
+router.post('/integrations/test/instagram', ceoOnly, settingsController.testInstagram.bind(settingsController));
 
 module.exports = router;

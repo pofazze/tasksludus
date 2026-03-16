@@ -12,7 +12,7 @@ class AuthService {
     }
 
     if (!user.password_hash) {
-      throw Object.assign(new Error('Please login with Google'), { status: 401 });
+      throw Object.assign(new Error('Invalid credentials'), { status: 401 });
     }
 
     const valid = await bcrypt.compare(password, user.password_hash);
@@ -23,30 +23,7 @@ class AuthService {
     return this._generateTokens(user);
   }
 
-  async googleLogin(googleId, email, name, avatarUrl) {
-    let user = await db('users').where({ google_id: googleId }).first();
-
-    if (!user) {
-      user = await db('users').where({ email }).first();
-      if (user) {
-        // Link Google account to existing user
-        await db('users').where({ id: user.id }).update({ google_id: googleId, avatar_url: avatarUrl });
-        user.google_id = googleId;
-      }
-    }
-
-    if (!user) {
-      throw Object.assign(new Error('No account found. Please use an invite link.'), { status: 401 });
-    }
-
-    if (!user.is_active) {
-      throw Object.assign(new Error('Account is deactivated'), { status: 401 });
-    }
-
-    return this._generateTokens(user);
-  }
-
-  async registerFromInvite(token, name, password, googleId) {
+  async registerFromInvite(token, name, password) {
     const invite = await db('invite_tokens')
       .where({ token })
       .whereNull('used_at')
@@ -62,14 +39,13 @@ class AuthService {
       throw Object.assign(new Error('User already exists'), { status: 409 });
     }
 
-    const passwordHash = password ? await bcrypt.hash(password, 10) : null;
+    const passwordHash = await bcrypt.hash(password, 10);
 
     const [user] = await db('users')
       .insert({
         name,
         email: invite.email,
         password_hash: passwordHash,
-        google_id: googleId || null,
         role: invite.role,
         producer_type: invite.producer_type || null,
       })
@@ -80,12 +56,30 @@ class AuthService {
     return this._generateTokens(user);
   }
 
-  async createInvite(email, role, producerType, invitedBy) {
+  async createInvite(email, role, producerType, invitedBy, { name, password, whatsapp } = {}) {
     const existing = await db('users').where({ email }).first();
     if (existing) {
       throw Object.assign(new Error('User with this email already exists'), { status: 409 });
     }
 
+    // If name + password provided, create user directly (admin shortcut)
+    if (name && password) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      const [user] = await db('users')
+        .insert({
+          name,
+          email,
+          password_hash: passwordHash,
+          role,
+          producer_type: producerType || null,
+          whatsapp: whatsapp || null,
+        })
+        .returning('*');
+
+      return { user, directCreation: true };
+    }
+
+    // Otherwise create invite token for self-registration
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 

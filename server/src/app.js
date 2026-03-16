@@ -18,6 +18,7 @@ const calculationsRoutes = require('./modules/calculations/calculations.routes')
 const settingsRoutes = require('./modules/settings/settings.routes');
 const rankingRoutes = require('./modules/ranking/ranking.routes');
 const simulatorRoutes = require('./modules/simulator/simulator.routes');
+const webhooksRoutes = require('./modules/webhooks/webhooks.routes');
 
 const app = express();
 
@@ -28,14 +29,20 @@ app.use(cors({ origin: env.clientUrl, credentials: true }));
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use('/api/', limiter);
 
-// Body parsing
-app.use(express.json());
+// Body parsing — capture raw body for webhook signature verification
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    if (req.url.startsWith('/api/webhooks/')) {
+      req.rawBody = buf.toString();
+    }
+  },
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // Passport
@@ -63,6 +70,7 @@ app.use('/api/calculations', calculationsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/ranking', rankingRoutes);
 app.use('/api/simulator', simulatorRoutes);
+app.use('/api/webhooks', webhooksRoutes);
 
 // 404 handler
 app.use((_req, res) => {

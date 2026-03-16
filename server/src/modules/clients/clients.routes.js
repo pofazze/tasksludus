@@ -11,5 +11,7 @@ router.get('/:id', clientsController.getById.bind(clientsController));
 router.post('/', managementLevel, clientsController.create.bind(clientsController));
 router.put('/:id', managementLevel, clientsController.update.bind(clientsController));
 router.get('/:id/overages', clientsController.getOverages.bind(clientsController));
+router.get('/:id/instagram', clientsController.getInstagramPosts.bind(clientsController));
+router.post('/:id/instagram/sync', managementLevel, clientsController.syncInstagram.bind(clientsController));
 
 module.exports = router;

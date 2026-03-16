@@ -14,37 +14,13 @@ class AuthController {
     }
   }
 
-  async googleCallback(req, res, next) {
-    try {
-      const { id: googleId, emails, displayName, photos } = req.user;
-      const email = emails[0].value;
-      const avatarUrl = photos?.[0]?.value || null;
-
-      const result = await authService.googleLogin(googleId, email, displayName, avatarUrl);
-
-      // Redirect to frontend with tokens
-      const params = new URLSearchParams({
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
-      });
-      res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/callback?${params}`);
-    } catch (err) {
-      next(err);
-    }
-  }
-
   async acceptInvite(req, res, next) {
     try {
       const { token } = req.params;
       const { error, value } = registerFromInviteSchema.validate(req.body);
       if (error) return res.status(400).json({ error: error.details[0].message });
 
-      const result = await authService.registerFromInvite(
-        token,
-        value.name,
-        value.password,
-        value.google_id
-      );
+      const result = await authService.registerFromInvite(token, value.name, value.password);
       res.status(201).json(result);
     } catch (err) {
       next(err);
@@ -56,13 +32,14 @@ class AuthController {
       const { error, value } = createInviteSchema.validate(req.body);
       if (error) return res.status(400).json({ error: error.details[0].message });
 
-      const invite = await authService.createInvite(
+      const result = await authService.createInvite(
         value.email,
         value.role,
         value.producer_type,
-        req.user.id
+        req.user.id,
+        { name: value.name, password: value.password, whatsapp: value.whatsapp }
       );
-      res.status(201).json(invite);
+      res.status(201).json(result);
     } catch (err) {
       next(err);
     }
@@ -81,8 +58,6 @@ class AuthController {
   }
 
   async logout(_req, res) {
-    // JWT is stateless — client just discards the token
-    // Future: add token to Redis blacklist
     res.json({ message: 'Logged out' });
   }
 

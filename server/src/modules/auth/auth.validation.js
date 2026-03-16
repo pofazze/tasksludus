@@ -8,7 +8,6 @@ const loginSchema = Joi.object({
 const registerFromInviteSchema = Joi.object({
   name: Joi.string().min(2).max(100).required(),
   password: Joi.string().min(6).required(),
-  google_id: Joi.string().optional(),
 });
 
 const createInviteSchema = Joi.object({
@@ -19,6 +18,9 @@ const createInviteSchema = Joi.object({
   producer_type: Joi.string()
     .valid('video_editor', 'designer', 'captation', 'social_media')
     .when('role', { is: 'producer', then: Joi.required(), otherwise: Joi.forbidden() }),
+  name: Joi.string().min(2).max(100).optional(),
+  password: Joi.string().min(6).optional(),
+  whatsapp: Joi.string().max(20).optional().allow(''),
 });
 
 module.exports = {
