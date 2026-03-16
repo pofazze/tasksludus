@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "start": "serve dist -s -l tcp://0.0.0.0:${PORT:-3000}",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -22,6 +23,7 @@
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.1",
     "recharts": "^3.8.0",
+    "serve": "^14.2.6",
     "shadcn": "^4.0.8",
     "socket.io-client": "^4.8.3",
     "sonner": "^2.0.7",
