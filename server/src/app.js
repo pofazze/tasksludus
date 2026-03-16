@@ -10,6 +10,14 @@ const errorHandler = require('./middleware/errorHandler');
 // Route imports
 const authRoutes = require('./modules/auth/auth.routes');
 const usersRoutes = require('./modules/users/users.routes');
+const goalsRoutes = require('./modules/goals/goals.routes');
+const clientsRoutes = require('./modules/clients/clients.routes');
+const plansRoutes = require('./modules/plans/plans.routes');
+const deliveriesRoutes = require('./modules/deliveries/deliveries.routes');
+const calculationsRoutes = require('./modules/calculations/calculations.routes');
+const settingsRoutes = require('./modules/settings/settings.routes');
+const rankingRoutes = require('./modules/ranking/ranking.routes');
+const simulatorRoutes = require('./modules/simulator/simulator.routes');
 
 const app = express();
 
@@ -47,6 +55,14 @@ app.get('/api/health', async (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/goals', goalsRoutes);
+app.use('/api/clients', clientsRoutes);
+app.use('/api/plans', plansRoutes);
+app.use('/api/deliveries', deliveriesRoutes);
+app.use('/api/calculations', calculationsRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/ranking', rankingRoutes);
+app.use('/api/simulator', simulatorRoutes);
 
 // 404 handler
 app.use((_req, res) => {
