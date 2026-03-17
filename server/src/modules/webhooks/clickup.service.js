@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const db = require('../../config/db');
 const env = require('../../config/env');
 const logger = require('../../utils/logger');
+const autoAssign = require('./automations/auto-assign');
 
 class ClickUpWebhookService {
   /**
@@ -89,13 +90,14 @@ class ClickUpWebhookService {
   }
 
   /**
-   * Handle task status change — update delivery status
+   * Handle task status change — update delivery status + run automations
    */
   async handleStatusChange(clickupTaskId, historyItems, event) {
     const statusItem = historyItems.find((h) => h.field === 'status');
     if (!statusItem) return;
 
-    const newStatus = this.mapClickUpStatus(statusItem.after?.status);
+    const rawStatusName = statusItem.after?.status;
+    const newStatus = this.mapClickUpStatus(rawStatusName);
     if (!newStatus) return;
 
     const delivery = await db('deliveries')
@@ -114,6 +116,18 @@ class ClickUpWebhookService {
     } else {
       logger.info(`No delivery found for ClickUp task ${clickupTaskId} — will auto-create`);
       await this.autoCreateDelivery(clickupTaskId, event);
+    }
+
+    // Run auto-assign automation
+    try {
+      const result = await autoAssign.run(clickupTaskId, rawStatusName);
+      if (result.executed) {
+        logger.info(`Automation executed: ${result.action}`);
+      } else {
+        logger.debug(`Automation skipped: ${result.reason || result.error}`);
+      }
+    } catch (err) {
+      logger.error(`Auto-assign automation error: ${err.message}`);
     }
   }
 
