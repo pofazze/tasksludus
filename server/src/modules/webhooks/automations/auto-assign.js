@@ -1,3 +1,4 @@
+const db = require('../../../config/db');
 const env = require('../../../config/env');
 const logger = require('../../../utils/logger');
 
@@ -6,6 +7,7 @@ const logger = require('../../../utils/logger');
  *
  * When a task changes status in the Dr. Wander Fran list,
  * automatically assign the person responsible for that phase.
+ * On publicação, assign ALL people who worked on the task.
  */
 
 const DR_WANDER_LIST_ID = '901113351972';
@@ -34,6 +36,8 @@ const NAMES = {
   '284596872': 'Pedro Torres',
   '61001382': 'Wander Fran',
 };
+
+const PUBLICACAO_STATUSES = ['publicação', 'publicacao'];
 
 /**
  * Run auto-assign automation
@@ -72,13 +76,17 @@ async function run(clickupTaskId, newStatusName, task) {
     return { executed: false, reason: 'task not in Dr. Wander Fran list' };
   }
 
-  // Check if already assigned to the right person
+  // PUBLICAÇÃO: assign ALL people who worked on this task
+  if (PUBLICACAO_STATUSES.includes(normalized)) {
+    return assignAllContributors(clickupTaskId, task);
+  }
+
+  // Normal phase: assign the single responsible person
   const currentAssignees = task.assignees?.map((a) => String(a.id)) || [];
   if (currentAssignees.length === 1 && currentAssignees[0] === assigneeId) {
     return { executed: false, reason: 'already assigned to correct user' };
   }
 
-  // Remove current assignees and add the new one
   const remIds = currentAssignees.map(Number);
   const res = await fetch(`https://api.clickup.com/api/v2/task/${clickupTaskId}`, {
     method: 'PUT',
@@ -87,10 +95,7 @@ async function run(clickupTaskId, newStatusName, task) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      assignees: {
-        add: [Number(assigneeId)],
-        rem: remIds,
-      },
+      assignees: { add: [Number(assigneeId)], rem: remIds },
     }),
   });
 
@@ -109,6 +114,64 @@ async function run(clickupTaskId, newStatusName, task) {
     taskId: clickupTaskId,
     phase: normalized,
     assigneeId,
+  };
+}
+
+/**
+ * On publicação: query delivery_phases for all distinct assignees and assign them all
+ */
+async function assignAllContributors(clickupTaskId, task) {
+  // Get all unique assignees from delivery_phases
+  const phases = await db('delivery_phases')
+    .where({ clickup_task_id: clickupTaskId })
+    .whereNotNull('assignee_clickup_id')
+    .distinct('assignee_clickup_id');
+
+  const allAssigneeIds = [...new Set(phases.map((p) => p.assignee_clickup_id))];
+
+  if (allAssigneeIds.length === 0) {
+    return { executed: false, reason: 'no assignees found in phase history' };
+  }
+
+  const currentAssignees = task.assignees?.map((a) => String(a.id)) || [];
+  const toAdd = allAssigneeIds.filter((id) => !currentAssignees.includes(id));
+  // Don't remove anyone — just add all contributors
+  const remIds = currentAssignees.filter((id) => !allAssigneeIds.includes(id)).map(Number);
+
+  if (toAdd.length === 0 && remIds.length === 0) {
+    return { executed: false, reason: 'all contributors already assigned' };
+  }
+
+  const res = await fetch(`https://api.clickup.com/api/v2/task/${clickupTaskId}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: env.clickup.apiToken,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      assignees: {
+        add: toAdd.map(Number),
+        rem: remIds,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    const error = `ClickUp API error ${res.status}: ${body}`;
+    logger.error(`auto-assign (publicação): ${error}`);
+    return { executed: false, error };
+  }
+
+  const names = allAssigneeIds.map((id) => NAMES[id] || id).join(', ');
+  logger.info(`auto-assign (publicação): task ${clickupTaskId} → assigned ALL contributors: ${names}`);
+
+  return {
+    executed: true,
+    action: `publicação — assigned all contributors: ${names}`,
+    taskId: clickupTaskId,
+    phase: 'publicação',
+    assigneeIds: allAssigneeIds,
   };
 }
 

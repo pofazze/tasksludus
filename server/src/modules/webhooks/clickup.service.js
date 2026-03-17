@@ -90,7 +90,7 @@ class ClickUpWebhookService {
   }
 
   /**
-   * Handle task status change — update delivery status + run automations
+   * Handle task status change — update delivery status + track phase + run automations
    */
   async handleStatusChange(clickupTaskId, historyItems, event) {
     const statusItem = historyItems.find((h) => h.field === 'status');
@@ -100,7 +100,7 @@ class ClickUpWebhookService {
     const newStatus = this.mapClickUpStatus(rawStatusName);
     if (!newStatus) return;
 
-    // Fetch task once, reuse for delivery + auto-assign
+    // Fetch task once, reuse for everything
     const task = await this.fetchTask(clickupTaskId);
 
     const delivery = await db('deliveries')
@@ -121,6 +121,9 @@ class ClickUpWebhookService {
       await this.autoCreateDelivery(clickupTaskId, event, task);
     }
 
+    // Track phase transition
+    await this.trackPhaseTransition(clickupTaskId, newStatus, task);
+
     // Run auto-assign (pass pre-fetched task to avoid extra API call)
     try {
       const result = await autoAssign.run(clickupTaskId, rawStatusName, task);
@@ -135,7 +138,7 @@ class ClickUpWebhookService {
   }
 
   /**
-   * Handle new task created in ClickUp — auto-assign + auto-create delivery
+   * Handle new task created in ClickUp — auto-assign + track phase + auto-create delivery
    */
   async handleTaskCreated(clickupTaskId, event) {
     const existing = await db('deliveries')
@@ -143,7 +146,7 @@ class ClickUpWebhookService {
       .first();
     if (existing) return;
 
-    // Fetch task once, reuse for auto-assign + auto-create
+    // Fetch task once, reuse for everything
     const task = await this.fetchTask(clickupTaskId);
     if (!task) return;
 
@@ -161,6 +164,11 @@ class ClickUpWebhookService {
     }
 
     await this.autoCreateDelivery(clickupTaskId, event, task);
+
+    // Track initial phase
+    const initialPhase = this.mapClickUpStatus(task.status?.status) || 'planejamento';
+    const assigneeId = task.assignees?.[0]?.id ? String(task.assignees[0].id) : null;
+    await this.openPhase(clickupTaskId, initialPhase, assigneeId);
   }
 
   /**
@@ -190,26 +198,41 @@ class ClickUpWebhookService {
   }
 
   /**
-   * Handle assignee change
+   * Handle assignee change — update delivery + update current phase tracking
    */
   async handleAssigneeChange(clickupTaskId, historyItems, _event) {
     const delivery = await db('deliveries')
       .where({ clickup_task_id: clickupTaskId })
       .first();
-    if (!delivery) return;
 
     const assigneeItem = historyItems.find((h) => h.field === 'assignee');
     if (!assigneeItem?.after) return;
 
-    // Try to find user by clickup_id
     const clickupUserId = String(assigneeItem.after.id);
     const user = await db('users').where({ clickup_id: clickupUserId }).first();
 
-    if (user) {
+    if (delivery && user) {
       await db('deliveries')
         .where({ id: delivery.id })
         .update({ user_id: user.id, updated_at: new Date() });
       logger.info(`Delivery ${delivery.id} assigned to ${user.name}`);
+    }
+
+    // Update current open phase with new assignee
+    const currentPhase = await db('delivery_phases')
+      .where({ clickup_task_id: clickupTaskId })
+      .whereNull('exited_at')
+      .first();
+
+    if (currentPhase) {
+      await db('delivery_phases')
+        .where({ id: currentPhase.id })
+        .update({
+          assignee_clickup_id: clickupUserId,
+          user_id: user?.id || null,
+          updated_at: new Date(),
+        });
+      logger.info(`Phase ${currentPhase.phase}: assignee → ${clickupUserId}`);
     }
   }
 
@@ -293,6 +316,83 @@ class ClickUpWebhookService {
       logger.error(`Failed to auto-create delivery for ${clickupTaskId}: ${err.message}`);
     }
   }
+
+  // ─── Phase Tracking ───────────────────────────────────────────
+
+  /**
+   * Close current open phase and open a new one
+   */
+  async trackPhaseTransition(clickupTaskId, newPhase, task) {
+    try {
+      const now = new Date();
+
+      // Close current open phase
+      const currentPhase = await db('delivery_phases')
+        .where({ clickup_task_id: clickupTaskId })
+        .whereNull('exited_at')
+        .first();
+
+      if (currentPhase) {
+        const enteredAt = new Date(currentPhase.entered_at);
+        const durationSeconds = Math.round((now - enteredAt) / 1000);
+        await db('delivery_phases')
+          .where({ id: currentPhase.id })
+          .update({ exited_at: now, duration_seconds: durationSeconds, updated_at: now });
+        logger.info(`Phase closed: ${currentPhase.phase} (${durationSeconds}s)`);
+      }
+
+      // Open new phase
+      const assigneeId = task?.assignees?.[0]?.id ? String(task.assignees[0].id) : null;
+      await this.openPhase(clickupTaskId, newPhase, assigneeId);
+    } catch (err) {
+      logger.error(`Phase tracking error: ${err.message}`);
+    }
+  }
+
+  /**
+   * Open a new phase record
+   */
+  async openPhase(clickupTaskId, phase, assigneeClickupId) {
+    try {
+      // Find delivery_id if it exists
+      const delivery = await db('deliveries')
+        .where({ clickup_task_id: clickupTaskId })
+        .first();
+
+      // Find user_id from clickup_id
+      let userId = null;
+      if (assigneeClickupId) {
+        const user = await db('users').where({ clickup_id: assigneeClickupId }).first();
+        userId = user?.id || null;
+      }
+
+      await db('delivery_phases').insert({
+        delivery_id: delivery?.id || null,
+        clickup_task_id: clickupTaskId,
+        phase,
+        assignee_clickup_id: assigneeClickupId,
+        user_id: userId,
+        entered_at: new Date(),
+      });
+
+      logger.info(`Phase opened: ${phase} (assignee: ${assigneeClickupId || 'none'})`);
+    } catch (err) {
+      logger.error(`Open phase error: ${err.message}`);
+    }
+  }
+
+  /**
+   * Get all distinct assignees who worked on a task
+   */
+  async getAllTaskAssignees(clickupTaskId) {
+    const phases = await db('delivery_phases')
+      .where({ clickup_task_id: clickupTaskId })
+      .whereNotNull('assignee_clickup_id')
+      .distinct('assignee_clickup_id');
+    return phases.map((p) => p.assignee_clickup_id);
+  }
+
+  // ─── ClickUp API ────────────────────────────────────────────
 
   /**
    * Fetch task details from ClickUp API
