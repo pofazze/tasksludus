@@ -26,6 +26,10 @@ export default function SettingsPage() {
   const [webhookRegistering, setWebhookRegistering] = useState(false);
   const [webhookEvents, setWebhookEvents] = useState([]);
 
+  // ClickUp Sync
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
+
   // Invite form
   const [inviteForm, setInviteForm] = useState({
     name: '', email: '', password: '', whatsapp: '',
@@ -152,6 +156,24 @@ export default function SettingsPage() {
       toast.error(err.response?.data?.error || 'Erro ao registrar webhook');
     } finally {
       setWebhookRegistering(false);
+    }
+  };
+
+  const runClickUpSync = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const { data } = await api.post('/webhooks/clickup/sync');
+      setSyncResult(data);
+      toast.success(
+        `Sync completo: ${data.members.created + data.members.updated} membros, ` +
+        `${data.clients.created + data.clients.updated} clientes, ` +
+        `${data.deliveries.created + data.deliveries.updated} entregas`
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao sincronizar com ClickUp');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -305,6 +327,29 @@ export default function SettingsPage() {
                       <Webhook size={14} className="mr-2" />
                       Ver Webhooks
                     </Button>
+                  </div>
+
+                  {/* Data Sync */}
+                  <div className="border-t pt-4 mt-4">
+                    <h4 className="font-medium mb-2">Importação de Dados</h4>
+                    <p className="text-sm text-gray-500 mb-3">
+                      Importa membros, clientes e tarefas do ClickUp para o banco de dados.
+                    </p>
+                    <Button
+                      onClick={runClickUpSync}
+                      disabled={syncing}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      {syncing ? <><Loader2 size={14} className="mr-2 animate-spin" /> Sincronizando...</> : <><RefreshCw size={14} className="mr-2" /> Sincronizar ClickUp</>}
+                    </Button>
+
+                    {syncResult && (
+                      <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm space-y-1">
+                        <p><strong>Membros:</strong> {syncResult.members.created} criados, {syncResult.members.updated} atualizados</p>
+                        <p><strong>Clientes:</strong> {syncResult.clients.created} criados, {syncResult.clients.updated} atualizados</p>
+                        <p><strong>Entregas:</strong> {syncResult.deliveries.created} criadas, {syncResult.deliveries.updated} atualizadas, {syncResult.deliveries.skipped} ignoradas ({syncResult.deliveries.total} total no ClickUp)</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Webhook Management */}
