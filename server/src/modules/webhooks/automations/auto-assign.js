@@ -27,31 +27,23 @@ const PHASE_ASSIGNEE_MAP = {
   'publicacao':       '284598101',  // Aléxia Sâmella
 };
 
-/**
- * Check if task belongs to the Dr. Wander Fran list
- */
-async function isTargetList(clickupTaskId) {
-  try {
-    const res = await fetch(`https://api.clickup.com/api/v2/task/${clickupTaskId}`, {
-      headers: { Authorization: env.clickup.apiToken },
-    });
-    if (!res.ok) return null;
-    const task = await res.json();
-    return task.list?.id === DR_WANDER_LIST_ID ? task : null;
-  } catch (err) {
-    logger.error(`auto-assign: failed to fetch task ${clickupTaskId}: ${err.message}`);
-    return null;
-  }
-}
+const NAMES = {
+  '284598101': 'Aléxia Sâmella',
+  '284598399': 'Filipe Sabino',
+  '152562683': 'Victor Costa',
+  '284596872': 'Pedro Torres',
+  '61001382': 'Wander Fran',
+};
 
 /**
- * Run auto-assign automation for a taskStatusUpdated event
+ * Run auto-assign automation
  *
  * @param {string} clickupTaskId - The ClickUp task ID
  * @param {string} newStatusName - The new status name from ClickUp (raw)
+ * @param {object} [task] - Pre-fetched task data (avoids extra API call)
  * @returns {{ executed: boolean, action?: string, error?: string }}
  */
-async function run(clickupTaskId, newStatusName) {
+async function run(clickupTaskId, newStatusName, task) {
   const normalized = newStatusName?.toLowerCase().trim();
   if (!normalized) {
     return { executed: false, reason: 'no status name' };
@@ -62,16 +54,27 @@ async function run(clickupTaskId, newStatusName) {
     return { executed: false, reason: `no mapping for status "${normalized}"` };
   }
 
-  // Verify task belongs to Dr. Wander Fran list
-  const task = await isTargetList(clickupTaskId);
+  // Use pre-fetched task or fetch if needed
   if (!task) {
+    try {
+      const res = await fetch(`https://api.clickup.com/api/v2/task/${clickupTaskId}`, {
+        headers: { Authorization: env.clickup.apiToken },
+      });
+      if (!res.ok) return { executed: false, reason: 'failed to fetch task' };
+      task = await res.json();
+    } catch (err) {
+      return { executed: false, reason: `fetch error: ${err.message}` };
+    }
+  }
+
+  // Verify task belongs to Dr. Wander Fran list
+  if (task.list?.id !== DR_WANDER_LIST_ID) {
     return { executed: false, reason: 'task not in Dr. Wander Fran list' };
   }
 
   // Check if already assigned to the right person
   const currentAssignees = task.assignees?.map((a) => String(a.id)) || [];
   if (currentAssignees.length === 1 && currentAssignees[0] === assigneeId) {
-    logger.info(`auto-assign: task ${clickupTaskId} already assigned to ${assigneeId}, skipping`);
     return { executed: false, reason: 'already assigned to correct user' };
   }
 
@@ -98,19 +101,11 @@ async function run(clickupTaskId, newStatusName) {
     return { executed: false, error };
   }
 
-  const NAMES = {
-    '284598101': 'Aléxia Sâmella',
-    '284598399': 'Filipe Sabino',
-    '152562683': 'Victor Costa',
-    '284596872': 'Pedro Torres',
-    '61001382': 'Wander Fran',
-  };
-
   logger.info(`auto-assign: task ${clickupTaskId} → ${normalized} → assigned to ${NAMES[assigneeId] || assigneeId}`);
 
   return {
     executed: true,
-    action: `assigned ${assigneeId} for phase "${normalized}"`,
+    action: `assigned ${NAMES[assigneeId] || assigneeId} for phase "${normalized}"`,
     taskId: clickupTaskId,
     phase: normalized,
     assigneeId,

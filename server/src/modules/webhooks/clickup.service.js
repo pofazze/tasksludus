@@ -100,6 +100,9 @@ class ClickUpWebhookService {
     const newStatus = this.mapClickUpStatus(rawStatusName);
     if (!newStatus) return;
 
+    // Fetch task once, reuse for delivery + auto-assign
+    const task = await this.fetchTask(clickupTaskId);
+
     const delivery = await db('deliveries')
       .where({ clickup_task_id: clickupTaskId })
       .first();
@@ -115,20 +118,19 @@ class ClickUpWebhookService {
       logger.info(`Delivery ${delivery.id} status → ${newStatus}`);
     } else {
       logger.info(`No delivery found for ClickUp task ${clickupTaskId} — will auto-create`);
-      await this.autoCreateDelivery(clickupTaskId, event);
+      await this.autoCreateDelivery(clickupTaskId, event, task);
     }
 
-    // Run auto-assign automation
+    // Run auto-assign (pass pre-fetched task to avoid extra API call)
     try {
-      logger.info(`auto-assign: checking task ${clickupTaskId}, status="${rawStatusName}"`);
-      const result = await autoAssign.run(clickupTaskId, rawStatusName);
+      const result = await autoAssign.run(clickupTaskId, rawStatusName, task);
       if (result.executed) {
         logger.info(`auto-assign: SUCCESS — ${result.action}`);
       } else {
         logger.info(`auto-assign: skipped — ${result.reason || result.error}`);
       }
     } catch (err) {
-      logger.error(`auto-assign: ERROR — ${err.message}`, { stack: err.stack });
+      logger.error(`auto-assign: ERROR — ${err.message}`);
     }
   }
 
@@ -141,24 +143,24 @@ class ClickUpWebhookService {
       .first();
     if (existing) return;
 
+    // Fetch task once, reuse for auto-assign + auto-create
+    const task = await this.fetchTask(clickupTaskId);
+    if (!task) return;
+
     // Auto-assign first so the task gets an assignee before we create the delivery
     try {
-      const task = await this.fetchTask(clickupTaskId);
-      if (task) {
-        const statusName = task.status?.status;
-        logger.info(`auto-assign (taskCreated): checking task ${clickupTaskId}, status="${statusName}"`);
-        const result = await autoAssign.run(clickupTaskId, statusName);
-        if (result.executed) {
-          logger.info(`auto-assign (taskCreated): SUCCESS — ${result.action}`);
-        } else {
-          logger.info(`auto-assign (taskCreated): skipped — ${result.reason || result.error}`);
-        }
+      const statusName = task.status?.status;
+      const result = await autoAssign.run(clickupTaskId, statusName, task);
+      if (result.executed) {
+        logger.info(`auto-assign (taskCreated): SUCCESS — ${result.action}`);
+      } else {
+        logger.info(`auto-assign (taskCreated): skipped — ${result.reason || result.error}`);
       }
     } catch (err) {
       logger.error(`auto-assign (taskCreated): ERROR — ${err.message}`);
     }
 
-    await this.autoCreateDelivery(clickupTaskId, event);
+    await this.autoCreateDelivery(clickupTaskId, event, task);
   }
 
   /**
@@ -222,10 +224,10 @@ class ClickUpWebhookService {
   /**
    * Auto-create a delivery from a ClickUp task
    */
-  async autoCreateDelivery(clickupTaskId, event) {
+  async autoCreateDelivery(clickupTaskId, event, existingTask) {
     try {
-      // Fetch full task from ClickUp API
-      const task = await this.fetchTask(clickupTaskId);
+      // Use pre-fetched task or fetch from ClickUp API
+      const task = existingTask || await this.fetchTask(clickupTaskId);
       if (!task) return;
 
       // Find assignee user
