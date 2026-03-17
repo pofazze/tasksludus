@@ -12,6 +12,7 @@ const updateClientSchema = Joi.object({
   instagram_account: Joi.string().max(100).allow(null, '').optional(),
   is_active: Joi.boolean().optional(),
   user_id: Joi.string().uuid().allow(null).optional(),
+  automations_enabled: Joi.boolean().optional(),
 }).min(1);
 
 module.exports = {
