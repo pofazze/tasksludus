@@ -133,13 +133,30 @@ class ClickUpWebhookService {
   }
 
   /**
-   * Handle new task created in ClickUp — auto-create delivery
+   * Handle new task created in ClickUp — auto-assign + auto-create delivery
    */
   async handleTaskCreated(clickupTaskId, event) {
     const existing = await db('deliveries')
       .where({ clickup_task_id: clickupTaskId })
       .first();
     if (existing) return;
+
+    // Auto-assign first so the task gets an assignee before we create the delivery
+    try {
+      const task = await this.fetchTask(clickupTaskId);
+      if (task) {
+        const statusName = task.status?.status;
+        logger.info(`auto-assign (taskCreated): checking task ${clickupTaskId}, status="${statusName}"`);
+        const result = await autoAssign.run(clickupTaskId, statusName);
+        if (result.executed) {
+          logger.info(`auto-assign (taskCreated): SUCCESS — ${result.action}`);
+        } else {
+          logger.info(`auto-assign (taskCreated): skipped — ${result.reason || result.error}`);
+        }
+      }
+    } catch (err) {
+      logger.error(`auto-assign (taskCreated): ERROR — ${err.message}`);
+    }
 
     await this.autoCreateDelivery(clickupTaskId, event);
   }
@@ -219,6 +236,19 @@ class ClickUpWebhookService {
         userId = user?.id;
       }
 
+      // Fallback: if no assignee but task is in Dr. Wander Fran list, use phase mapping
+      if (!userId && task.list?.id === autoAssign.DR_WANDER_LIST_ID) {
+        const statusName = task.status?.status?.toLowerCase().trim();
+        const mappedClickupId = autoAssign.PHASE_ASSIGNEE_MAP[statusName];
+        if (mappedClickupId) {
+          const user = await db('users').where({ clickup_id: mappedClickupId }).first();
+          userId = user?.id;
+          if (userId) {
+            logger.info(`autoCreateDelivery: used phase mapping for assignee (${statusName} → ${mappedClickupId})`);
+          }
+        }
+      }
+
       // Find client from list name
       let clientId = null;
       if (task.list?.name) {
@@ -229,7 +259,7 @@ class ClickUpWebhookService {
       }
 
       if (!userId || !clientId) {
-        logger.warn(`Cannot auto-create delivery for task ${clickupTaskId}: missing user or client mapping`);
+        logger.warn(`Cannot auto-create delivery for task ${clickupTaskId}: missing ${!userId ? 'user' : ''} ${!clientId ? 'client' : ''} mapping`);
         return;
       }
 
