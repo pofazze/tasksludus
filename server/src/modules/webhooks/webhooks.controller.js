@@ -1,4 +1,5 @@
 const clickupService = require('./clickup.service');
+const clickupSyncService = require('./clickup-sync.service');
 const logger = require('../../utils/logger');
 
 class WebhooksController {
@@ -84,6 +85,18 @@ class WebhooksController {
 
       const events = await query;
       res.json(events);
+    } catch (err) {
+      next(err);
+    }
+  }
+  /**
+   * Full sync from ClickUp
+   * POST /api/webhooks/clickup/sync
+   */
+  async sync(req, res, next) {
+    try {
+      const stats = await clickupSyncService.fullSync();
+      res.json(stats);
     } catch (err) {
       next(err);
     }
