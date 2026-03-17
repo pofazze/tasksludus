@@ -120,14 +120,15 @@ class ClickUpWebhookService {
 
     // Run auto-assign automation
     try {
+      logger.info(`auto-assign: checking task ${clickupTaskId}, status="${rawStatusName}"`);
       const result = await autoAssign.run(clickupTaskId, rawStatusName);
       if (result.executed) {
-        logger.info(`Automation executed: ${result.action}`);
+        logger.info(`auto-assign: SUCCESS — ${result.action}`);
       } else {
-        logger.debug(`Automation skipped: ${result.reason || result.error}`);
+        logger.info(`auto-assign: skipped — ${result.reason || result.error}`);
       }
     } catch (err) {
-      logger.error(`Auto-assign automation error: ${err.message}`);
+      logger.error(`auto-assign: ERROR — ${err.message}`, { stack: err.stack });
     }
   }
 
