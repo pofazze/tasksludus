@@ -71,9 +71,14 @@ async function run(clickupTaskId, newStatusName, task) {
     }
   }
 
-  // Verify task belongs to Dr. Wander Fran list
-  if (task.list?.id !== DR_WANDER_LIST_ID) {
-    return { executed: false, reason: 'task not in Dr. Wander Fran list' };
+  // Verify client has automations enabled
+  const listId = task.list?.id;
+  if (!listId) {
+    return { executed: false, reason: 'task has no list' };
+  }
+  const client = await db('clients').where({ clickup_list_id: listId }).first();
+  if (!client?.automations_enabled) {
+    return { executed: false, reason: `automations disabled for list ${listId}` };
   }
 
   // PUBLICAÇÃO: assign ALL people who worked on this task
