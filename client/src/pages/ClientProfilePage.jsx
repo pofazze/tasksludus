@@ -429,11 +429,9 @@ export default function ClientProfilePage() {
         <TabButton active={activeTab === 'entregas'} onClick={() => setActiveTab('entregas')}>
           Entregas
         </TabButton>
-        {client.instagram_account && (
-          <TabButton active={activeTab === 'instagram'} onClick={() => setActiveTab('instagram')}>
-            <Instagram size={14} className="mr-1.5" /> Instagram
-          </TabButton>
-        )}
+        <TabButton active={activeTab === 'instagram'} onClick={() => setActiveTab('instagram')}>
+          <Instagram size={14} className="mr-1.5" /> Instagram
+        </TabButton>
       </div>
 
       {/* ─── Tab: Entregas ─────────────────────────────── */}

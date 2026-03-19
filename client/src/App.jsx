@@ -20,6 +20,7 @@ import SalariesPage from '@/pages/SalariesPage';
 import BoostPage from '@/pages/BoostPage';
 import ClientProfilePage from '@/pages/ClientProfilePage';
 import ScheduleCalendarPage from '@/pages/ScheduleCalendarPage';
+import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 
 const MANAGEMENT = ['ceo', 'director', 'manager'];
 const ADMIN = ['ceo', 'director'];
@@ -38,6 +39,7 @@ function App() {
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/invite/:token" element={<InviteAcceptPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
         {/* Protected routes */}
         <Route
