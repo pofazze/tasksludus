@@ -26,8 +26,11 @@ class RankingService {
     const shouldShowNames = showNames ? JSON.parse(showNames.value) : true;
 
     return ranking.map((entry, index) => ({
-      position: index + 1,
       ...entry,
+      rank: index + 1,
+      position: index + 1,
+      multiplier: entry.multiplier_applied,
+      bonus: entry.final_bonus != null ? parseFloat(entry.final_bonus) : parseFloat(entry.suggested_bonus) || null,
       name: shouldShowNames ? entry.name : `Produtor ${index + 1}`,
       avatar_url: shouldShowNames ? entry.avatar_url : null,
     }));

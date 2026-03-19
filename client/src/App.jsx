@@ -16,6 +16,10 @@ import RankingPage from '@/pages/RankingPage';
 import SettingsPage from '@/pages/SettingsPage';
 import SimulatorPage from '@/pages/SimulatorPage';
 import PortalPage from '@/pages/PortalPage';
+import SalariesPage from '@/pages/SalariesPage';
+import BoostPage from '@/pages/BoostPage';
+import ClientProfilePage from '@/pages/ClientProfilePage';
+import ScheduleCalendarPage from '@/pages/ScheduleCalendarPage';
 
 const MANAGEMENT = ['ceo', 'director', 'manager'];
 const ADMIN = ['ceo', 'director'];
@@ -48,21 +52,31 @@ function App() {
             <ProtectedRoute roles={MANAGEMENT}><UsersPage /></ProtectedRoute>
           } />
           <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/clients/:id" element={<ClientProfilePage />} />
           <Route path="/deliveries" element={<DeliveriesPage />} />
+          <Route path="/schedule" element={
+            <ProtectedRoute roles={ALL_INTERNAL}><ScheduleCalendarPage /></ProtectedRoute>
+          } />
           <Route path="/goals" element={
             <ProtectedRoute roles={MANAGEMENT}><GoalsPage /></ProtectedRoute>
           } />
-          <Route path="/calculations" element={
+          <Route path="/boost" element={
             <ProtectedRoute roles={ADMIN}><CalculationsPage /></ProtectedRoute>
           } />
           <Route path="/ranking" element={
             <ProtectedRoute roles={ALL_INTERNAL}><RankingPage /></ProtectedRoute>
+          } />
+          <Route path="/roles" element={
+            <ProtectedRoute roles={['ceo']}><SalariesPage /></ProtectedRoute>
           } />
           <Route path="/settings" element={
             <ProtectedRoute roles={['ceo']}><SettingsPage /></ProtectedRoute>
           } />
           <Route path="/simulator" element={
             <ProtectedRoute roles={['producer']}><SimulatorPage /></ProtectedRoute>
+          } />
+          <Route path="/comofunciona" element={
+            <ProtectedRoute roles={ALL_INTERNAL}><BoostPage /></ProtectedRoute>
           } />
           <Route path="/portal" element={
             <ProtectedRoute roles={['client']}><PortalPage /></ProtectedRoute>

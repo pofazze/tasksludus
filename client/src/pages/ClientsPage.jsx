@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import useAuthStore from '@/stores/authStore';
@@ -9,27 +10,35 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  ArrowLeft, Bot, ExternalLink, Eye, Instagram, Loader2, Pencil, Plus, RefreshCw,
+  ArrowLeft, Bot, ExternalLink, Eye, Instagram, Pencil, Plus,
 } from 'lucide-react';
 
-const EMPTY_FORM = { name: '', company: '', instagram_account: '' };
+const EMPTY_FORM = {
+  name: '',
+  company: '',
+  instagram_account: '',
+  user_id: '',
+  is_active: true,
+  clickup_list_id: '',
+  automations_enabled: false,
+};
 
 export default function ClientsPage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const canManage = isManagement(user?.role);
   const [clients, setClients] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('list'); // 'list' | 'form' | 'instagram'
+  const [view, setView] = useState('list'); // 'list' | 'form'
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
-
-  // Instagram detail
-  const [igClient, setIgClient] = useState(null);
-  const [igPosts, setIgPosts] = useState([]);
-  const [igLoading, setIgLoading] = useState(false);
-  const [igSyncing, setIgSyncing] = useState(false);
+  const [touched, setTouched] = useState({});
 
   const fetchClients = async () => {
     try {
@@ -42,65 +51,65 @@ export default function ClientsPage() {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const { data } = await api.get('/users');
+      setUsers(data);
+    } catch {
+      // silently fail — select will just be empty
+    }
+  };
+
   useEffect(() => { fetchClients(); }, []);
+
+  const nameError = touched.name && form.name.length < 2 ? 'Nome deve ter pelo menos 2 caracteres' : '';
 
   const openNew = () => {
     setEditId(null);
     setForm(EMPTY_FORM);
+    setTouched({});
+    fetchUsers();
     setView('form');
   };
 
   const openEdit = (c) => {
     setEditId(c.id);
-    setForm({ name: c.name, company: c.company || '', instagram_account: c.instagram_account || '' });
+    setForm({
+      name: c.name,
+      company: c.company || '',
+      instagram_account: c.instagram_account || '',
+      user_id: c.user_id || '',
+      is_active: c.is_active ?? true,
+      clickup_list_id: c.clickup_list_id || '',
+      automations_enabled: c.automations_enabled ?? false,
+    });
+    setTouched({});
+    fetchUsers();
     setView('form');
   };
 
   const handleSave = async () => {
+    if (form.name.length < 2) {
+      setTouched({ ...touched, name: true });
+      return;
+    }
+    const payload = {
+      ...form,
+      user_id: form.user_id || null,
+      clickup_list_id: form.clickup_list_id || null,
+    };
     try {
       if (editId) {
-        await api.put(`/clients/${editId}`, form);
+        await api.put(`/clients/${editId}`, payload);
         toast.success('Cliente atualizado');
       } else {
-        await api.post('/clients', form);
+        await api.post('/clients', payload);
         toast.success('Cliente criado');
       }
       setView('list');
       fetchClients();
     } catch {
       toast.error('Erro ao salvar cliente');
-    }
-  };
-
-  // --- Instagram ---
-  const openInstagram = async (client) => {
-    setIgClient(client);
-    setIgPosts([]);
-    setIgLoading(true);
-    setView('instagram');
-    try {
-      const { data } = await api.get(`/clients/${client.id}/instagram`);
-      setIgPosts(data);
-    } catch {
-      // no posts yet is fine
-    } finally {
-      setIgLoading(false);
-    }
-  };
-
-  const syncInstagram = async () => {
-    if (!igClient) return;
-    setIgSyncing(true);
-    try {
-      const { data } = await api.post(`/clients/${igClient.id}/instagram/sync`);
-      toast.success(`Sync concluído: ${data.synced} novos posts de ${data.total}`);
-      // reload posts
-      const { data: posts } = await api.get(`/clients/${igClient.id}/instagram`);
-      setIgPosts(posts);
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Erro ao sincronizar Instagram');
-    } finally {
-      setIgSyncing(false);
     }
   };
 
@@ -115,16 +124,7 @@ export default function ClientsPage() {
     }
   };
 
-  const fmtNumber = (n) => n != null ? n.toLocaleString('pt-BR') : '—';
-  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '—';
-
   if (loading) return <PageLoading />;
-
-  // Instagram summary stats
-  const igTotalPosts = igPosts.length;
-  const igTotalImpressions = igPosts.reduce((s, p) => s + (p.metrics?.impressions || 0), 0);
-  const igTotalReach = igPosts.reduce((s, p) => s + (p.metrics?.reach || 0), 0);
-  const igTotalEngagement = igPosts.reduce((s, p) => s + (p.metrics?.engagement || 0), 0);
 
   return (
     <div>
@@ -155,7 +155,14 @@ export default function ClientsPage() {
                 <TableBody>
                   {clients.map((c) => (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
+                      <TableCell>
+                        <button
+                          onClick={() => navigate(`/clients/${c.id}`)}
+                          className="font-medium hover:text-purple-400 transition-colors cursor-pointer text-left"
+                        >
+                          {c.name}
+                        </button>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{c.company || '—'}</TableCell>
                       <TableCell>
                         {c.instagram_account ? (
@@ -202,11 +209,9 @@ export default function ClientsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          {c.instagram_account && (
-                            <Button variant="ghost" size="icon" onClick={() => openInstagram(c)} title="Ver Instagram">
-                              <Instagram size={16} className="text-pink-400" />
-                            </Button>
-                          )}
+                          <Button variant="ghost" size="icon" onClick={() => navigate(`/clients/${c.id}`)} title="Ver perfil">
+                            <Eye size={16} />
+                          </Button>
                           {canManage && (
                             <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
                               <Pencil size={16} />
@@ -232,182 +237,132 @@ export default function ClientsPage() {
 
       {view === 'form' && (
         <>
-          <div className="flex items-center gap-3 mb-6">
-            <Button variant="ghost" size="icon" onClick={() => setView('list')}>
-              <ArrowLeft size={18} />
-            </Button>
-            <h1 className="text-2xl font-bold font-display">
-              {editId ? 'Editar Cliente' : 'Novo Cliente'}
-            </h1>
-          </div>
-          <Card className="max-w-2xl">
-            <CardContent className="pt-6 space-y-4">
-              <div>
-                <Label>Nome</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              </div>
-              <div>
-                <Label>Empresa</Label>
-                <Input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
-              </div>
-              <div>
-                <Label className="flex items-center gap-1.5">
-                  <Instagram size={14} className="text-pink-400" />
-                  Instagram
-                </Label>
-                <Input
-                  value={form.instagram_account}
-                  onChange={(e) => setForm({ ...form, instagram_account: e.target.value })}
-                  placeholder="@conta_do_cliente"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Conta Instagram do cliente para acompanhar métricas de posts
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-          <div className="flex gap-2 mt-4 max-w-2xl">
-            <Button variant="outline" onClick={() => setView('list')}>Cancelar</Button>
-            <Button onClick={handleSave}>Salvar</Button>
-          </div>
-        </>
-      )}
-
-      {view === 'instagram' && (
-        <>
-          <div className="flex items-center gap-3 mb-6">
-            <Button variant="ghost" size="icon" onClick={() => { setView('list'); setIgClient(null); }}>
-              <ArrowLeft size={18} />
-            </Button>
-            <h1 className="text-2xl font-bold font-display">
-              Instagram — {igClient?.name}
-            </h1>
-            {igClient?.instagram_account && (
-              <a
-                href={`https://instagram.com/${igClient.instagram_account.replace('@', '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-pink-400 hover:underline text-sm inline-flex items-center gap-1"
-              >
-                {igClient.instagram_account.startsWith('@') ? igClient.instagram_account : `@${igClient.instagram_account}`}
-                <ExternalLink size={10} />
-              </a>
-            )}
-          </div>
-
-          {/* Sync Button */}
-          {canManage && (
-            <div className="flex justify-end mb-4">
-              <Button size="sm" onClick={syncInstagram} disabled={igSyncing}>
-                {igSyncing ? (
-                  <Loader2 size={14} className="mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw size={14} className="mr-2" />
-                )}
-                {igSyncing ? 'Sincronizando...' : 'Sincronizar Posts'}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => setView('list')}>
+                <ArrowLeft size={18} />
               </Button>
+              <h1 className="text-2xl font-bold font-display">
+                {editId ? 'Editar Cliente' : 'Novo Cliente'}
+              </h1>
             </div>
-          )}
-
-          {igLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-pink-400" />
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setView('list')}>Cancelar</Button>
+              <Button onClick={handleSave}>Salvar</Button>
             </div>
-          ) : igPosts.length > 0 ? (
-            <>
-              {/* Summary Metrics */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                <Card>
-                  <CardContent className="pt-4 pb-3 px-4 text-center">
-                    <p className="text-xs text-muted-foreground">Posts</p>
-                    <p className="text-xl font-bold">{igTotalPosts}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4 pb-3 px-4 text-center">
-                    <p className="text-xs text-muted-foreground">Impressões</p>
-                    <p className="text-xl font-bold">{fmtNumber(igTotalImpressions)}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4 pb-3 px-4 text-center">
-                    <p className="text-xs text-muted-foreground">Alcance</p>
-                    <p className="text-xl font-bold">{fmtNumber(igTotalReach)}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4 pb-3 px-4 text-center">
-                    <p className="text-xs text-muted-foreground">Engajamento</p>
-                    <p className="text-xl font-bold">{fmtNumber(igTotalEngagement)}</p>
-                  </CardContent>
-                </Card>
-              </div>
+          </div>
 
-              {/* Posts Table */}
+          <div className="grid grid-cols-3 gap-6">
+            {/* Coluna principal */}
+            <div className="col-span-2 space-y-6">
               <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead className="text-right">Impressões</TableHead>
-                        <TableHead className="text-right">Alcance</TableHead>
-                        <TableHead className="text-right">Engajamento</TableHead>
-                        <TableHead className="text-right">Salvos</TableHead>
-                        <TableHead>Link</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {igPosts.map((post) => (
-                        <TableRow key={post.id}>
-                          <TableCell>
-                            <Badge variant="secondary" className={
-                              post.post_type === 'reel' ? 'bg-purple-500/15 text-purple-400' :
-                              post.post_type === 'carousel' ? 'bg-blue-500/15 text-blue-400' :
-                              post.post_type === 'story' ? 'bg-orange-500/15 text-orange-400' :
-                              'bg-zinc-800/50 text-zinc-400'
-                            }>
-                              {post.post_type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{fmtDate(post.posted_at)}</TableCell>
-                          <TableCell className="text-right">{fmtNumber(post.metrics?.impressions)}</TableCell>
-                          <TableCell className="text-right">{fmtNumber(post.metrics?.reach)}</TableCell>
-                          <TableCell className="text-right">{fmtNumber(post.metrics?.engagement)}</TableCell>
-                          <TableCell className="text-right">{fmtNumber(post.metrics?.saves)}</TableCell>
-                          <TableCell>
-                            {post.post_url ? (
-                              <a
-                                href={post.post_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center text-pink-400 hover:underline"
-                              >
-                                <Eye size={14} />
-                              </a>
-                            ) : '—'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nome *</Label>
+                      <Input
+                        id="name"
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        onBlur={() => setTouched({ ...touched, name: true })}
+                        placeholder="Nome do cliente"
+                        className={nameError ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                      />
+                      {nameError && <p className="text-xs text-red-500 mt-1">{nameError}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="company">Empresa</Label>
+                      <Input
+                        id="company"
+                        value={form.company}
+                        onChange={(e) => setForm({ ...form, company: e.target.value })}
+                        placeholder="Nome da empresa"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="user_id">Responsável</Label>
+                    <Select
+                      value={form.user_id}
+                      onValueChange={(val) => setForm({ ...form, user_id: val === '_none' ? '' : val })}
+                    >
+                      <SelectTrigger id="user_id">
+                        <SelectValue placeholder="Selecione um responsável" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">Nenhum</SelectItem>
+                        {users.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardContent>
               </Card>
-            </>
-          ) : (
-            <div className="text-center py-12 space-y-3">
-              <Instagram size={40} className="mx-auto text-muted-foreground" />
-              <p className="text-muted-foreground">Nenhum post sincronizado</p>
-              {canManage && (
-                <p className="text-sm text-muted-foreground">
-                  Clique em "Sincronizar Posts" para buscar dados do Instagram.
-                  <br />
-                  Certifique-se de que o token do Instagram está configurado em Configurações &gt; Integrações.
-                </p>
-              )}
+
+              <Card>
+                <CardContent className="pt-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-4">Integrações</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="instagram" className="flex items-center gap-1.5">
+                        <Instagram size={14} className="text-pink-400" />
+                        Instagram
+                      </Label>
+                      <Input
+                        id="instagram"
+                        value={form.instagram_account}
+                        onChange={(e) => setForm({ ...form, instagram_account: e.target.value })}
+                        placeholder="@conta_do_cliente"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="clickup">ClickUp List ID</Label>
+                      <Input
+                        id="clickup"
+                        value={form.clickup_list_id}
+                        onChange={(e) => setForm({ ...form, clickup_list_id: e.target.value })}
+                        placeholder="Ex: 901100123456"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          )}
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              <Card>
+                <CardContent className="pt-6 space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Status</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {form.is_active ? 'Visível nos relatórios' : 'Oculto dos relatórios'}
+                      </p>
+                    </div>
+                    <Switch
+                      id="is_active"
+                      checked={form.is_active}
+                      onCheckedChange={(val) => setForm({ ...form, is_active: val })}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Automações</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Sync com ClickUp</p>
+                    </div>
+                    <Switch
+                      id="automations"
+                      checked={form.automations_enabled}
+                      onCheckedChange={(val) => setForm({ ...form, automations_enabled: val })}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </>
       )}
     </div>

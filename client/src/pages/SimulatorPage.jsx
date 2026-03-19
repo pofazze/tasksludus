@@ -53,7 +53,7 @@ export default function SimulatorPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Simulador de Bônus</h1>
+      <h1 className="text-2xl font-bold font-display mb-6">Simulador de Bônus</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
@@ -69,7 +69,7 @@ export default function SimulatorPage() {
             <CardTitle className="text-sm text-muted-foreground">Entregas no Mês</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold" style={{ color: '#9A48EA' }}>
+            <p className="text-2xl font-bold text-[#9A48EA]">
               {status?.deliveries_count ?? 0}
             </p>
           </CardContent>
@@ -117,11 +117,11 @@ export default function SimulatorPage() {
           <CardContent className="space-y-3">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Multiplicador</span>
-              <span className="font-semibold" style={{ color: '#9A48EA' }}>{result.multiplier}x</span>
+              <span className="font-semibold text-[#9A48EA]">{result.multiplier}x</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Bônus Estimado</span>
-              <span className="font-semibold text-green-600">{formatCurrency(result.bonus)}</span>
+              <span className="font-semibold text-green-400">{formatCurrency(result.bonus)}</span>
             </div>
             <div className="flex justify-between border-t pt-3">
               <span className="text-muted-foreground">Total (Salário + Bônus)</span>

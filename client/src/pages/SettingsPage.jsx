@@ -186,7 +186,7 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Configurações</h1>
+      <h1 className="text-2xl font-bold font-display mb-6">Configurações</h1>
 
       <Tabs defaultValue="general">
         <TabsList>
@@ -253,8 +253,8 @@ export default function SettingsPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="rounded-lg p-2 bg-purple-100">
-                        <Plug size={18} className="text-purple-600" />
+                      <div className="rounded-lg p-2 bg-purple-500/15">
+                        <Plug size={18} className="text-purple-400" />
                       </div>
                       <div>
                         <CardTitle className="text-base">ClickUp</CardTitle>
@@ -280,7 +280,7 @@ export default function SettingsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 border text-sm">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-zinc-800/50 border text-sm">
                     <span className="text-muted-foreground">Token configurado via</span>
                     <Badge variant="outline">CLICKUP_API_TOKEN</Badge>
                     <span className="text-muted-foreground">no arquivo .env</span>
@@ -289,13 +289,13 @@ export default function SettingsPage() {
                   {clickupResult && (
                     <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
                       clickupResult.connected
-                        ? 'bg-green-50 text-green-800 border border-green-200'
-                        : 'bg-red-50 text-red-800 border border-red-200'
+                        ? 'bg-emerald-500/10 text-green-400 border border-emerald-500/20'
+                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
                     }`}>
                       {clickupResult.connected ? (
-                        <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                        <CheckCircle2 size={16} className="text-green-400 shrink-0" />
                       ) : (
-                        <XCircle size={16} className="text-red-600 shrink-0" />
+                        <XCircle size={16} className="text-red-400 shrink-0" />
                       )}
                       <span>
                         {clickupResult.connected
@@ -332,7 +332,7 @@ export default function SettingsPage() {
                   {/* Data Sync */}
                   <div className="border-t pt-4 mt-4">
                     <h4 className="font-medium mb-2">Importação de Dados</h4>
-                    <p className="text-sm text-gray-500 mb-3">
+                    <p className="text-sm text-zinc-500 mb-3">
                       Importa membros, clientes e tarefas do ClickUp para o banco de dados.
                     </p>
                     <Button
@@ -344,7 +344,7 @@ export default function SettingsPage() {
                     </Button>
 
                     {syncResult && (
-                      <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm space-y-1">
+                      <div className="mt-3 p-3 bg-zinc-800/50 rounded-lg text-sm space-y-1">
                         <p><strong>Membros:</strong> {syncResult.members.created} criados, {syncResult.members.updated} atualizados</p>
                         <p><strong>Clientes:</strong> {syncResult.clients.created} criados, {syncResult.clients.updated} atualizados</p>
                         <p><strong>Entregas:</strong> {syncResult.deliveries.created} criadas, {syncResult.deliveries.updated} atualizadas, {syncResult.deliveries.skipped} ignoradas ({syncResult.deliveries.total} total no ClickUp)</p>
@@ -357,7 +357,7 @@ export default function SettingsPage() {
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Webhooks registrados</p>
                       {webhooks.map((wh) => (
-                        <div key={wh.id} className="flex items-center gap-2 p-2 rounded bg-gray-50 border text-xs">
+                        <div key={wh.id} className="flex items-center gap-2 p-2 rounded bg-zinc-800/50 border text-xs">
                           <Badge variant={wh.health?.status === 'active' ? 'default' : 'secondary'}>
                             {wh.health?.status || 'unknown'}
                           </Badge>
@@ -405,10 +405,10 @@ export default function SettingsPage() {
                       </div>
                       <div className="max-h-48 overflow-y-auto space-y-1">
                         {webhookEvents.map((ev) => (
-                          <div key={ev.id} className="flex items-center gap-2 p-1.5 rounded text-xs bg-gray-50">
+                          <div key={ev.id} className="flex items-center gap-2 p-1.5 rounded text-xs bg-zinc-800/50">
                             <Badge
                               variant="secondary"
-                              className={ev.status === 'processed' ? 'bg-green-100 text-green-800' : ev.status === 'failed' ? 'bg-red-100 text-red-800' : ''}
+                              className={ev.status === 'processed' ? 'bg-emerald-500/15 text-emerald-400' : ev.status === 'failed' ? 'bg-red-500/15 text-red-400' : ''}
                             >
                               {ev.status}
                             </Badge>
@@ -428,8 +428,8 @@ export default function SettingsPage() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="rounded-lg p-2 bg-pink-100">
-                      <Plug size={18} className="text-pink-600" />
+                    <div className="rounded-lg p-2 bg-pink-500/15">
+                      <Plug size={18} className="text-pink-400" />
                     </div>
                     <div>
                       <CardTitle className="text-base">Instagram</CardTitle>
@@ -450,8 +450,8 @@ export default function SettingsPage() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="rounded-lg p-2 bg-gray-100">
-                          <Plug size={18} className="text-gray-600" />
+                        <div className="rounded-lg p-2 bg-zinc-800/50">
+                          <Plug size={18} className="text-zinc-400" />
                         </div>
                         <CardTitle className="text-base capitalize">{integ.type.replace('_', ' ')}</CardTitle>
                       </div>
@@ -530,7 +530,7 @@ export default function SettingsPage() {
                     <select
                       value={inviteForm.role}
                       onChange={(e) => setField('role', e.target.value)}
-                      className="w-full border rounded-md px-3 py-2 text-sm"
+                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
                     >
                       <option value="director">Diretor</option>
                       <option value="manager">Gerente</option>
@@ -545,7 +545,7 @@ export default function SettingsPage() {
                       <select
                         value={inviteForm.producer_type}
                         onChange={(e) => setField('producer_type', e.target.value)}
-                        className="w-full border rounded-md px-3 py-2 text-sm"
+                        className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
                       >
                         <option value="video_editor">Editor de Vídeo</option>
                         <option value="designer">Designer</option>

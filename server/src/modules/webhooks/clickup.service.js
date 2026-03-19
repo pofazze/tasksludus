@@ -135,6 +135,11 @@ class ClickUpWebhookService {
     } catch (err) {
       logger.error(`auto-assign: ERROR — ${err.message}`);
     }
+
+    // Auto-create Instagram draft when task moves to "agendamento"
+    if (newStatus === 'agendamento') {
+      await this.autoCreateScheduledPost(clickupTaskId, delivery, task);
+    }
   }
 
   /**
@@ -211,11 +216,11 @@ class ClickUpWebhookService {
     const clickupUserId = String(assigneeItem.after.id);
     const user = await db('users').where({ clickup_id: clickupUserId }).first();
 
+    // Don't update delivery.user_id — it should stay with the original
+    // creator/owner. The auto-assign changes ClickUp assignees per phase,
+    // but the delivery "belongs" to whoever first created the content.
     if (delivery && user) {
-      await db('deliveries')
-        .where({ id: delivery.id })
-        .update({ user_id: user.id, updated_at: new Date() });
-      logger.info(`Delivery ${delivery.id} assigned to ${user.name}`);
+      logger.info(`Delivery ${delivery.id}: ClickUp assignee → ${user.name} (user_id unchanged)`);
     }
 
     // Update current open phase with new assignee
@@ -314,6 +319,83 @@ class ClickUpWebhookService {
       logger.info(`Auto-created delivery for ClickUp task ${clickupTaskId}: "${task.name}"`);
     } catch (err) {
       logger.error(`Failed to auto-create delivery for ${clickupTaskId}: ${err.message}`);
+    }
+  }
+
+  // ─── Instagram Auto-Draft ────────────────────────────────────
+
+  /**
+   * Auto-create a scheduled_post draft when a task moves to "agendamento"
+   */
+  async autoCreateScheduledPost(clickupTaskId, delivery, task) {
+    try {
+      // Check if a scheduled_post already exists for this task
+      const existing = await db('scheduled_posts')
+        .where({ clickup_task_id: clickupTaskId })
+        .first();
+      if (existing) {
+        logger.info(`Scheduled post already exists for task ${clickupTaskId}`);
+        return;
+      }
+
+      if (!delivery) {
+        logger.warn(`Cannot auto-create scheduled post: no delivery for task ${clickupTaskId}`);
+        return;
+      }
+
+      // Check client has Instagram connected
+      const igToken = await db('client_instagram_tokens')
+        .where({ client_id: delivery.client_id, is_active: true })
+        .first();
+      if (!igToken) {
+        logger.info(`Client ${delivery.client_id} has no Instagram connected — skipping auto-draft`);
+        return;
+      }
+
+      // Fetch task with attachments
+      const taskWithAttachments = task || await this.fetchTask(clickupTaskId);
+      if (!taskWithAttachments) return;
+
+      // Extract media URLs from attachments
+      const attachments = taskWithAttachments.attachments || [];
+      const mediaUrls = attachments
+        .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
+        .map((a, i) => ({
+          url: a.url,
+          type: a.mimetype?.startsWith('video/') ? 'video' : 'image',
+          order: i,
+        }));
+
+      // Map delivery content_type to post_type
+      const postTypeMap = {
+        reel: 'reel',
+        carrossel: 'carousel',
+        feed: 'image',
+        story: 'story',
+        video: 'video',
+        cortes: 'reel',
+        corte: 'reel',
+        banner: 'image',
+        foto_com_frase: 'image',
+        video_com_frase: 'video',
+        mockup: 'image',
+        caixinha: 'story',
+      };
+      const postType = postTypeMap[delivery.content_type] || 'image';
+
+      await db('scheduled_posts').insert({
+        client_id: delivery.client_id,
+        delivery_id: delivery.id,
+        clickup_task_id: clickupTaskId,
+        caption: taskWithAttachments.name || '',
+        post_type: postType,
+        media_urls: JSON.stringify(mediaUrls),
+        status: 'draft',
+      });
+
+      logger.info(`Auto-created Instagram draft for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media)`);
+    } catch (err) {
+      logger.error(`Failed to auto-create scheduled post for ${clickupTaskId}: ${err.message}`);
     }
   }
 

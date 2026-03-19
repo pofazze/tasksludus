@@ -41,6 +41,55 @@ class ClientsService {
     return query;
   }
 
+  // --- Profile ---
+
+  async getProfile(clientId) {
+    const client = await this.getById(clientId);
+
+    // All deliveries for this client with user name
+    const deliveries = await db('deliveries')
+      .leftJoin('users', 'deliveries.user_id', 'users.id')
+      .select('deliveries.*', 'users.name as user_name')
+      .where('deliveries.client_id', clientId)
+      .orderBy('deliveries.created_at', 'desc');
+
+    // Instagram posts with metrics
+    const igPosts = await this.getInstagramPosts(clientId);
+
+    // Compute metrics
+    const totalDeliveries = deliveries.length;
+    const publishedCount = deliveries.filter((d) => d.status === 'publicacao').length;
+    const inProduction = deliveries.filter((d) => d.status && d.status !== 'publicacao').length;
+
+    const byStatus = {};
+    const byContentType = {};
+    for (const d of deliveries) {
+      if (d.status) byStatus[d.status] = (byStatus[d.status] || 0) + 1;
+      if (d.content_type) byContentType[d.content_type] = (byContentType[d.content_type] || 0) + 1;
+    }
+
+    const igSummary = {
+      totalPosts: igPosts.length,
+      totalImpressions: igPosts.reduce((s, p) => s + (p.metrics?.impressions || 0), 0),
+      totalReach: igPosts.reduce((s, p) => s + (p.metrics?.reach || 0), 0),
+      totalEngagement: igPosts.reduce((s, p) => s + (p.metrics?.engagement || 0), 0),
+    };
+
+    return {
+      client,
+      deliveries,
+      igPosts,
+      metrics: {
+        totalDeliveries,
+        publishedCount,
+        inProduction,
+        byStatus,
+        byContentType,
+        igSummary,
+      },
+    };
+  }
+
   // --- Instagram ---
 
   async getInstagramPosts(clientId) {

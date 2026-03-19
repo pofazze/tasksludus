@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '@/services/api';
 import useAuthStore from '@/stores/authStore';
-import { isManagement } from '@/lib/roles';
+import { isManagement, isCeo } from '@/lib/roles';
 import { formatCurrency } from '@/lib/utils';
 import {
   CONTENT_TYPE_LABELS,
@@ -18,10 +18,10 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   BarChart3, CheckCircle2, Clock, Target, Trophy, TrendingUp,
-  Users, ArrowRight, Package,
+  Users, ArrowRight, Package, DollarSign,
 } from 'lucide-react';
 
-const PIE_COLORS = ['#9A48EA', '#3B82F6', '#F97316', '#EAB308', '#10B981', '#EC4899', '#6366F1', '#14B8A6'];
+const PIE_COLORS = ['#9A48EA', '#3B82F6', '#F97316', '#EAB308', '#22C55E', '#EC4899', '#6366F1', '#14B8A6'];
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const [goals, setGoals] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [clients, setClients] = useState([]);
+  const [calculations, setCalculations] = useState([]);
 
   const isMgmt = isManagement(user?.role);
 
@@ -56,6 +57,7 @@ export default function DashboardPage() {
             api.get('/goals', { params: { month } }).catch(() => ({ data: [] })),
             api.get('/users').catch(() => ({ data: [] })),
             api.get('/clients').catch(() => ({ data: [] })),
+            api.get('/boost', { params: { month } }).catch(() => ({ data: [] })),
           );
         }
 
@@ -66,6 +68,7 @@ export default function DashboardPage() {
         if (results[3]) setGoals(results[3].data);
         if (results[4]) setUsersList(results[4].data);
         if (results[5]) setClients(results[5].data);
+        if (results[6]) setCalculations(results[6].data);
       } catch {
         toast.error('Erro ao carregar dashboard');
       } finally {
@@ -118,9 +121,14 @@ export default function DashboardPage() {
   const myInPipeline = myDeliveries.filter((d) => d.status !== 'publicacao' && d.status !== 'completed').length;
   const myRank = ranking.find((r) => r.user_id === user?.id);
 
+  // Commissions summary (management)
+  const totalSuggestedBonus = calculations.reduce((s, c) => s + (parseFloat(c.suggested_bonus) || 0), 0);
+  const totalFinalBonus = calculations.reduce((s, c) => s + (parseFloat(c.final_bonus) || parseFloat(c.suggested_bonus) || 0), 0);
+  const closedCalcs = calculations.filter((c) => c.status === 'closed').length;
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-6 font-display">Dashboard</h1>
 
       {isMgmt ? (
         /* ========== MANAGEMENT / CEO VIEW ========== */
@@ -129,8 +137,8 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/deliveries')}>
               <CardContent className="flex items-center gap-4 pt-6">
-                <div className="rounded-lg p-2.5 bg-purple-100">
-                  <Package size={22} style={{ color: '#9A48EA' }} />
+                <div className="rounded-lg p-2.5 bg-purple-500/15">
+                  <Package size={22} className="text-[#9A48EA]" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Total Entregas</p>
@@ -144,8 +152,8 @@ export default function DashboardPage() {
             </Card>
             <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/users')}>
               <CardContent className="flex items-center gap-4 pt-6">
-                <div className="rounded-lg p-2.5 bg-blue-100">
-                  <Users size={22} className="text-blue-600" />
+                <div className="rounded-lg p-2.5 bg-blue-500/15">
+                  <Users size={22} className="text-blue-400" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Equipe Ativa</p>
@@ -156,8 +164,8 @@ export default function DashboardPage() {
             </Card>
             <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/goals')}>
               <CardContent className="flex items-center gap-4 pt-6">
-                <div className="rounded-lg p-2.5 bg-green-100">
-                  <TrendingUp size={22} className="text-green-600" />
+                <div className="rounded-lg p-2.5 bg-emerald-500/15">
+                  <TrendingUp size={22} className="text-emerald-400" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Metas Ativas</p>
@@ -166,18 +174,36 @@ export default function DashboardPage() {
                 <ArrowRight size={16} className="text-muted-foreground" />
               </CardContent>
             </Card>
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/ranking')}>
-              <CardContent className="flex items-center gap-4 pt-6">
-                <div className="rounded-lg p-2.5 bg-yellow-100">
-                  <Trophy size={22} className="text-yellow-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">Ranking</p>
-                  <p className="text-2xl font-bold">{ranking.length} produtores</p>
-                </div>
-                <ArrowRight size={16} className="text-muted-foreground" />
-              </CardContent>
-            </Card>
+            {isCeo(user?.role) ? (
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/boost')}>
+                <CardContent className="flex items-center gap-4 pt-6">
+                  <div className="rounded-lg p-2.5 bg-emerald-500/15">
+                    <DollarSign size={22} className="text-emerald-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Boost do Mês</p>
+                    <p className="text-2xl font-bold">{formatCurrency(totalFinalBonus)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {closedCalcs}/{calculations.length} fechados
+                    </p>
+                  </div>
+                  <ArrowRight size={16} className="text-muted-foreground" />
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/ranking')}>
+                <CardContent className="flex items-center gap-4 pt-6">
+                  <div className="rounded-lg p-2.5 bg-yellow-500/15">
+                    <Trophy size={22} className="text-yellow-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Ranking</p>
+                    <p className="text-2xl font-bold">{ranking.length} produtores</p>
+                  </div>
+                  <ArrowRight size={16} className="text-muted-foreground" />
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Pipeline Overview */}
@@ -189,7 +215,7 @@ export default function DashboardPage() {
                 <div
                   key={status}
                   className={`flex flex-col items-center px-3 py-2 rounded-lg text-xs whitespace-nowrap ${
-                    count > 0 ? PIPELINE_STATUS_COLORS[status] : 'bg-gray-50 text-gray-400'
+                    count > 0 ? PIPELINE_STATUS_COLORS[status] : 'bg-zinc-800/30 text-zinc-600'
                   }`}
                 >
                   <span className="font-bold text-lg">{count}</span>
@@ -209,12 +235,12 @@ export default function DashboardPage() {
                 {workloadData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={workloadData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" allowDecimals={false} fontSize={12} />
-                      <YAxis dataKey="name" type="category" fontSize={12} width={100} />
-                      <Tooltip />
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#27272A" />
+                      <XAxis type="number" allowDecimals={false} fontSize={12} tick={{ fill: '#71717A' }} />
+                      <YAxis dataKey="name" type="category" fontSize={12} width={100} tick={{ fill: '#A1A1AA' }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#1C1C22', border: '1px solid #27272A', borderRadius: '8px', color: '#FAFAFA' }} />
                       <Bar dataKey="total" name="Total" fill="#9A48EA" radius={[0, 4, 4, 0]} />
-                      <Bar dataKey="publicadas" name="Publicadas" fill="#10B981" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="publicadas" name="Publicadas" fill="#22C55E" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -245,7 +271,7 @@ export default function DashboardPage() {
                             <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip />
+                        <Tooltip contentStyle={{ backgroundColor: '#1C1C22', border: '1px solid #27272A', borderRadius: '8px', color: '#FAFAFA' }} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="space-y-2">
@@ -268,12 +294,68 @@ export default function DashboardPage() {
             </Card>
           </div>
 
+          {/* Commissions Breakdown (CEO only) */}
+          {isCeo(user?.role) && calculations.length > 0 && (
+            <>
+              <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Boost do Mês</h2>
+              <Card className="mb-6">
+                <CardContent className="p-0">
+                  <div className="divide-y">
+                    {calculations.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between px-4 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="text-xs">
+                              {c.user_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{c.user_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {c.total_deliveries} entregas · {c.multiplier_applied}x
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <p className="text-sm font-semibold">
+                              {formatCurrency(c.final_bonus ?? c.suggested_bonus)}
+                            </p>
+                            {c.final_bonus != null && parseFloat(c.final_bonus) !== parseFloat(c.suggested_bonus) && (
+                              <p className="text-xs text-muted-foreground line-through">
+                                {formatCurrency(c.suggested_bonus)}
+                              </p>
+                            )}
+                          </div>
+                          <Badge
+                            variant="secondary"
+                            className={
+                              c.status === 'closed' ? 'bg-emerald-500/15 text-emerald-400' :
+                              c.status === 'adjusted' ? 'bg-orange-500/15 text-orange-400' :
+                              'bg-blue-500/15 text-blue-400'
+                            }
+                          >
+                            {c.status === 'closed' ? 'Fechado' : c.status === 'adjusted' ? 'Ajustado' : 'Calculado'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between px-4 py-3 bg-muted/50">
+                      <p className="text-sm font-semibold">Total</p>
+                      <p className="text-sm font-bold">{formatCurrency(totalFinalBonus)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
           {/* Ranking + Recent Deliveries */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Top Ranking do Mês</CardTitle>
-                <button onClick={() => navigate('/ranking')} className="text-sm text-purple-600 hover:underline flex items-center gap-1">
+                <button onClick={() => navigate('/ranking')} className="text-sm text-[#9A48EA] hover:underline flex items-center gap-1">
                   Ver completo <ArrowRight size={12} />
                 </button>
               </CardHeader>
@@ -281,7 +363,7 @@ export default function DashboardPage() {
                 {ranking.slice(0, 5).map((entry, idx) => (
                   <div key={entry.user_id} className="flex items-center gap-3">
                     <span className={`text-lg font-bold w-6 text-center ${
-                      idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-gray-400' : idx === 2 ? 'text-amber-700' : 'text-muted-foreground'
+                      idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-zinc-500' : idx === 2 ? 'text-amber-700' : 'text-muted-foreground'
                     }`}>
                       {entry.rank}
                     </span>
@@ -293,7 +375,7 @@ export default function DashboardPage() {
                       <p className="text-sm font-medium truncate">{entry.name}</p>
                       <p className="text-xs text-muted-foreground">{entry.total_deliveries} entregas</p>
                     </div>
-                    <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                    <Badge variant="secondary" className="bg-purple-500/15 text-purple-400">
                       {entry.multiplier}x
                     </Badge>
                   </div>
@@ -307,7 +389,7 @@ export default function DashboardPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Entregas Recentes</CardTitle>
-                <button onClick={() => navigate('/deliveries')} className="text-sm text-purple-600 hover:underline flex items-center gap-1">
+                <button onClick={() => navigate('/deliveries')} className="text-sm text-[#9A48EA] hover:underline flex items-center gap-1">
                   Ver todas <ArrowRight size={12} />
                 </button>
               </CardHeader>
@@ -323,7 +405,7 @@ export default function DashboardPage() {
                     </div>
                     <Badge
                       variant="secondary"
-                      className={PIPELINE_STATUS_COLORS[d.status] || (d.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')}
+                      className={PIPELINE_STATUS_COLORS[d.status] || (d.status === 'completed' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800/50 text-zinc-300')}
                     >
                       {PIPELINE_STATUSES[d.status] || d.status}
                     </Badge>
@@ -343,8 +425,8 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/deliveries')}>
               <CardContent className="flex items-center gap-4 pt-6">
-                <div className="rounded-lg p-2.5 bg-purple-100">
-                  <BarChart3 size={22} className="text-purple-600" />
+                <div className="rounded-lg p-2.5 bg-purple-500/15">
+                  <BarChart3 size={22} className="text-purple-400" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Minhas Entregas</p>
@@ -355,8 +437,8 @@ export default function DashboardPage() {
             </Card>
             <Card>
               <CardContent className="flex items-center gap-4 pt-6">
-                <div className="rounded-lg p-2.5 bg-green-100">
-                  <CheckCircle2 size={22} className="text-green-600" />
+                <div className="rounded-lg p-2.5 bg-emerald-500/15">
+                  <CheckCircle2 size={22} className="text-emerald-400" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Publicadas</p>
@@ -366,8 +448,8 @@ export default function DashboardPage() {
             </Card>
             <Card>
               <CardContent className="flex items-center gap-4 pt-6">
-                <div className="rounded-lg p-2.5 bg-blue-100">
-                  <Clock size={22} className="text-blue-600" />
+                <div className="rounded-lg p-2.5 bg-blue-500/15">
+                  <Clock size={22} className="text-blue-400" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Em Produção</p>
@@ -377,8 +459,8 @@ export default function DashboardPage() {
             </Card>
             <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/ranking')}>
               <CardContent className="flex items-center gap-4 pt-6">
-                <div className="rounded-lg p-2.5 bg-yellow-100">
-                  <Trophy size={22} className="text-yellow-600" />
+                <div className="rounded-lg p-2.5 bg-yellow-500/15">
+                  <Trophy size={22} className="text-yellow-400" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Meu Ranking</p>
@@ -403,7 +485,7 @@ export default function DashboardPage() {
                 <div
                   key={status}
                   className={`flex flex-col items-center px-3 py-2 rounded-lg text-xs whitespace-nowrap ${
-                    count > 0 ? PIPELINE_STATUS_COLORS[status] : 'bg-gray-50 text-gray-400'
+                    count > 0 ? PIPELINE_STATUS_COLORS[status] : 'bg-zinc-800/30 text-zinc-600'
                   }`}
                 >
                   <span className="font-bold text-lg">{count}</span>
@@ -417,7 +499,7 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">Minhas Entregas Recentes</CardTitle>
-              <button onClick={() => navigate('/deliveries')} className="text-sm text-purple-600 hover:underline flex items-center gap-1">
+              <button onClick={() => navigate('/deliveries')} className="text-sm text-[#9A48EA] hover:underline flex items-center gap-1">
                 Ver todas <ArrowRight size={12} />
               </button>
             </CardHeader>
@@ -432,7 +514,7 @@ export default function DashboardPage() {
                   </div>
                   <Badge
                     variant="secondary"
-                    className={PIPELINE_STATUS_COLORS[d.status] || 'bg-gray-100 text-gray-800'}
+                    className={PIPELINE_STATUS_COLORS[d.status] || 'bg-zinc-800/50 text-zinc-300'}
                   >
                     {PIPELINE_STATUSES[d.status] || d.status}
                   </Badge>

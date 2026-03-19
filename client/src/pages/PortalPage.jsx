@@ -35,12 +35,12 @@ export default function PortalPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Portal do Cliente</h1>
+      <h1 className="text-2xl font-bold font-display mb-6">Portal do Cliente</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardContent className="flex items-center gap-4 py-6">
-            <Clock size={28} className="text-blue-500" />
+            <Clock size={28} className="text-blue-400" />
             <div>
               <p className="text-sm text-muted-foreground">Em Produção</p>
               <p className="text-2xl font-bold">{inPipeline}</p>
@@ -49,7 +49,7 @@ export default function PortalPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-4 py-6">
-            <CheckCircle2 size={28} className="text-green-500" />
+            <CheckCircle2 size={28} className="text-green-400" />
             <div>
               <p className="text-sm text-muted-foreground">Publicadas</p>
               <p className="text-2xl font-bold">{published}</p>
@@ -58,7 +58,7 @@ export default function PortalPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-4 py-6">
-            <Package size={28} style={{ color: '#9A48EA' }} />
+            <Package size={28} className="text-[#9A48EA]" />
             <div>
               <p className="text-sm text-muted-foreground">Total</p>
               <p className="text-2xl font-bold">{deliveries.length}</p>

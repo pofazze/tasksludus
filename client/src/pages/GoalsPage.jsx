@@ -6,12 +6,11 @@ import PageLoading from '@/components/common/PageLoading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Pencil, Plus, Trash2, Target, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Trash2, Target, TrendingUp } from 'lucide-react';
 
 const EMPTY_TEMPLATE = {
   role: 'producer', producer_type: 'video_editor', name: '',
@@ -31,13 +30,14 @@ export default function GoalsPage() {
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Template dialog
-  const [tplDialog, setTplDialog] = useState(false);
+  // View state replaces dialog states
+  const [view, setView] = useState('list'); // 'list' | 'template-form' | 'goal-form'
+
+  // Template form
   const [tplEditId, setTplEditId] = useState(null);
   const [tplForm, setTplForm] = useState(EMPTY_TEMPLATE);
 
-  // Goal dialog
-  const [goalDialog, setGoalDialog] = useState(false);
+  // Goal form
   const [goalEditId, setGoalEditId] = useState(null);
   const [goalForm, setGoalForm] = useState(EMPTY_GOAL);
 
@@ -86,7 +86,7 @@ export default function GoalsPage() {
   const openNewTemplate = () => {
     setTplEditId(null);
     setTplForm(EMPTY_TEMPLATE);
-    setTplDialog(true);
+    setView('template-form');
   };
 
   const openEditTemplate = (t) => {
@@ -96,7 +96,7 @@ export default function GoalsPage() {
       monthly_target: t.monthly_target, multiplier_cap: t.multiplier_cap,
       curve_config: t.curve_config || { levels: [{ from: 0, to: 10, multiplier: 1 }] },
     });
-    setTplDialog(true);
+    setView('template-form');
   };
 
   const saveTemplate = async () => {
@@ -114,7 +114,7 @@ export default function GoalsPage() {
         await api.post('/goals/templates', payload);
         toast.success('Template criado');
       }
-      setTplDialog(false);
+      setView('list');
       fetchAll();
     } catch {
       toast.error('Erro ao salvar template');
@@ -155,7 +155,7 @@ export default function GoalsPage() {
   const openNewGoal = () => {
     setGoalEditId(null);
     setGoalForm({ ...EMPTY_GOAL, month: goalMonth });
-    setGoalDialog(true);
+    setView('goal-form');
   };
 
   const openEditGoal = (g) => {
@@ -166,7 +166,7 @@ export default function GoalsPage() {
       monthly_target: g.monthly_target, multiplier_cap: g.multiplier_cap || '',
       curve_config: g.curve_config,
     });
-    setGoalDialog(true);
+    setView('goal-form');
   };
 
   const saveGoal = async () => {
@@ -188,7 +188,7 @@ export default function GoalsPage() {
         await api.post('/goals', payload);
         toast.success('Meta criada');
       }
-      setGoalDialog(false);
+      setView('list');
       fetchGoals();
     } catch {
       toast.error('Erro ao salvar meta');
@@ -223,389 +223,405 @@ export default function GoalsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Metas</h1>
+      {view === 'list' && (
+        <>
+          <h1 className="text-2xl font-bold font-display mb-6">Metas</h1>
 
-      <Tabs defaultValue="goals">
-        <TabsList>
-          <TabsTrigger value="goals">Metas do Mês</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-        </TabsList>
+          <Tabs defaultValue="goals">
+            <TabsList>
+              <TabsTrigger value="goals">Metas do Mês</TabsTrigger>
+              <TabsTrigger value="templates">Templates</TabsTrigger>
+            </TabsList>
 
-        {/* Goals Tab */}
-        <TabsContent value="goals">
-          {/* Metrics Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardContent className="flex items-center gap-4 pt-6">
-                <div className="rounded-lg p-2.5 bg-purple-100">
-                  <Target size={22} className="text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Metas Ativas</p>
-                  <p className="text-2xl font-bold">{totalGoals}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="flex items-center gap-4 pt-6">
-                <div className="rounded-lg p-2.5 bg-green-100">
-                  <TrendingUp size={22} className="text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Metas Atingidas</p>
-                  <p className="text-2xl font-bold">{goalsHit}<span className="text-sm text-muted-foreground font-normal">/{totalGoals}</span></p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="flex items-center gap-4 pt-6">
-                <div className="rounded-lg p-2.5 bg-blue-100">
-                  <Target size={22} className="text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Progresso Médio</p>
-                  <p className="text-2xl font-bold">{avgProgress}%</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+            {/* Goals Tab */}
+            <TabsContent value="goals">
+              {/* Metrics Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <Card>
+                  <CardContent className="flex items-center gap-4 pt-6">
+                    <div className="rounded-lg p-2.5 bg-purple-500/15">
+                      <Target size={22} className="text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Metas Ativas</p>
+                      <p className="text-2xl font-bold">{totalGoals}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="flex items-center gap-4 pt-6">
+                    <div className="rounded-lg p-2.5 bg-emerald-500/15">
+                      <TrendingUp size={22} className="text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Metas Atingidas</p>
+                      <p className="text-2xl font-bold">{goalsHit}<span className="text-sm text-muted-foreground font-normal">/{totalGoals}</span></p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="flex items-center gap-4 pt-6">
+                    <div className="rounded-lg p-2.5 bg-blue-500/15">
+                      <Target size={22} className="text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Progresso Médio</p>
+                      <p className="text-2xl font-bold">{avgProgress}%</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-          {/* Chart: Goal vs Deliveries */}
-          {chartData.length > 0 && (
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="text-base">Meta vs Entregas por Usuário</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" fontSize={12} />
-                    <YAxis allowDecimals={false} fontSize={12} />
-                    <Tooltip />
-                    <Bar dataKey="meta" name="Meta" fill="#E2E8F0" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="entregas" name="Entregas" fill="#9A48EA" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
+              {/* Chart: Goal vs Deliveries */}
+              {chartData.length > 0 && (
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle className="text-base">Meta vs Entregas por Usuário</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="name" fontSize={12} />
+                        <YAxis allowDecimals={false} fontSize={12} />
+                        <Tooltip />
+                        <Bar dataKey="meta" name="Meta" fill="#E2E8F0" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="entregas" name="Entregas" fill="#9A48EA" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
 
-          {/* Filters + Table */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex gap-3">
-              <input
-                type="month"
-                value={goalMonth}
-                onChange={(e) => setGoalMonth(e.target.value)}
-                className="border rounded-md px-3 py-2 text-sm"
-              />
-              <select
-                value={goalUser}
-                onChange={(e) => setGoalUser(e.target.value)}
-                className="border rounded-md px-3 py-2 text-sm"
-              >
-                <option value="">Todos os usuários</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </select>
-            </div>
-            <Button onClick={openNewGoal}>
-              <Plus size={16} className="mr-2" /> Nova Meta
-            </Button>
-          </div>
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Usuário</TableHead>
-                    <TableHead>Mês</TableHead>
-                    <TableHead>Meta</TableHead>
-                    <TableHead>Entregas</TableHead>
-                    <TableHead>Progresso</TableHead>
-                    <TableHead>Mult. Max</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {goalsWithProgress.map((g) => (
-                    <TableRow key={g.id}>
-                      <TableCell className="font-medium">{getUserName(g.user_id)}</TableCell>
-                      <TableCell>{g.month ? g.month.slice(0, 7) : '—'}</TableCell>
-                      <TableCell>{g.monthly_target}</TableCell>
-                      <TableCell>{g.done}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                width: `${Math.min(g.pct, 100)}%`,
-                                backgroundColor: g.pct >= 100 ? '#22C55E' : '#9A48EA',
-                              }}
-                            />
-                          </div>
-                          <Badge
-                            variant="secondary"
-                            className={g.pct >= 100 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
-                          >
-                            {g.pct}%
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>{g.multiplier_cap ? `${g.multiplier_cap}x` : '—'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => openEditGoal(g)}>
-                          <Pencil size={16} />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {goals.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                        Nenhuma meta encontrada
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Templates Tab */}
-        <TabsContent value="templates">
-          <div className="flex justify-end mb-4">
-            <Button onClick={openNewTemplate}>
-              <Plus size={16} className="mr-2" /> Novo Template
-            </Button>
-          </div>
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Meta Mensal</TableHead>
-                    <TableHead>Multiplicador Max</TableHead>
-                    <TableHead>Níveis</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {templates.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell className="font-medium">{t.name}</TableCell>
-                      <TableCell>{t.producer_type}</TableCell>
-                      <TableCell>{t.monthly_target}</TableCell>
-                      <TableCell>{t.multiplier_cap}x</TableCell>
-                      <TableCell>{t.curve_config?.levels?.length || 0}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEditTemplate(t)}>
-                            <Pencil size={16} />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteTemplate(t.id)}>
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {templates.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        Nenhum template cadastrado
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Template Dialog */}
-      <Dialog open={tplDialog} onOpenChange={setTplDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{tplEditId ? 'Editar Template' : 'Novo Template'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Nome</Label>
-              <Input value={tplForm.name} onChange={(e) => setTplForm({ ...tplForm, name: e.target.value })} />
-            </div>
-            {!tplEditId && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Role</Label>
+              {/* Filters + Table */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex gap-3">
+                  <input
+                    type="month"
+                    value={goalMonth}
+                    onChange={(e) => setGoalMonth(e.target.value)}
+                    className="border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                  />
                   <select
-                    value={tplForm.role}
-                    onChange={(e) => setTplForm({ ...tplForm, role: e.target.value })}
-                    className="w-full border rounded-md px-3 py-2 text-sm"
+                    value={goalUser}
+                    onChange={(e) => setGoalUser(e.target.value)}
+                    className="border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
                   >
-                    <option value="producer">Producer</option>
-                  </select>
-                </div>
-                <div>
-                  <Label>Tipo Produtor</Label>
-                  <select
-                    value={tplForm.producer_type}
-                    onChange={(e) => setTplForm({ ...tplForm, producer_type: e.target.value })}
-                    className="w-full border rounded-md px-3 py-2 text-sm"
-                  >
-                    <option value="video_editor">Video Editor</option>
-                    <option value="designer">Designer</option>
-                    <option value="captation">Captação</option>
-                    <option value="social_media">Social Media</option>
-                  </select>
-                </div>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Meta Mensal</Label>
-                <Input
-                  type="number"
-                  value={tplForm.monthly_target}
-                  onChange={(e) => setTplForm({ ...tplForm, monthly_target: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Multiplicador Máximo</Label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={tplForm.multiplier_cap}
-                  onChange={(e) => setTplForm({ ...tplForm, multiplier_cap: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Curve Config Editor */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label>Curva J (Níveis)</Label>
-                <Button variant="outline" size="sm" onClick={addLevel}>+ Nível</Button>
-              </div>
-              <div className="space-y-2">
-                {tplForm.curve_config.levels.map((level, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <Input
-                      type="number" placeholder="De"
-                      value={level.from}
-                      onChange={(e) => updateLevel(idx, 'from', e.target.value)}
-                      className="w-20"
-                    />
-                    <span className="text-muted-foreground">→</span>
-                    <Input
-                      type="number" placeholder="Até"
-                      value={level.to ?? ''}
-                      onChange={(e) => updateLevel(idx, 'to', e.target.value)}
-                      className="w-20"
-                    />
-                    <span className="text-muted-foreground">×</span>
-                    <Input
-                      type="number" step="0.1" placeholder="Mult"
-                      value={level.multiplier}
-                      onChange={(e) => updateLevel(idx, 'multiplier', e.target.value)}
-                      className="w-24"
-                    />
-                    {tplForm.curve_config.levels.length > 1 && (
-                      <Button variant="ghost" size="icon" onClick={() => removeLevel(idx)}>
-                        <Trash2 size={14} />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTplDialog(false)}>Cancelar</Button>
-            <Button onClick={saveTemplate}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Goal Dialog */}
-      <Dialog open={goalDialog} onOpenChange={setGoalDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{goalEditId ? 'Editar Meta' : 'Nova Meta'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {!goalEditId && (
-              <>
-                <div>
-                  <Label>Usuário</Label>
-                  <select
-                    value={goalForm.user_id}
-                    onChange={(e) => setGoalForm({ ...goalForm, user_id: e.target.value })}
-                    className="w-full border rounded-md px-3 py-2 text-sm"
-                  >
-                    <option value="">Selecione...</option>
+                    <option value="">Todos os usuários</option>
                     {users.map((u) => (
                       <option key={u.id} value={u.id}>{u.name}</option>
                     ))}
                   </select>
                 </div>
-                <div>
-                  <Label>Template (opcional)</Label>
-                  <select
-                    value={goalForm.goal_template_id}
-                    onChange={(e) => setGoalForm({ ...goalForm, goal_template_id: e.target.value })}
-                    className="w-full border rounded-md px-3 py-2 text-sm"
-                  >
-                    <option value="">Nenhum</option>
-                    {templates.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
+                <Button onClick={openNewGoal}>
+                  <Plus size={16} className="mr-2" /> Nova Meta
+                </Button>
+              </div>
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Usuário</TableHead>
+                        <TableHead>Mês</TableHead>
+                        <TableHead>Meta</TableHead>
+                        <TableHead>Entregas</TableHead>
+                        <TableHead>Progresso</TableHead>
+                        <TableHead>Mult. Max</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {goalsWithProgress.map((g) => (
+                        <TableRow key={g.id}>
+                          <TableCell className="font-medium">{getUserName(g.user_id)}</TableCell>
+                          <TableCell>{g.month ? g.month.slice(0, 7) : '—'}</TableCell>
+                          <TableCell>{g.monthly_target}</TableCell>
+                          <TableCell>{g.done}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className="w-24 h-2 bg-zinc-700 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{
+                                    width: `${Math.min(g.pct, 100)}%`,
+                                    backgroundColor: g.pct >= 100 ? '#22C55E' : '#9A48EA',
+                                  }}
+                                />
+                              </div>
+                              <Badge
+                                variant="secondary"
+                                className={g.pct >= 100 ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-500/15 text-zinc-300'}
+                              >
+                                {g.pct}%
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell>{g.multiplier_cap ? `${g.multiplier_cap}x` : '—'}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => openEditGoal(g)}>
+                              <Pencil size={16} />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {goals.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                            Nenhuma meta encontrada
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Templates Tab */}
+            <TabsContent value="templates">
+              <div className="flex justify-end mb-4">
+                <Button onClick={openNewTemplate}>
+                  <Plus size={16} className="mr-2" /> Novo Template
+                </Button>
+              </div>
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Meta Mensal</TableHead>
+                        <TableHead>Multiplicador Max</TableHead>
+                        <TableHead>Níveis</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {templates.map((t) => (
+                        <TableRow key={t.id}>
+                          <TableCell className="font-medium">{t.name}</TableCell>
+                          <TableCell>{t.producer_type}</TableCell>
+                          <TableCell>{t.monthly_target}</TableCell>
+                          <TableCell>{t.multiplier_cap}x</TableCell>
+                          <TableCell>{t.curve_config?.levels?.length || 0}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => openEditTemplate(t)}>
+                                <Pencil size={16} />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => deleteTemplate(t.id)}>
+                                <Trash2 size={16} />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {templates.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                            Nenhum template cadastrado
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
+
+      {view === 'template-form' && (
+        <>
+          <div className="flex items-center gap-3 mb-6">
+            <Button variant="ghost" size="icon" onClick={() => setView('list')}>
+              <ArrowLeft size={18} />
+            </Button>
+            <h1 className="text-2xl font-bold font-display">
+              {tplEditId ? 'Editar Template' : 'Novo Template'}
+            </h1>
+          </div>
+          <Card className="max-w-2xl">
+            <CardContent className="pt-6 space-y-4">
+              <div>
+                <Label>Nome</Label>
+                <Input value={tplForm.name} onChange={(e) => setTplForm({ ...tplForm, name: e.target.value })} />
+              </div>
+              {!tplEditId && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Role</Label>
+                    <select
+                      value={tplForm.role}
+                      onChange={(e) => setTplForm({ ...tplForm, role: e.target.value })}
+                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                    >
+                      <option value="producer">Producer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Tipo Produtor</Label>
+                    <select
+                      value={tplForm.producer_type}
+                      onChange={(e) => setTplForm({ ...tplForm, producer_type: e.target.value })}
+                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                    >
+                      <option value="video_editor">Video Editor</option>
+                      <option value="designer">Designer</option>
+                      <option value="captation">Captação</option>
+                      <option value="social_media">Social Media</option>
+                    </select>
+                  </div>
                 </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Mês</Label>
-                  <input
-                    type="month"
-                    value={goalForm.month}
-                    onChange={(e) => setGoalForm({ ...goalForm, month: e.target.value })}
-                    className="w-full border rounded-md px-3 py-2 text-sm"
+                  <Label>Meta Mensal</Label>
+                  <Input
+                    type="number"
+                    value={tplForm.monthly_target}
+                    onChange={(e) => setTplForm({ ...tplForm, monthly_target: e.target.value })}
                   />
                 </div>
-              </>
-            )}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Meta Mensal</Label>
-                <Input
-                  type="number"
-                  value={goalForm.monthly_target}
-                  onChange={(e) => setGoalForm({ ...goalForm, monthly_target: e.target.value })}
-                />
+                <div>
+                  <Label>Multiplicador Máximo</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={tplForm.multiplier_cap}
+                    onChange={(e) => setTplForm({ ...tplForm, multiplier_cap: e.target.value })}
+                  />
+                </div>
               </div>
+
+              {/* Curve Config Editor */}
               <div>
-                <Label>Multiplicador Max</Label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={goalForm.multiplier_cap}
-                  onChange={(e) => setGoalForm({ ...goalForm, multiplier_cap: e.target.value })}
-                />
+                <div className="flex items-center justify-between mb-2">
+                  <Label>Curva J (Níveis)</Label>
+                  <Button variant="outline" size="sm" onClick={addLevel}>+ Nível</Button>
+                </div>
+                <div className="space-y-2">
+                  {tplForm.curve_config.levels.map((level, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Input
+                        type="number" placeholder="De"
+                        value={level.from}
+                        onChange={(e) => updateLevel(idx, 'from', e.target.value)}
+                        className="w-20"
+                      />
+                      <span className="text-muted-foreground">→</span>
+                      <Input
+                        type="number" placeholder="Até"
+                        value={level.to ?? ''}
+                        onChange={(e) => updateLevel(idx, 'to', e.target.value)}
+                        className="w-20"
+                      />
+                      <span className="text-muted-foreground">×</span>
+                      <Input
+                        type="number" step="0.1" placeholder="Mult"
+                        value={level.multiplier}
+                        onChange={(e) => updateLevel(idx, 'multiplier', e.target.value)}
+                        className="w-24"
+                      />
+                      {tplForm.curve_config.levels.length > 1 && (
+                        <Button variant="ghost" size="icon" onClick={() => removeLevel(idx)}>
+                          <Trash2 size={14} />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
+          <div className="flex gap-2 mt-4 max-w-2xl">
+            <Button variant="outline" onClick={() => setView('list')}>Cancelar</Button>
+            <Button onClick={saveTemplate}>Salvar</Button>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setGoalDialog(false)}>Cancelar</Button>
+        </>
+      )}
+
+      {view === 'goal-form' && (
+        <>
+          <div className="flex items-center gap-3 mb-6">
+            <Button variant="ghost" size="icon" onClick={() => setView('list')}>
+              <ArrowLeft size={18} />
+            </Button>
+            <h1 className="text-2xl font-bold font-display">
+              {goalEditId ? 'Editar Meta' : 'Nova Meta'}
+            </h1>
+          </div>
+          <Card className="max-w-2xl">
+            <CardContent className="pt-6 space-y-4">
+              {!goalEditId && (
+                <>
+                  <div>
+                    <Label>Usuário</Label>
+                    <select
+                      value={goalForm.user_id}
+                      onChange={(e) => setGoalForm({ ...goalForm, user_id: e.target.value })}
+                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                    >
+                      <option value="">Selecione...</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Template (opcional)</Label>
+                    <select
+                      value={goalForm.goal_template_id}
+                      onChange={(e) => setGoalForm({ ...goalForm, goal_template_id: e.target.value })}
+                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                    >
+                      <option value="">Nenhum</option>
+                      {templates.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Mês</Label>
+                    <input
+                      type="month"
+                      value={goalForm.month}
+                      onChange={(e) => setGoalForm({ ...goalForm, month: e.target.value })}
+                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                    />
+                  </div>
+                </>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Meta Mensal</Label>
+                  <Input
+                    type="number"
+                    value={goalForm.monthly_target}
+                    onChange={(e) => setGoalForm({ ...goalForm, monthly_target: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Multiplicador Max</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={goalForm.multiplier_cap}
+                    onChange={(e) => setGoalForm({ ...goalForm, multiplier_cap: e.target.value })}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <div className="flex gap-2 mt-4 max-w-2xl">
+            <Button variant="outline" onClick={() => setView('list')}>Cancelar</Button>
             <Button onClick={saveGoal}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </>
+      )}
     </div>
   );
 }

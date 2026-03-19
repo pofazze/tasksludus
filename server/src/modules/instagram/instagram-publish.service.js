@@ -1,0 +1,266 @@
+const db = require('../../config/db');
+const env = require('../../config/env');
+const logger = require('../../utils/logger');
+const oauthService = require('./instagram-oauth.service');
+
+const GRAPH_URL = 'https://graph.instagram.com/v21.0';
+
+const POLL_INTERVALS = [5000, 10000, 20000, 40000, 60000]; // 5s, 10s, 20s, 40s, 60s
+const MAX_POLL_TIME = 5 * 60 * 1000; // 5 minutes
+
+class InstagramPublishService {
+  async executeScheduledPost(postId) {
+    const post = await db('scheduled_posts').where({ id: postId }).first();
+    if (!post) throw Object.assign(new Error('Post not found'), { status: 404 });
+    if (post.status === 'published') return post;
+
+    await db('scheduled_posts').where({ id: postId }).update({ status: 'publishing', updated_at: new Date() });
+
+    try {
+      const accessToken = await oauthService.getDecryptedToken(post.client_id);
+      const igToken = await db('client_instagram_tokens').where({ client_id: post.client_id }).first();
+      const igUserId = igToken.ig_user_id;
+
+      // Re-fetch media URLs from ClickUp if task is linked (S3 URLs expire)
+      let mediaUrls = post.media_urls;
+      if (post.clickup_task_id) {
+        mediaUrls = await this.resolveMediaUrls(post.clickup_task_id, mediaUrls);
+      }
+
+      let result;
+      switch (post.post_type) {
+        case 'image':
+          result = await this.publishImage(igUserId, accessToken, mediaUrls[0]?.url, post.caption);
+          break;
+        case 'video':
+        case 'reel':
+          result = await this.publishVideo(igUserId, accessToken, mediaUrls[0]?.url, post.caption, post.post_type === 'reel');
+          break;
+        case 'story':
+          result = await this.publishStory(igUserId, accessToken, mediaUrls[0]);
+          break;
+        case 'carousel':
+          result = await this.publishCarousel(igUserId, accessToken, mediaUrls, post.caption);
+          break;
+        default:
+          throw new Error(`Unsupported post type: ${post.post_type}`);
+      }
+
+      const [updated] = await db('scheduled_posts')
+        .where({ id: postId })
+        .update({
+          status: 'published',
+          ig_container_id: result.containerId,
+          ig_media_id: result.mediaId,
+          ig_permalink: result.permalink,
+          published_at: new Date(),
+          media_urls: JSON.stringify(mediaUrls),
+          updated_at: new Date(),
+        })
+        .returning('*');
+
+      logger.info('Post published', { postId, igMediaId: result.mediaId });
+      return updated;
+    } catch (err) {
+      const retryCount = (post.retry_count || 0) + 1;
+      await db('scheduled_posts')
+        .where({ id: postId })
+        .update({
+          status: retryCount > 2 ? 'failed' : 'scheduled',
+          error_message: err.message,
+          retry_count: retryCount,
+          updated_at: new Date(),
+        });
+
+      logger.error('Post publish failed', { postId, error: err.message, retryCount });
+      throw err;
+    }
+  }
+
+  async publishImage(igUserId, accessToken, imageUrl, caption) {
+    // Step 1: Create media container
+    const containerId = await this._createContainer(igUserId, accessToken, {
+      image_url: imageUrl,
+      caption,
+    });
+
+    // Step 2: Publish
+    const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
+    const permalink = await this._getPermalink(mediaId, accessToken);
+
+    return { containerId, mediaId, permalink };
+  }
+
+  async publishVideo(igUserId, accessToken, videoUrl, caption, isReel = true) {
+    // Step 1: Create container (always REELS for video)
+    const containerId = await this._createContainer(igUserId, accessToken, {
+      video_url: videoUrl,
+      caption,
+      media_type: 'REELS',
+    });
+
+    // Step 2: Poll until ready
+    await this._pollContainerStatus(containerId, accessToken);
+
+    // Step 3: Publish
+    const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
+    const permalink = await this._getPermalink(mediaId, accessToken);
+
+    return { containerId, mediaId, permalink };
+  }
+
+  async publishStory(igUserId, accessToken, media) {
+    const isVideo = media.type === 'video';
+    const params = {
+      media_type: 'STORIES',
+      ...(isVideo ? { video_url: media.url } : { image_url: media.url }),
+    };
+
+    const containerId = await this._createContainer(igUserId, accessToken, params);
+
+    if (isVideo) {
+      await this._pollContainerStatus(containerId, accessToken);
+    }
+
+    const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
+    return { containerId, mediaId, permalink: null }; // Stories have no permalink
+  }
+
+  async publishCarousel(igUserId, accessToken, mediaItems, caption) {
+    // Step 1: Create child containers (2-10 items)
+    const childIds = [];
+    for (const item of mediaItems.slice(0, 10)) {
+      const isVideo = item.type === 'video';
+      const params = {
+        is_carousel_item: true,
+        ...(isVideo ? { video_url: item.url, media_type: 'REELS' } : { image_url: item.url }),
+      };
+
+      const childId = await this._createContainer(igUserId, accessToken, params);
+
+      if (isVideo) {
+        await this._pollContainerStatus(childId, accessToken);
+      }
+
+      childIds.push(childId);
+    }
+
+    // Step 2: Create carousel container
+    const containerId = await this._createContainer(igUserId, accessToken, {
+      media_type: 'CAROUSEL',
+      caption,
+      children: childIds.join(','),
+    });
+
+    // Step 3: Publish
+    const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
+    const permalink = await this._getPermalink(mediaId, accessToken);
+
+    return { containerId, mediaId, permalink };
+  }
+
+  async resolveMediaUrls(clickupTaskId, existingUrls) {
+    try {
+      const res = await fetch(`https://api.clickup.com/api/v2/task/${clickupTaskId}`, {
+        headers: { Authorization: env.clickup.apiToken },
+      });
+
+      if (!res.ok) {
+        logger.warn('Failed to re-fetch ClickUp task for media', { clickupTaskId });
+        return existingUrls; // Fall back to saved URLs
+      }
+
+      const task = await res.json();
+      if (!task.attachments || task.attachments.length === 0) {
+        return existingUrls;
+      }
+
+      return task.attachments
+        .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
+        .map((a, i) => ({
+          url: this._normalizeMediaUrl(a.url),
+          type: a.mimetype?.startsWith('video/') ? 'video' : 'image',
+          order: i,
+        }));
+    } catch (err) {
+      logger.warn('Error resolving media URLs', { clickupTaskId, error: err.message });
+      return existingUrls;
+    }
+  }
+
+  _normalizeMediaUrl(url) {
+    // Convert Google Drive view links to direct download
+    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+    if (driveMatch) {
+      return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+    }
+    return url;
+  }
+
+  // --- Private helpers ---
+
+  async _createContainer(igUserId, accessToken, params) {
+    const url = `${GRAPH_URL}/${igUserId}/media`;
+    const body = new URLSearchParams({ access_token: accessToken, ...params });
+
+    const res = await fetch(url, { method: 'POST', body });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      logger.error('Failed to create IG container', { igUserId, error: err, params: Object.keys(params) });
+      throw Object.assign(new Error(err.error?.message || 'Failed to create Instagram media container'), { status: 502 });
+    }
+
+    const data = await res.json();
+    return data.id;
+  }
+
+  async _publishContainer(igUserId, accessToken, containerId) {
+    const url = `${GRAPH_URL}/${igUserId}/media_publish`;
+    const body = new URLSearchParams({ access_token: accessToken, creation_id: containerId });
+
+    const res = await fetch(url, { method: 'POST', body });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw Object.assign(new Error(err.error?.message || 'Failed to publish Instagram media'), { status: 502 });
+    }
+
+    const data = await res.json();
+    return data.id;
+  }
+
+  async _pollContainerStatus(containerId, accessToken) {
+    const startTime = Date.now();
+    let attempt = 0;
+
+    while (Date.now() - startTime < MAX_POLL_TIME) {
+      const delay = POLL_INTERVALS[Math.min(attempt, POLL_INTERVALS.length - 1)];
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      const url = `${GRAPH_URL}/${containerId}?fields=status_code,status&access_token=${accessToken}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.status_code === 'FINISHED') return;
+      if (data.status_code === 'ERROR') {
+        throw new Error(`Media processing failed: ${data.status || 'unknown error'}`);
+      }
+
+      attempt++;
+      logger.debug('Polling container status', { containerId, status: data.status_code, attempt });
+    }
+
+    throw new Error('Media processing timed out after 5 minutes');
+  }
+
+  async _getPermalink(mediaId, accessToken) {
+    try {
+      const res = await fetch(`${GRAPH_URL}/${mediaId}?fields=permalink&access_token=${accessToken}`);
+      const data = await res.json();
+      return data.permalink || null;
+    } catch {
+      return null;
+    }
+  }
+}
+
+module.exports = new InstagramPublishService();

@@ -53,6 +53,17 @@ class DeliveriesService {
     return updated;
   }
 
+  async getPhases(deliveryId) {
+    return db('delivery_phases')
+      .leftJoin('users', 'delivery_phases.user_id', 'users.id')
+      .select(
+        'delivery_phases.*',
+        'users.name as user_name'
+      )
+      .where('delivery_phases.delivery_id', deliveryId)
+      .orderBy('delivery_phases.entered_at', 'asc');
+  }
+
   async getStats(filters = {}) {
     const query = db('delivery_time_stats').orderBy('period', 'desc');
     if (filters.content_type) query.where('content_type', filters.content_type);

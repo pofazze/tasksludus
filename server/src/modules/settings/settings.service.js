@@ -15,18 +15,27 @@ class SettingsService {
   }
 
   async updateSetting(key, value, updatedBy) {
-    const [updated] = await db('app_settings')
-      .where({ key })
-      .update({
+    const existing = await db('app_settings').where({ key }).first();
+    if (existing) {
+      const [updated] = await db('app_settings')
+        .where({ key })
+        .update({
+          value: JSON.stringify(value),
+          updated_by: updatedBy,
+          updated_at: new Date(),
+        })
+        .returning('*');
+      return updated;
+    }
+    const [created] = await db('app_settings')
+      .insert({
+        key,
         value: JSON.stringify(value),
         updated_by: updatedBy,
         updated_at: new Date(),
       })
       .returning('*');
-    if (!updated) {
-      throw Object.assign(new Error('Setting not found'), { status: 404 });
-    }
-    return updated;
+    return created;
   }
 
   async listIntegrations() {

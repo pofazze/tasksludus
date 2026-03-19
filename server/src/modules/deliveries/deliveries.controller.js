@@ -47,6 +47,15 @@ class DeliveriesController {
     }
   }
 
+  async getPhases(req, res, next) {
+    try {
+      const phases = await deliveriesService.getPhases(req.params.id);
+      res.json(phases);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getStats(req, res, next) {
     try {
       const { content_type, difficulty, period } = req.query;

@@ -9,9 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Trophy } from 'lucide-react';
 
 const PODIUM_STYLES = [
-  { border: 'border-yellow-400 border-2', bg: 'bg-yellow-50', icon: 'text-yellow-500', label: 'Ouro' },
-  { border: 'border-gray-300 border-2', bg: 'bg-gray-50', icon: 'text-gray-400', label: 'Prata' },
-  { border: 'border-amber-600 border-2', bg: 'bg-amber-50', icon: 'text-amber-700', label: 'Bronze' },
+  { border: 'border-yellow-400 border-2', bg: 'bg-yellow-500/10', icon: 'text-yellow-400', label: 'Ouro' },
+  { border: 'border-zinc-400 border-2', bg: 'bg-zinc-500/10', icon: 'text-zinc-400', label: 'Prata' },
+  { border: 'border-amber-500 border-2', bg: 'bg-amber-500/10', icon: 'text-amber-500', label: 'Bronze' },
 ];
 
 export default function RankingPage() {
@@ -52,12 +52,12 @@ export default function RankingPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Ranking</h1>
+        <h1 className="text-2xl font-bold font-display">Ranking</h1>
         <input
           type="month"
           value={month}
           onChange={(e) => setMonth(e.target.value)}
-          className="border rounded-md px-3 py-2 text-sm"
+          className="border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
         />
       </div>
 
@@ -83,12 +83,12 @@ export default function RankingPage() {
                     <p className="font-semibold mt-2 text-lg">{displayName(entry.name)}</p>
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-sm text-muted-foreground">{entry.total_deliveries} entregas</span>
-                      <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                      <Badge variant="secondary" className="bg-purple-500/15 text-purple-400">
                         {entry.multiplier}x
                       </Badge>
                     </div>
                     {entry.bonus != null && entry.bonus > 0 && (
-                      <p className="text-sm font-medium text-green-600 mt-1">
+                      <p className="text-sm font-medium text-green-400 mt-1">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(entry.bonus)}
                       </p>
                     )}
@@ -119,7 +119,7 @@ export default function RankingPage() {
                   <TableRow key={entry.user_id} className={idx < 3 ? 'font-medium' : ''}>
                     <TableCell>
                       <span className={`font-bold ${
-                        idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-gray-400' : idx === 2 ? 'text-amber-700' : ''
+                        idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-zinc-400' : idx === 2 ? 'text-amber-500' : ''
                       }`}>
                         {entry.rank}
                       </span>
@@ -135,7 +135,7 @@ export default function RankingPage() {
                     </TableCell>
                     <TableCell className="text-right">{entry.total_deliveries}</TableCell>
                     <TableCell className="text-right">
-                      <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                      <Badge variant="secondary" className="bg-purple-500/15 text-purple-400">
                         {entry.multiplier}x
                       </Badge>
                     </TableCell>

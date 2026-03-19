@@ -30,17 +30,17 @@ export const PIPELINE_STATUSES = {
   publicacao: 'Publicação',
 };
 
-// Status colors matching ClickUp
+// Status colors — dark theme compatible
 export const PIPELINE_STATUS_COLORS = {
-  triagem: 'bg-orange-100 text-orange-800',
-  planejamento: 'bg-gray-100 text-gray-800',
-  captacao: 'bg-sky-100 text-sky-800',
-  edicao_de_video: 'bg-violet-100 text-violet-800',
-  estruturacao: 'bg-yellow-100 text-yellow-800',
-  design: 'bg-blue-100 text-blue-800',
-  aprovacao: 'bg-pink-100 text-pink-800',
-  agendamento: 'bg-amber-100 text-amber-800',
-  publicacao: 'bg-green-100 text-green-800',
+  triagem: 'bg-orange-500/15 text-orange-400',
+  planejamento: 'bg-zinc-500/15 text-zinc-400',
+  captacao: 'bg-sky-500/15 text-sky-400',
+  edicao_de_video: 'bg-violet-500/15 text-violet-400',
+  estruturacao: 'bg-yellow-500/15 text-yellow-400',
+  design: 'bg-blue-500/15 text-blue-400',
+  aprovacao: 'bg-pink-500/15 text-pink-400',
+  agendamento: 'bg-amber-500/15 text-amber-400',
+  publicacao: 'bg-emerald-500/15 text-emerald-400',
 };
 
 // Pipeline order for sorting and display

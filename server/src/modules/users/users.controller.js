@@ -1,4 +1,5 @@
 const usersService = require('./users.service');
+const calculationsService = require('../calculations/calculations.service');
 const { updateUserSchema, updateSalarySchema } = require('./users.validation');
 
 class UsersController {
@@ -27,6 +28,14 @@ class UsersController {
       if (error) return res.status(400).json({ error: error.details[0].message });
 
       const user = await usersService.update(req.params.id, value);
+
+      // Recalculate if base_deliveries changed
+      if (value.base_deliveries !== undefined) {
+        const now = new Date();
+        const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        await calculationsService.suggest(month, [req.params.id]).catch(() => {});
+      }
+
       res.json(user);
     } catch (err) {
       next(err);
@@ -39,6 +48,12 @@ class UsersController {
       if (error) return res.status(400).json({ error: error.details[0].message });
 
       const user = await usersService.updateSalary(req.params.id, value.base_salary);
+
+      // Recalculate commission for this user's current month
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      await calculationsService.suggest(month, [req.params.id]).catch(() => {});
+
       res.json(user);
     } catch (err) {
       next(err);

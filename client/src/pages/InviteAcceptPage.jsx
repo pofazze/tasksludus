@@ -36,10 +36,10 @@ export default function InviteAcceptPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold" style={{ color: '#9A48EA' }}>
+          <CardTitle className="text-2xl font-bold font-display text-[#9A48EA]">
             TasksLudus
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">Crie sua conta</p>
@@ -47,7 +47,7 @@ export default function InviteAcceptPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</div>
+              <div className="text-sm text-red-400 bg-red-500/10 p-2 rounded">{error}</div>
             )}
             <div className="space-y-2">
               <Label htmlFor="name">Nome</Label>

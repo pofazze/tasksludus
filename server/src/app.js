@@ -19,6 +19,7 @@ const settingsRoutes = require('./modules/settings/settings.routes');
 const rankingRoutes = require('./modules/ranking/ranking.routes');
 const simulatorRoutes = require('./modules/simulator/simulator.routes');
 const webhooksRoutes = require('./modules/webhooks/webhooks.routes');
+const instagramRoutes = require('./modules/instagram/instagram.routes');
 
 const app = express();
 
@@ -71,6 +72,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/ranking', rankingRoutes);
 app.use('/api/simulator', simulatorRoutes);
 app.use('/api/webhooks', webhooksRoutes);
+app.use('/api/instagram', instagramRoutes);
 
 // 404 handler
 app.use((_req, res) => {
@@ -79,6 +81,17 @@ app.use((_req, res) => {
 
 // Error handler
 app.use(errorHandler);
+
+// Start BullMQ workers and repeatable jobs (non-blocking — server works without Redis)
+try {
+  const { setupRepeatable } = require('./queues');
+  require('./queues/instagram-publish.worker');
+  require('./queues/token-refresh.worker');
+  setupRepeatable().catch((err) => logger.error('Failed to setup repeatable jobs', { error: err.message }));
+  logger.info('BullMQ workers initialized');
+} catch (err) {
+  logger.error('BullMQ failed to initialize — scheduling disabled', { error: err.message });
+}
 
 // Start server
 const server = app.listen(env.port, () => {

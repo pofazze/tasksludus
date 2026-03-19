@@ -45,6 +45,15 @@ class ClientsController {
     }
   }
 
+  async getProfile(req, res, next) {
+    try {
+      const profile = await clientsService.getProfile(req.params.id);
+      res.json(profile);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async getOverages(req, res, next) {
     try {
       const { month, status } = req.query;
