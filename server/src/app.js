@@ -23,6 +23,9 @@ const instagramRoutes = require('./modules/instagram/instagram.routes');
 
 const app = express();
 
+// Trust proxy (Railway runs behind reverse proxy)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({ origin: env.clientUrl, credentials: true }));
