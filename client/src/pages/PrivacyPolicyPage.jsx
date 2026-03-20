@@ -78,7 +78,7 @@ export default function PrivacyPolicyPage() {
           <h2 className="text-lg font-semibold">8. Contato</h2>
           <p className="text-sm text-[#A1A1AA] leading-relaxed">
             Para dúvidas sobre esta política ou sobre o uso dos seus dados:<br />
-            <strong className="text-[#E4E4E7]">Ludus</strong> — <a href="mailto:wander@ludus.com" className="text-[#9A48EA] hover:underline">wander@ludus.com</a>
+            <strong className="text-[#E4E4E7]">Ludus</strong> — <a href="mailto:pofazze@gmail.com" className="text-[#9A48EA] hover:underline">pofazze@gmail.com</a>
           </p>
         </section>
 
