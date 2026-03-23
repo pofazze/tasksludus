@@ -18,7 +18,7 @@ class InstagramOAuthService {
       client_id: env.meta.appId,
       redirect_uri: env.meta.redirectUri,
       response_type: 'code',
-      scope: 'public_profile,pages_show_list,instagram_basic,instagram_content_publish,pages_read_engagement',
+      config_id: env.meta.fbLoginConfigId,
       state,
     });
 
