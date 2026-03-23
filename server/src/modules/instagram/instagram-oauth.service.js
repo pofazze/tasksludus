@@ -17,7 +17,6 @@ class InstagramOAuthService {
     const params = new URLSearchParams({
       client_id: env.meta.appId,
       redirect_uri: env.meta.redirectUri,
-      response_type: 'code',
       config_id: env.meta.fbLoginConfigId,
       state,
     });
