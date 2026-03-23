@@ -35,27 +35,36 @@ class InstagramOAuthService {
   }
 
   async handleCallback(code, clientId) {
-    // Step 1: Exchange code for short-lived token
+    // Step 1: Exchange code for short-lived token (returns {access_token, user_id})
     const codeData = await this._exchangeCode(code);
     const shortToken = codeData.access_token;
+    const igUserId = String(codeData.user_id);
 
-    // Step 2: Exchange for long-lived token (60 days)
+    // Step 2: Try to exchange for long-lived token (60 days)
     const longToken = await this._exchangeForLongLived(shortToken);
+    const finalToken = longToken.access_token;
+    const expiresIn = longToken.expires_in || 3600;
 
-    // Step 3: Get Instagram user info
-    const igUser = await this._getIgUser(longToken.access_token);
+    // Step 3: Try to get username (best-effort, not blocking)
+    let igUsername = null;
+    try {
+      const igUser = await this._getIgUser(finalToken);
+      igUsername = igUser.username;
+    } catch (err) {
+      logger.warn('Could not fetch IG username — saving without it', { error: err.message });
+    }
 
     // Step 4: Encrypt and save
-    const { encrypted, iv, authTag } = encrypt(longToken.access_token);
+    const { encrypted, iv, authTag } = encrypt(finalToken);
 
     const tokenData = {
       client_id: clientId,
-      ig_user_id: igUser.user_id,
-      ig_username: igUser.username,
+      ig_user_id: igUserId,
+      ig_username: igUsername,
       access_token_encrypted: encrypted,
       token_iv: iv,
       token_auth_tag: authTag,
-      token_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+      token_expires_at: new Date(Date.now() + expiresIn * 1000),
       token_refreshed_at: new Date(),
       is_active: true,
     };
