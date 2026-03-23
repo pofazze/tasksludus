@@ -43,6 +43,7 @@ module.exports = {
   meta: {
     appId: process.env.META_APP_ID,
     appSecret: process.env.META_APP_SECRET,
+    igAppSecret: process.env.META_IG_APP_SECRET || process.env.META_APP_SECRET,
     redirectUri: process.env.META_REDIRECT_URI || 'https://server-production-bea3.up.railway.app/api/instagram/oauth/callback',
     encryptionKey: process.env.TOKEN_ENCRYPTION_KEY,
   },
