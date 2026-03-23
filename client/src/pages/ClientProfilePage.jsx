@@ -608,7 +608,7 @@ export default function ClientProfilePage() {
                         <>
                           <p className="text-sm font-medium text-emerald-400">Conectado</p>
                           <p className="text-xs text-muted-foreground">
-                            @{igConnection.username} &middot; expira em {new Date(igConnection.expiresAt).toLocaleDateString('pt-BR')}
+                            @{igConnection.username}
                           </p>
                         </>
                       ) : (

@@ -4,6 +4,11 @@ const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const autoAssign = require('./automations/auto-assign');
 
+const PUBLISHABLE_FORMATS = new Set([
+  'reel', 'feed', 'story', 'carrossel', 'video',
+  'foto_com_frase', 'video_com_frase',
+]);
+
 class ClickUpWebhookService {
   /**
    * Verify webhook signature from ClickUp
@@ -141,10 +146,8 @@ class ClickUpWebhookService {
       await this.autoCreateScheduledPost(clickupTaskId, delivery, task);
     }
 
-    // Auto-publish to Instagram when task moves to "publicação"
-    if (newStatus === 'publicacao') {
-      await this.autoPublishToInstagram(clickupTaskId, delivery, task);
-    }
+    // "publicação" is now set BY TasksLudus after publishing — ignore webhook to prevent loop
+    // (no auto-publish trigger here)
   }
 
   /**
@@ -330,7 +333,8 @@ class ClickUpWebhookService {
   // ─── Instagram Auto-Draft ────────────────────────────────────
 
   /**
-   * Auto-create a scheduled_post draft when a task moves to "agendamento"
+   * Auto-create a scheduled_post when a task moves to "agendamento".
+   * Filters non-publishable formats and extracts the "entrega" date for scheduling.
    */
   async autoCreateScheduledPost(clickupTaskId, delivery, task) {
     try {
@@ -348,6 +352,12 @@ class ClickUpWebhookService {
         return;
       }
 
+      // Filter non-publishable formats (PDF, Mockup, Banner, etc.)
+      if (!PUBLISHABLE_FORMATS.has(delivery.content_type)) {
+        logger.info(`Skipping auto-draft: format "${delivery.content_type}" not publishable`);
+        return;
+      }
+
       // Check client has Instagram connected
       const igToken = await db('client_instagram_tokens')
         .where({ client_id: delivery.client_id, is_active: true })
@@ -360,6 +370,12 @@ class ClickUpWebhookService {
       // Fetch task with attachments
       const taskWithAttachments = task || await this.fetchTask(clickupTaskId);
       if (!taskWithAttachments) return;
+
+      // Extract "entrega" custom field (date/time) for scheduling
+      const entregaField = taskWithAttachments.custom_fields?.find(
+        (cf) => cf.name?.toLowerCase() === 'entrega'
+      );
+      const scheduledAt = entregaField?.value ? new Date(Number(entregaField.value)) : null;
 
       // Extract media URLs from attachments
       const attachments = taskWithAttachments.attachments || [];
@@ -378,106 +394,36 @@ class ClickUpWebhookService {
         feed: 'image',
         story: 'story',
         video: 'video',
-        cortes: 'reel',
-        corte: 'reel',
-        banner: 'image',
         foto_com_frase: 'image',
         video_com_frase: 'video',
-        mockup: 'image',
-        caixinha: 'story',
       };
       const postType = postTypeMap[delivery.content_type] || 'image';
 
-      await db('scheduled_posts').insert({
+      // Determine status: scheduled (future date) or draft (no date / past date)
+      const isFutureDate = scheduledAt && scheduledAt > new Date();
+      const postStatus = isFutureDate ? 'scheduled' : 'draft';
+
+      const [post] = await db('scheduled_posts').insert({
         client_id: delivery.client_id,
         delivery_id: delivery.id,
         clickup_task_id: clickupTaskId,
         caption: taskWithAttachments.name || '',
         post_type: postType,
         media_urls: JSON.stringify(mediaUrls),
-        status: 'draft',
-      });
+        status: postStatus,
+        scheduled_at: isFutureDate ? scheduledAt : null,
+      }).returning('*');
 
-      logger.info(`Auto-created Instagram draft for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media)`);
+      // If scheduled, enqueue in BullMQ for automatic publish at the right time
+      if (isFutureDate) {
+        const { schedulePost } = require('../../queues');
+        await schedulePost(post.id, scheduledAt);
+        logger.info(`Auto-scheduled Instagram post for task ${clickupTaskId} at ${scheduledAt.toISOString()} (${postType}, ${mediaUrls.length} media)`);
+      } else {
+        logger.info(`Auto-created Instagram draft for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media, no entrega date)`);
+      }
     } catch (err) {
       logger.error(`Failed to auto-create scheduled post for ${clickupTaskId}: ${err.message}`);
-    }
-  }
-
-  /**
-   * Auto-publish to Instagram when a task moves to "publicação"
-   */
-  async autoPublishToInstagram(clickupTaskId, delivery, task) {
-    try {
-      if (!delivery) {
-        logger.warn(`Cannot auto-publish: no delivery for task ${clickupTaskId}`);
-        return;
-      }
-
-      // Check client has Instagram connected
-      const igToken = await db('client_instagram_tokens')
-        .where({ client_id: delivery.client_id, is_active: true })
-        .first();
-      if (!igToken) {
-        logger.info(`Client ${delivery.client_id} has no Instagram connected — skipping auto-publish`);
-        return;
-      }
-
-      // Check if scheduled_post already exists (from agendamento step)
-      let post = await db('scheduled_posts')
-        .where({ clickup_task_id: clickupTaskId })
-        .first();
-
-      // If no draft exists, create one now
-      if (!post) {
-        const taskData = task || await this.fetchTask(clickupTaskId);
-        if (!taskData) return;
-
-        const attachments = taskData.attachments || [];
-        const mediaUrls = attachments
-          .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
-          .map((a, i) => ({
-            url: a.url,
-            type: a.mimetype?.startsWith('video/') ? 'video' : 'image',
-            order: i,
-          }));
-
-        if (mediaUrls.length === 0) {
-          logger.warn(`Cannot auto-publish task ${clickupTaskId}: no media attachments`);
-          return;
-        }
-
-        const postTypeMap = {
-          reel: 'reel', carrossel: 'carousel', feed: 'image', story: 'story',
-          video: 'video', cortes: 'reel', corte: 'reel', banner: 'image',
-          foto_com_frase: 'image', video_com_frase: 'video', mockup: 'image', caixinha: 'story',
-        };
-
-        const [created] = await db('scheduled_posts').insert({
-          client_id: delivery.client_id,
-          delivery_id: delivery.id,
-          clickup_task_id: clickupTaskId,
-          caption: taskData.name || '',
-          post_type: postTypeMap[delivery.content_type] || 'image',
-          media_urls: JSON.stringify(mediaUrls),
-          status: 'draft',
-        }).returning('*');
-
-        post = created;
-        logger.info(`Created post for immediate publish: task ${clickupTaskId}`);
-      }
-
-      if (post.status === 'published') {
-        logger.info(`Post for task ${clickupTaskId} already published`);
-        return;
-      }
-
-      // Publish immediately
-      const publishService = require('../instagram/instagram-publish.service');
-      await publishService.executeScheduledPost(post.id);
-      logger.info(`Auto-published Instagram post for task ${clickupTaskId}`);
-    } catch (err) {
-      logger.error(`Auto-publish failed for task ${clickupTaskId}: ${err.message}`);
     }
   }
 
