@@ -36,7 +36,8 @@ class InstagramOAuthService {
 
   async handleCallback(code, clientId) {
     // Step 1: Exchange code for short-lived token
-    const shortToken = await this._exchangeCode(code);
+    const codeData = await this._exchangeCode(code);
+    const shortToken = codeData.access_token;
 
     // Step 2: Exchange for long-lived token (60 days)
     const longToken = await this._exchangeForLongLived(shortToken);
@@ -172,29 +173,50 @@ class InstagramOAuthService {
     }
 
     const data = await res.json();
-    return data.access_token;
+    logger.info('Code exchange successful', { userId: data.user_id, hasToken: !!data.access_token });
+    return data;
   }
 
   async _exchangeForLongLived(shortToken) {
+    // Try with API version first
     const params = new URLSearchParams({
       grant_type: 'ig_exchange_token',
       client_secret: env.meta.appSecret,
       access_token: shortToken,
     });
 
-    const res = await fetch(`${META_GRAPH_URL}/access_token?${params.toString()}`);
-    if (!res.ok) {
+    const urls = [
+      `${META_GRAPH_URL}/access_token?${params.toString()}`,
+      `${META_GRAPH_URL}/v22.0/access_token?${params.toString()}`,
+    ];
+
+    for (const url of urls) {
+      logger.info('Attempting long-lived token exchange', { url: url.replace(/access_token=[^&]+/, 'access_token=***') });
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        logger.info('Long-lived token exchange successful', { expiresIn: data.expires_in });
+        return data;
+      }
       const err = await res.json().catch(() => ({}));
-      logger.error('Long-lived token exchange failed', { error: err });
-      throw Object.assign(new Error('Failed to obtain long-lived token'), { status: 502 });
+      logger.warn('Long-lived token exchange attempt failed', {
+        url: url.replace(/access_token=[^&]+/, 'access_token=***'),
+        status: res.status,
+        error: err,
+      });
     }
 
-    return res.json();
+    // If all attempts fail, return the short-lived token with 1h expiry
+    // This allows OAuth to complete; the token refresh worker will try to extend it
+    logger.warn('All long-lived exchange attempts failed — using short-lived token (1h)');
+    return { access_token: shortToken, expires_in: 3600 };
   }
 
   async _getIgUser(accessToken) {
-    const res = await fetch(`${META_GRAPH_URL}/me?fields=user_id,username&access_token=${accessToken}`);
+    const res = await fetch(`${META_GRAPH_URL}/v22.0/me?fields=user_id,username&access_token=${accessToken}`);
     if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      logger.error('Failed to fetch IG user info', { error: err });
       throw Object.assign(new Error('Failed to fetch Instagram user info'), { status: 502 });
     }
     return res.json();
