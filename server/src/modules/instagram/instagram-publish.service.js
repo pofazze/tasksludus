@@ -3,7 +3,7 @@ const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const oauthService = require('./instagram-oauth.service');
 
-const GRAPH_URL = 'https://graph.facebook.com/v25.0';
+const GRAPH_URL = 'https://graph.instagram.com/v25.0';
 
 const POLL_INTERVALS = [5000, 10000, 20000, 40000, 60000]; // 5s, 10s, 20s, 40s, 60s
 const MAX_POLL_TIME = 5 * 60 * 1000; // 5 minutes
@@ -227,42 +227,58 @@ class InstagramPublishService {
 
   async _createContainer(igUserId, accessToken, params) {
     const url = `${GRAPH_URL}/${igUserId}/media`;
+    const bodyParams = { ...params, access_token: accessToken };
+
+    logger.info('Creating IG container', {
+      url,
+      igUserId,
+      paramKeys: Object.keys(params),
+      tokenPrefix: accessToken?.slice(0, 8),
+      tokenLength: accessToken?.length,
+    });
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(params),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyParams),
     });
+
+    const responseText = await res.text();
+    logger.info('IG container response', { status: res.status, body: responseText.slice(0, 500) });
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      logger.error('Failed to create IG container', { igUserId, error: err, params: Object.keys(params) });
-      throw Object.assign(new Error(err.error?.message || 'Failed to create Instagram media container'), { status: 502 });
+      let parsedErr;
+      try { parsedErr = JSON.parse(responseText); } catch { parsedErr = { raw: responseText }; }
+      logger.error('Failed to create IG container', { igUserId, error: parsedErr, params: Object.keys(params) });
+      throw Object.assign(new Error(parsedErr.error?.message || responseText || 'Failed to create Instagram media container'), { status: 502 });
     }
 
-    const data = await res.json();
+    const data = JSON.parse(responseText);
     return data.id;
   }
 
   async _publishContainer(igUserId, accessToken, containerId) {
     const url = `${GRAPH_URL}/${igUserId}/media_publish`;
+    const bodyParams = { creation_id: containerId, access_token: accessToken };
+
+    logger.info('Publishing IG container', { url, igUserId, containerId });
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ creation_id: containerId }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyParams),
     });
+
+    const responseText = await res.text();
+    logger.info('IG publish response', { status: res.status, body: responseText.slice(0, 500) });
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw Object.assign(new Error(err.error?.message || 'Failed to publish Instagram media'), { status: 502 });
+      let parsedErr;
+      try { parsedErr = JSON.parse(responseText); } catch { parsedErr = { raw: responseText }; }
+      throw Object.assign(new Error(parsedErr.error?.message || responseText || 'Failed to publish Instagram media'), { status: 502 });
     }
 
-    const data = await res.json();
+    const data = JSON.parse(responseText);
     return data.id;
   }
 
@@ -274,8 +290,8 @@ class InstagramPublishService {
       const delay = POLL_INTERVALS[Math.min(attempt, POLL_INTERVALS.length - 1)];
       await new Promise((resolve) => setTimeout(resolve, delay));
 
-      const url = `${GRAPH_URL}/${containerId}?fields=status_code,status`;
-      const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+      const url = `${GRAPH_URL}/${containerId}?fields=status_code,status&access_token=${accessToken}`;
+      const res = await fetch(url);
       const data = await res.json();
 
       if (data.status_code === 'FINISHED') return;
@@ -292,7 +308,7 @@ class InstagramPublishService {
 
   async _getPermalink(mediaId, accessToken) {
     try {
-      const res = await fetch(`${GRAPH_URL}/${mediaId}?fields=permalink`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+      const res = await fetch(`${GRAPH_URL}/${mediaId}?fields=permalink&access_token=${accessToken}`);
       const data = await res.json();
       return data.permalink || null;
     } catch {
