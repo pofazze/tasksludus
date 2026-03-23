@@ -38,12 +38,20 @@ async function reschedulePost(postId, newScheduledAt) {
 }
 
 async function setupRepeatable() {
-  // Token refresh: daily at 3:00 AM
+  // Remove old daily job if exists
+  const repeatable = await tokenRefreshQueue.getRepeatableJobs();
+  for (const job of repeatable) {
+    if (job.id === 'daily-token-refresh') {
+      await tokenRefreshQueue.removeRepeatableByKey(job.key);
+    }
+  }
+
+  // Token refresh: every 6 hours
   await tokenRefreshQueue.add('refresh-expiring', {}, {
-    repeat: { pattern: '0 3 * * *' },
-    jobId: 'daily-token-refresh',
+    repeat: { pattern: '0 */6 * * *' },
+    jobId: 'token-refresh-6h',
   });
-  logger.info('Token refresh repeatable job configured (daily 3 AM)');
+  logger.info('Token refresh repeatable job configured (every 6h)');
 }
 
 module.exports = {

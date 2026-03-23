@@ -19,9 +19,9 @@ router.get('/oauth/status/:clientId', controller.getConnectionStatus.bind(contro
 router.get('/scheduled', controller.listScheduledPosts.bind(controller));
 router.get('/scheduled/:id', controller.getScheduledPost.bind(controller));
 router.post('/scheduled', managementLevel, controller.createScheduledPost.bind(controller));
-router.put('/scheduled/:id', managementLevel, controller.updateScheduledPost.bind(controller));
+router.put('/scheduled/:id', controller.updateScheduledPost.bind(controller));
 router.delete('/scheduled/:id', managementLevel, controller.deleteScheduledPost.bind(controller));
-router.post('/scheduled/:id/publish-now', managementLevel, controller.publishNow.bind(controller));
+router.post('/scheduled/:id/publish-now', controller.publishNow.bind(controller));
 
 // Calendar
 router.get('/calendar/:clientId', controller.getCalendar.bind(controller));

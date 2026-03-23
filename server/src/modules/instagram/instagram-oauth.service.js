@@ -85,16 +85,28 @@ class InstagramOAuthService {
 
   async refreshToken(clientId) {
     const token = await this.getDecryptedToken(clientId);
-    const url = `${META_GRAPH_URL}/refresh_access_token?grant_type=ig_refresh_token&access_token=${token}`;
 
-    const res = await fetch(url);
-    if (!res.ok) {
+    // Try versioned URL first, then unversioned
+    const urls = [
+      `${META_GRAPH_URL}/v22.0/refresh_access_token?grant_type=ig_refresh_token&access_token=${token}`,
+      `${META_GRAPH_URL}/refresh_access_token?grant_type=ig_refresh_token&access_token=${token}`,
+    ];
+
+    let data;
+    for (const url of urls) {
+      const res = await fetch(url);
+      if (res.ok) {
+        data = await res.json();
+        break;
+      }
       const err = await res.json().catch(() => ({}));
-      logger.error('Token refresh failed', { clientId, error: err });
+      logger.warn('Token refresh attempt failed', { clientId, status: res.status, error: err });
+    }
+
+    if (!data) {
       throw Object.assign(new Error('Failed to refresh Instagram token'), { status: 502 });
     }
 
-    const data = await res.json();
     const { encrypted, iv, authTag } = encrypt(data.access_token);
 
     const [updated] = await db('client_instagram_tokens')

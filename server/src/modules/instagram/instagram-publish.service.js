@@ -3,7 +3,7 @@ const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const oauthService = require('./instagram-oauth.service');
 
-const GRAPH_URL = 'https://graph.instagram.com/v21.0';
+const GRAPH_URL = 'https://graph.facebook.com/v21.0';
 
 const POLL_INTERVALS = [5000, 10000, 20000, 40000, 60000]; // 5s, 10s, 20s, 40s, 60s
 const MAX_POLL_TIME = 5 * 60 * 1000; // 5 minutes
@@ -60,6 +60,12 @@ class InstagramPublishService {
         .returning('*');
 
       logger.info('Post published', { postId, igMediaId: result.mediaId });
+
+      // Move ClickUp task to "publicação" after successful publish
+      if (post.clickup_task_id) {
+        await this._moveToPublicacao(post.clickup_task_id);
+      }
+
       return updated;
     } catch (err) {
       const retryCount = (post.retry_count || 0) + 1;
@@ -195,6 +201,26 @@ class InstagramPublishService {
       return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
     }
     return url;
+  }
+
+  async _moveToPublicacao(clickupTaskId) {
+    try {
+      const res = await fetch(`https://api.clickup.com/api/v2/task/${clickupTaskId}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: env.clickup.apiToken,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'publicação' }),
+      });
+      if (res.ok) {
+        logger.info('Moved ClickUp task to publicação', { clickupTaskId });
+      } else {
+        logger.warn('Failed to move ClickUp task to publicação', { clickupTaskId, status: res.status });
+      }
+    } catch (err) {
+      logger.warn('Error moving ClickUp task to publicação', { clickupTaskId, error: err.message });
+    }
   }
 
   // --- Private helpers ---

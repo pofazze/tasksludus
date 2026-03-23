@@ -62,7 +62,14 @@ class InstagramController {
       const { client_id, month, status } = req.query;
       const query = db('scheduled_posts')
         .leftJoin('clients', 'scheduled_posts.client_id', 'clients.id')
-        .select('scheduled_posts.*', 'clients.name as client_name', 'clients.instagram_account')
+        .leftJoin('deliveries', 'scheduled_posts.delivery_id', 'deliveries.id')
+        .select(
+          'scheduled_posts.*',
+          'clients.name as client_name',
+          'clients.instagram_account',
+          'deliveries.title as delivery_title',
+          'deliveries.content_type as delivery_content_type'
+        )
         .orderBy('scheduled_posts.scheduled_at', 'asc');
 
       if (client_id) query.where('scheduled_posts.client_id', client_id);

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '@/services/api';
-import { getConnectionStatus, getOAuthUrl, disconnectInstagram } from '@/services/instagram';
+import { getConnectionStatus, getOAuthUrl, disconnectInstagram, listScheduledPosts } from '@/services/instagram';
 import useAuthStore from '@/stores/authStore';
 import { isManagement } from '@/lib/roles';
 import {
@@ -12,6 +12,8 @@ import {
   PIPELINE_ORDER,
   DIFFICULTY_LABELS,
 } from '@/lib/constants';
+import AgendamentoTab from '@/components/instagram/AgendamentoTab';
+import PostReviewView from '@/components/instagram/PostReviewView';
 import PageLoading from '@/components/common/PageLoading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -56,14 +58,16 @@ export default function ClientProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Internal views: 'profile' | 'delivery'
+  // Internal views: 'profile' | 'delivery' | 'post-review'
   const [view, setView] = useState('profile');
   const [selectedDelivery, setSelectedDelivery] = useState(null);
+  const [selectedPost, setSelectedPost] = useState(null);
   const [phases, setPhases] = useState([]);
   const [phasesLoading, setPhasesLoading] = useState(false);
 
-  // Tab: 'entregas' | 'instagram'
+  // Tab: 'entregas' | 'instagram' | 'agendamento'
   const [activeTab, setActiveTab] = useState('entregas');
+  const [draftCount, setDraftCount] = useState(0);
 
   // Filters
   const [filterMonth, setFilterMonth] = useState('');
@@ -95,6 +99,13 @@ export default function ClientProfilePage() {
     fetchProfile();
   }, [id, navigate]);
 
+  // Fetch draft count for Agendamento tab badge
+  useEffect(() => {
+    listScheduledPosts({ client_id: id, status: 'draft' })
+      .then((data) => setDraftCount(data.length))
+      .catch(() => {});
+  }, [id]);
+
   // Fetch Instagram connection status
   useEffect(() => {
     getConnectionStatus(id).then(setIgConnection).catch(() => setIgConnection(null));
@@ -125,7 +136,23 @@ export default function ClientProfilePage() {
   const backToProfile = () => {
     setView('profile');
     setSelectedDelivery(null);
+    setSelectedPost(null);
     setPhases([]);
+  };
+
+  const openPostReview = (post) => {
+    setSelectedPost(post);
+    setView('post-review');
+  };
+
+  const handlePostSaved = () => {
+    setView('profile');
+    setSelectedPost(null);
+    setActiveTab('agendamento');
+    // Refresh draft count
+    listScheduledPosts({ client_id: id, status: 'draft' })
+      .then((data) => setDraftCount(data.length))
+      .catch(() => {});
   };
 
   // ─── Instagram sync ───────────────────────────────────
@@ -318,6 +345,20 @@ export default function ClientProfilePage() {
   }
 
   // ═══════════════════════════════════════════════════════
+  // POST REVIEW VIEW
+  // ═══════════════════════════════════════════════════════
+  if (view === 'post-review' && selectedPost) {
+    return (
+      <PostReviewView
+        post={selectedPost}
+        clientName={client.name}
+        onBack={backToProfile}
+        onSaved={handlePostSaved}
+      />
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
   // PROFILE VIEW
   // ═══════════════════════════════════════════════════════
   return (
@@ -429,6 +470,14 @@ export default function ClientProfilePage() {
         <TabButton active={activeTab === 'entregas'} onClick={() => setActiveTab('entregas')}>
           Entregas
         </TabButton>
+        <TabButton active={activeTab === 'agendamento'} onClick={() => setActiveTab('agendamento')}>
+          <Calendar size={14} className="mr-1.5" /> Agendamento
+          {draftCount > 0 && (
+            <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0 bg-amber-500/15 text-amber-400">
+              {draftCount}
+            </Badge>
+          )}
+        </TabButton>
         <TabButton active={activeTab === 'instagram'} onClick={() => setActiveTab('instagram')}>
           <Instagram size={14} className="mr-1.5" /> Instagram
         </TabButton>
@@ -533,6 +582,11 @@ export default function ClientProfilePage() {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* ─── Tab: Agendamento ──────────────────────────── */}
+      {activeTab === 'agendamento' && (
+        <AgendamentoTab clientId={id} onReviewPost={openPostReview} />
       )}
 
       {/* ─── Tab: Instagram ────────────────────────────── */}
