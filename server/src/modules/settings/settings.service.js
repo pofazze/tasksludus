@@ -83,7 +83,7 @@ class SettingsService {
       return { connected: false, error: 'Token não configurado' };
     }
     try {
-      const res = await fetch(`https://graph.instagram.com/v25.0/me?fields=id,username&access_token=${token}`);
+      const res = await fetch(`https://graph.facebook.com/v25.0/me?fields=id,username&access_token=${token}`);
       if (!res.ok) {
         return { connected: false, error: `Instagram retornou ${res.status}` };
       }
