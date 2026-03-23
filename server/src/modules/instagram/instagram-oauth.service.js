@@ -4,7 +4,7 @@ const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const { encrypt, decrypt } = require('../../utils/encryption');
 
-const META_GRAPH_URL = 'https://graph.instagram.com';
+const META_GRAPH_URL = 'https://graph.facebook.com';
 const META_AUTH_URL = 'https://www.instagram.com/oauth/authorize';
 const META_TOKEN_URL = 'https://api.instagram.com/oauth/access_token';
 
@@ -86,31 +86,21 @@ class InstagramOAuthService {
   async refreshToken(clientId) {
     const token = await this.getDecryptedToken(clientId);
 
-    const body = new URLSearchParams({
+    const params = new URLSearchParams({
       grant_type: 'ig_refresh_token',
       access_token: token,
     });
 
-    // Try versioned URL first, then unversioned
-    const urls = [
-      `${META_GRAPH_URL}/v22.0/refresh_access_token`,
-      `${META_GRAPH_URL}/refresh_access_token`,
-    ];
+    const url = `${META_GRAPH_URL}/v22.0/refresh_access_token?${params.toString()}`;
+    const res = await fetch(url);
 
-    let data;
-    for (const url of urls) {
-      const res = await fetch(url, { method: 'POST', body });
-      if (res.ok) {
-        data = await res.json();
-        break;
-      }
+    if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      logger.warn('Token refresh attempt failed', { clientId, status: res.status, error: err });
-    }
-
-    if (!data) {
+      logger.error('Token refresh failed', { clientId, error: err });
       throw Object.assign(new Error('Failed to refresh Instagram token'), { status: 502 });
     }
+
+    const data = await res.json();
 
     const { encrypted, iv, authTag } = encrypt(data.access_token);
 
@@ -204,39 +194,30 @@ class InstagramOAuthService {
   }
 
   async _exchangeForLongLived(shortToken) {
-    const body = new URLSearchParams({
+    const params = new URLSearchParams({
       grant_type: 'ig_exchange_token',
       client_secret: env.meta.appSecret,
       access_token: shortToken,
     });
 
-    const urls = [
-      `${META_GRAPH_URL}/v22.0/access_token`,
-      `${META_GRAPH_URL}/access_token`,
-    ];
+    const url = `${META_GRAPH_URL}/v22.0/access_token?${params.toString()}`;
+    logger.info('Attempting long-lived token exchange', { url: url.replace(/access_token=[^&]+/, 'access_token=***') });
 
-    for (const url of urls) {
-      logger.info('Attempting long-lived token exchange', { url });
-      const res = await fetch(url, { method: 'POST', body });
-      if (res.ok) {
-        const data = await res.json();
-        logger.info('Long-lived token exchange successful', { expiresIn: data.expires_in });
-        return data;
-      }
-      const err = await res.json().catch(() => ({}));
-      logger.warn('Long-lived token exchange attempt failed', { url, status: res.status, error: err });
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      logger.info('Long-lived token exchange successful', { expiresIn: data.expires_in });
+      return data;
     }
 
-    logger.warn('All long-lived exchange attempts failed — using short-lived token (1h)');
+    const err = await res.json().catch(() => ({}));
+    logger.warn('Long-lived token exchange failed', { status: res.status, error: err });
+    logger.warn('Using short-lived token (1h)');
     return { access_token: shortToken, expires_in: 3600 };
   }
 
   async _getIgUser(accessToken) {
-    const body = new URLSearchParams({
-      fields: 'user_id,username',
-      access_token: accessToken,
-    });
-    const res = await fetch(`${META_GRAPH_URL}/v22.0/me`, { method: 'POST', body });
+    const res = await fetch(`${META_GRAPH_URL}/v22.0/me?fields=user_id,username&access_token=${accessToken}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       logger.error('Failed to fetch IG user info', { error: err });
