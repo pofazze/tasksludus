@@ -4,7 +4,7 @@ const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const { encrypt, decrypt } = require('../../utils/encryption');
 
-const META_GRAPH_URL = 'https://graph.facebook.com';
+const IG_GRAPH_URL = 'https://graph.instagram.com';
 const META_AUTH_URL = 'https://www.instagram.com/oauth/authorize';
 const META_TOKEN_URL = 'https://api.instagram.com/oauth/access_token';
 
@@ -35,17 +35,17 @@ class InstagramOAuthService {
   }
 
   async handleCallback(code, clientId) {
-    // Step 1: Exchange code for short-lived token (returns {access_token, user_id})
+    // Step 1: Exchange code for short-lived token
     const codeData = await this._exchangeCode(code);
     const shortToken = codeData.access_token;
     const igUserId = String(codeData.user_id);
 
-    // Step 2: Try to exchange for long-lived token (60 days)
+    // Step 2: Exchange for long-lived token (60 days)
     const longToken = await this._exchangeForLongLived(shortToken);
     const finalToken = longToken.access_token;
     const expiresIn = longToken.expires_in || 3600;
 
-    // Step 3: Try to get username (best-effort, not blocking)
+    // Step 3: Get username (best-effort)
     let igUsername = null;
     try {
       const igUser = await this._getIgUser(finalToken);
@@ -69,7 +69,6 @@ class InstagramOAuthService {
       is_active: true,
     };
 
-    // Upsert (one token per client)
     const existing = await db('client_instagram_tokens').where({ client_id: clientId }).first();
     if (existing) {
       const [updated] = await db('client_instagram_tokens')
@@ -86,32 +85,23 @@ class InstagramOAuthService {
   async refreshToken(clientId) {
     const token = await this.getDecryptedToken(clientId);
 
-    const params = new URLSearchParams({
+    const body = new URLSearchParams({
       grant_type: 'ig_refresh_token',
       access_token: token,
     });
 
-    const urls = [
-      `https://graph.instagram.com/refresh_access_token?${params.toString()}`,
-      `https://graph.facebook.com/v22.0/refresh_access_token?${params.toString()}`,
-    ];
+    const res = await fetch(`${IG_GRAPH_URL}/v25.0/refresh_access_token`, {
+      method: 'POST',
+      body,
+    });
 
-    let data;
-    for (const url of urls) {
-      const res = await fetch(url);
-      if (res.ok) {
-        data = await res.json();
-        logger.info('Token refresh successful', { clientId, expiresIn: data.expires_in });
-        break;
-      }
+    if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      logger.warn('Token refresh attempt failed', { clientId, url: url.replace(/access_token=[^&]+/, 'access_token=***'), error: err });
-    }
-
-    if (!data) {
+      logger.error('Token refresh failed', { clientId, error: err });
       throw Object.assign(new Error('Failed to refresh Instagram token'), { status: 502 });
     }
 
+    const data = await res.json();
     const { encrypted, iv, authTag } = encrypt(data.access_token);
 
     const [updated] = await db('client_instagram_tokens')
@@ -204,57 +194,58 @@ class InstagramOAuthService {
   }
 
   async _exchangeForLongLived(shortToken) {
-    // Attempt 1: Instagram Platform API (official docs)
-    const igParams = new URLSearchParams({
+    const body = new URLSearchParams({
       grant_type: 'ig_exchange_token',
       client_secret: env.meta.appSecret,
       access_token: shortToken,
     });
-    const attempts = [
-      { url: `https://graph.instagram.com/access_token?${igParams.toString()}`, label: 'IG unversioned' },
-      { url: `https://graph.instagram.com/v22.0/access_token?${igParams.toString()}`, label: 'IG v22.0' },
-    ];
 
-    // Attempt 2: Facebook Graph API (fb_exchange_token)
-    const fbParams = new URLSearchParams({
-      grant_type: 'fb_exchange_token',
-      client_id: env.meta.appId,
-      client_secret: env.meta.appSecret,
-      fb_exchange_token: shortToken,
-    });
-    attempts.push(
-      { url: `https://graph.facebook.com/v22.0/oauth/access_token?${fbParams.toString()}`, label: 'FB v22.0 oauth' },
-      { url: `https://graph.facebook.com/v21.0/oauth/access_token?${fbParams.toString()}`, label: 'FB v21.0 oauth' },
-    );
+    // graph.instagram.com v25.0 POST (as shown in Meta Graph API Explorer)
+    const url = `${IG_GRAPH_URL}/v25.0/access_token`;
+    logger.info('Attempting long-lived token exchange', { url });
 
-    for (const { url, label } of attempts) {
-      logger.info('Attempting long-lived token exchange', { label, url: url.replace(/access_token=[^&]+/g, 'access_token=***').replace(/fb_exchange_token=[^&]+/, 'fb_exchange_token=***') });
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        logger.info('Long-lived token exchange successful', { label, expiresIn: data.expires_in });
-        return data;
-      }
-      const err = await res.json().catch(() => ({}));
-      logger.warn('Long-lived token exchange attempt failed', { label, status: res.status, error: err });
+    const res = await fetch(url, { method: 'POST', body });
+    if (res.ok) {
+      const data = await res.json();
+      logger.info('Long-lived token exchange successful', { expiresIn: data.expires_in });
+      return data;
     }
 
-    logger.warn('All long-lived exchange attempts failed — using short-lived token (1h)');
+    const err = await res.json().catch(() => ({}));
+    logger.warn('Long-lived token exchange failed', { status: res.status, error: err });
+
+    // Fallback: try GET (per official docs)
+    const getUrl = `${IG_GRAPH_URL}/v25.0/access_token?${body.toString()}`;
+    logger.info('Retrying with GET', { url: getUrl.replace(/access_token=[^&]+/, 'access_token=***') });
+
+    const res2 = await fetch(getUrl);
+    if (res2.ok) {
+      const data = await res2.json();
+      logger.info('Long-lived token exchange successful (GET)', { expiresIn: data.expires_in });
+      return data;
+    }
+
+    const err2 = await res2.json().catch(() => ({}));
+    logger.warn('Long-lived GET also failed', { status: res2.status, error: err2 });
+    logger.warn('Using short-lived token (1h)');
     return { access_token: shortToken, expires_in: 3600 };
   }
 
   async _getIgUser(accessToken) {
-    // Try both domains
-    const urls = [
-      `https://graph.instagram.com/v22.0/me?fields=user_id,username&access_token=${accessToken}`,
-      `https://graph.facebook.com/v22.0/me?fields=user_id,username&access_token=${accessToken}`,
-    ];
-    for (const url of urls) {
-      const res = await fetch(url);
-      if (res.ok) return res.json();
-      const err = await res.json().catch(() => ({}));
-      logger.warn('Failed to fetch IG user info', { url: url.replace(/access_token=[^&]+/, 'access_token=***'), error: err });
-    }
+    const body = new URLSearchParams({
+      fields: 'user_id,username',
+      access_token: accessToken,
+    });
+
+    const res = await fetch(`${IG_GRAPH_URL}/v25.0/me`, { method: 'POST', body });
+    if (res.ok) return res.json();
+
+    // Fallback: GET
+    const res2 = await fetch(`${IG_GRAPH_URL}/v25.0/me?fields=user_id,username&access_token=${accessToken}`);
+    if (res2.ok) return res2.json();
+
+    const err = await res2.json().catch(() => ({}));
+    logger.error('Failed to fetch IG user info', { error: err });
     throw Object.assign(new Error('Failed to fetch Instagram user info'), { status: 502 });
   }
 }

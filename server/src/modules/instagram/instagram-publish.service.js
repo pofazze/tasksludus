@@ -3,7 +3,7 @@ const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const oauthService = require('./instagram-oauth.service');
 
-const GRAPH_URL = 'https://graph.facebook.com/v21.0';
+const GRAPH_URL = 'https://graph.instagram.com/v25.0';
 
 const POLL_INTERVALS = [5000, 10000, 20000, 40000, 60000]; // 5s, 10s, 20s, 40s, 60s
 const MAX_POLL_TIME = 5 * 60 * 1000; // 5 minutes
