@@ -137,7 +137,7 @@ class ClientsService {
       // Alternative: use direct media endpoint if we have the IG user ID stored
       // For now, try fetching media from the linked account
       const mediaRes = await fetch(
-        `https://graph.facebook.com/v25.0/me/media?fields=id,caption,media_type,media_url,permalink,timestamp&access_token=${token}&limit=20`
+        `https://graph.instagram.com/v25.0/me/media?fields=id,caption,media_type,media_url,permalink,timestamp&access_token=${token}&limit=20`
       );
 
       if (!mediaRes.ok) {
@@ -180,7 +180,7 @@ class ClientsService {
       for (const p of allPosts) {
         try {
           const insightsRes = await fetch(
-            `https://graph.facebook.com/v25.0/${p.instagram_media_id}/insights?metric=impressions,reach,engagement,saved&access_token=${token}`
+            `https://graph.instagram.com/v25.0/${p.instagram_media_id}/insights?metric=impressions,reach,engagement,saved&access_token=${token}`
           );
           if (insightsRes.ok) {
             const insightsData = await insightsRes.json();

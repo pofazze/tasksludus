@@ -245,11 +245,11 @@ class InstagramOAuthService {
   }
 
   async _getIgUser(accessToken) {
-    // Try graph.facebook.com first (new Instagram API)
-    const res = await fetch(`${FB_GRAPH_URL}/me?fields=user_id,username&access_token=${accessToken}`);
+    // Try graph.instagram.com with version
+    const res = await fetch(`${IG_GRAPH_URL}/v25.0/me?fields=user_id,username&access_token=${accessToken}`);
     if (res.ok) return res.json();
 
-    // Fallback: graph.instagram.com
+    // Fallback: without version
     const res2 = await fetch(`${IG_GRAPH_URL}/me?fields=user_id,username&access_token=${accessToken}`);
     if (res2.ok) return res2.json();
 
