@@ -226,10 +226,10 @@ class InstagramPublishService {
   // --- Private helpers ---
 
   async _createContainer(igUserId, accessToken, params) {
-    const url = `${GRAPH_URL}/${igUserId}/media`;
-    const body = new URLSearchParams({ access_token: accessToken, ...params });
+    const qs = new URLSearchParams({ access_token: accessToken, ...params });
+    const url = `${GRAPH_URL}/${igUserId}/media?${qs.toString()}`;
 
-    const res = await fetch(url, { method: 'POST', body });
+    const res = await fetch(url, { method: 'POST' });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       logger.error('Failed to create IG container', { igUserId, error: err, params: Object.keys(params) });
@@ -241,10 +241,10 @@ class InstagramPublishService {
   }
 
   async _publishContainer(igUserId, accessToken, containerId) {
-    const url = `${GRAPH_URL}/${igUserId}/media_publish`;
-    const body = new URLSearchParams({ access_token: accessToken, creation_id: containerId });
+    const qs = new URLSearchParams({ access_token: accessToken, creation_id: containerId });
+    const url = `${GRAPH_URL}/${igUserId}/media_publish?${qs.toString()}`;
 
-    const res = await fetch(url, { method: 'POST', body });
+    const res = await fetch(url, { method: 'POST' });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw Object.assign(new Error(err.error?.message || 'Failed to publish Instagram media'), { status: 502 });
