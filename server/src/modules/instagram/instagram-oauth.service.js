@@ -192,7 +192,12 @@ class InstagramOAuthService {
       code,
     });
 
-    logger.info('Exchanging code for token via Instagram Login');
+    logger.info('Exchanging code for token via Instagram Login', {
+      redirect_uri: env.meta.redirectUri,
+      client_id: env.meta.appId,
+      secret_prefix: env.meta.igAppSecret?.slice(0, 6),
+      code_prefix: code?.slice(0, 10),
+    });
 
     const res = await fetch(IG_TOKEN_URL, { method: 'POST', body: form });
     if (!res.ok) {
