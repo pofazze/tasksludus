@@ -3,6 +3,7 @@ const db = require('../../config/db');
 const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const autoAssign = require('./automations/auto-assign');
+const clickupOAuth = require('./clickup-oauth.service');
 
 const PUBLISHABLE_FORMATS = new Set([
   'reel', 'feed', 'story', 'carrossel', 'video',
@@ -509,8 +510,9 @@ class ClickUpWebhookService {
    */
   async fetchTask(taskId) {
     try {
+      const token = await clickupOAuth.getDecryptedToken();
       const res = await fetch(`https://api.clickup.com/api/v2/task/${taskId}`, {
-        headers: { Authorization: env.clickup.apiToken },
+        headers: { Authorization: token },
       });
       if (!res.ok) return null;
       return res.json();
@@ -579,10 +581,11 @@ class ClickUpWebhookService {
    */
   async registerWebhook(endpointUrl) {
     const teamId = '9011736576'; // Wander Fran workspace
+    const token = await clickupOAuth.getDecryptedToken();
 
     // First check existing webhooks
     const existingRes = await fetch(`https://api.clickup.com/api/v2/team/${teamId}/webhook`, {
-      headers: { Authorization: env.clickup.apiToken },
+      headers: { Authorization: token },
     });
     const existing = await existingRes.json();
 
@@ -591,7 +594,7 @@ class ClickUpWebhookService {
       if (wh.endpoint === endpointUrl) {
         await fetch(`https://api.clickup.com/api/v2/webhook/${wh.id}`, {
           method: 'DELETE',
-          headers: { Authorization: env.clickup.apiToken },
+          headers: { Authorization: token },
         });
         logger.info(`Deleted old webhook ${wh.id}`);
       }
@@ -601,7 +604,7 @@ class ClickUpWebhookService {
     const res = await fetch(`https://api.clickup.com/api/v2/team/${teamId}/webhook`, {
       method: 'POST',
       headers: {
-        Authorization: env.clickup.apiToken,
+        Authorization: token,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -640,8 +643,9 @@ class ClickUpWebhookService {
    */
   async listWebhooks() {
     const teamId = '9011736576';
+    const token = await clickupOAuth.getDecryptedToken();
     const res = await fetch(`https://api.clickup.com/api/v2/team/${teamId}/webhook`, {
-      headers: { Authorization: env.clickup.apiToken },
+      headers: { Authorization: token },
     });
     return res.json();
   }

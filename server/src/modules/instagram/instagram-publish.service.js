@@ -2,6 +2,7 @@ const db = require('../../config/db');
 const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const oauthService = require('./instagram-oauth.service');
+const clickupOAuth = require('../webhooks/clickup-oauth.service');
 
 const GRAPH_URL = 'https://graph.instagram.com/v25.0';
 
@@ -173,8 +174,9 @@ class InstagramPublishService {
 
   async resolveMediaUrls(clickupTaskId, existingUrls) {
     try {
+      const token = await clickupOAuth.getDecryptedToken();
       const res = await fetch(`https://api.clickup.com/api/v2/task/${clickupTaskId}`, {
-        headers: { Authorization: env.clickup.apiToken },
+        headers: { Authorization: token },
       });
 
       if (!res.ok) {
@@ -216,10 +218,11 @@ class InstagramPublishService {
 
   async _moveToPublicacao(clickupTaskId) {
     try {
+      const token = await clickupOAuth.getDecryptedToken();
       const res = await fetch(`https://api.clickup.com/api/v2/task/${clickupTaskId}`, {
         method: 'PUT',
         headers: {
-          Authorization: env.clickup.apiToken,
+          Authorization: token,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ status: 'publicação' }),

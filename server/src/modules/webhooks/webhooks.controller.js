@@ -1,5 +1,7 @@
 const clickupService = require('./clickup.service');
 const clickupSyncService = require('./clickup-sync.service');
+const clickupOAuthService = require('./clickup-oauth.service');
+const env = require('../../config/env');
 const logger = require('../../utils/logger');
 
 class WebhooksController {
@@ -97,6 +99,64 @@ class WebhooksController {
     try {
       const stats = await clickupSyncService.fullSync();
       res.json(stats);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Get ClickUp OAuth authorization URL
+   * GET /api/webhooks/clickup/oauth/url
+   */
+  async clickupOAuthUrl(_req, res, next) {
+    try {
+      const { url } = clickupOAuthService.getAuthorizationUrl();
+      res.json({ url });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * ClickUp OAuth callback — exchanges code and redirects to frontend
+   * GET /api/webhooks/clickup/oauth/callback
+   */
+  async clickupOAuthCallback(req, res) {
+    const { code } = req.query;
+    if (!code) {
+      return res.redirect(`${env.clientUrl}/settings?clickup_error=missing_code`);
+    }
+
+    try {
+      await clickupOAuthService.handleCallback(code);
+      res.redirect(`${env.clientUrl}/settings?clickup_connected=true`);
+    } catch (err) {
+      logger.error('ClickUp OAuth callback error', { error: err.message });
+      res.redirect(`${env.clientUrl}/settings?clickup_error=${encodeURIComponent(err.message)}`);
+    }
+  }
+
+  /**
+   * Disconnect ClickUp OAuth
+   * DELETE /api/webhooks/clickup/oauth
+   */
+  async clickupOAuthDisconnect(_req, res, next) {
+    try {
+      const result = await clickupOAuthService.disconnect();
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * Get ClickUp OAuth connection status
+   * GET /api/webhooks/clickup/oauth/status
+   */
+  async clickupOAuthStatus(_req, res, next) {
+    try {
+      const status = await clickupOAuthService.getConnectionStatus();
+      res.json(status);
     } catch (err) {
       next(err);
     }

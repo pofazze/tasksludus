@@ -1,5 +1,5 @@
 const db = require('../../config/db');
-const env = require('../../config/env');
+const clickupOAuth = require('../webhooks/clickup-oauth.service');
 
 class SettingsService {
   async listSettings() {
@@ -57,11 +57,8 @@ class SettingsService {
     return updated;
   }
   async testClickUp() {
-    const token = env.clickup.apiToken;
-    if (!token) {
-      return { connected: false, error: 'CLICKUP_API_TOKEN não configurado no .env' };
-    }
     try {
+      const token = await clickupOAuth.getDecryptedToken();
       const res = await fetch('https://api.clickup.com/api/v2/user', {
         headers: { Authorization: token },
       });

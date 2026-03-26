@@ -1,6 +1,6 @@
 const db = require('../../../config/db');
-const env = require('../../../config/env');
 const logger = require('../../../utils/logger');
+const clickupOAuth = require('../clickup-oauth.service');
 
 /**
  * Auto-assign automation — Test scope: Dr. Wander Fran only
@@ -61,8 +61,9 @@ async function run(clickupTaskId, newStatusName, task) {
   // Use pre-fetched task or fetch if needed
   if (!task) {
     try {
+      const token = await clickupOAuth.getDecryptedToken();
       const res = await fetch(`https://api.clickup.com/api/v2/task/${clickupTaskId}`, {
-        headers: { Authorization: env.clickup.apiToken },
+        headers: { Authorization: token },
       });
       if (!res.ok) return { executed: false, reason: 'failed to fetch task' };
       task = await res.json();
@@ -93,10 +94,11 @@ async function run(clickupTaskId, newStatusName, task) {
   }
 
   const remIds = currentAssignees.map(Number);
+  const token = await clickupOAuth.getDecryptedToken();
   const res = await fetch(`https://api.clickup.com/api/v2/task/${clickupTaskId}`, {
     method: 'PUT',
     headers: {
-      Authorization: env.clickup.apiToken,
+      Authorization: token,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -147,10 +149,11 @@ async function assignAllContributors(clickupTaskId, task) {
     return { executed: false, reason: 'all contributors already assigned' };
   }
 
+  const token = await clickupOAuth.getDecryptedToken();
   const res = await fetch(`https://api.clickup.com/api/v2/task/${clickupTaskId}`, {
     method: 'PUT',
     headers: {
-      Authorization: env.clickup.apiToken,
+      Authorization: token,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({

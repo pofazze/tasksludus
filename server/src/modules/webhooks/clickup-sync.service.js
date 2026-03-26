@@ -1,19 +1,16 @@
 const db = require('../../config/db');
-const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const clickupService = require('./clickup.service');
+const clickupOAuth = require('./clickup-oauth.service');
 
 const TEAM_ID = '9011736576';
 const MARKETING_SPACE_ID = '90114084559';
 const API_BASE = 'https://api.clickup.com/api/v2';
 
 class ClickUpSyncService {
-  get headers() {
-    return { Authorization: env.clickup.apiToken };
-  }
-
   async fetchJson(url) {
-    const res = await fetch(url, { headers: this.headers });
+    const token = await clickupOAuth.getDecryptedToken();
+    const res = await fetch(url, { headers: { Authorization: token } });
     if (!res.ok) {
       throw new Error(`ClickUp API ${res.status}: ${url}`);
     }

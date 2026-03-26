@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Send, CheckCircle2, XCircle, Loader2, Plug, Webhook, RefreshCw } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Send, CheckCircle2, XCircle, Loader2, Plug, Webhook, RefreshCw, Unplug } from 'lucide-react';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState([]);
@@ -25,6 +26,12 @@ export default function SettingsPage() {
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookRegistering, setWebhookRegistering] = useState(false);
   const [webhookEvents, setWebhookEvents] = useState([]);
+
+  // ClickUp OAuth
+  const [clickupOAuth, setClickupOAuth] = useState(null); // { connected, source, username, email }
+  const [clickupConnecting, setClickupConnecting] = useState(false);
+  const [clickupDisconnecting, setClickupDisconnecting] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // ClickUp Sync
   const [syncing, setSyncing] = useState(false);
@@ -52,7 +59,33 @@ export default function SettingsPage() {
     }
   };
 
-  useEffect(() => { fetchSettings(); }, []);
+  const fetchClickUpOAuth = async () => {
+    try {
+      const { data } = await api.get('/webhooks/clickup/oauth/status');
+      setClickupOAuth(data);
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+    fetchClickUpOAuth();
+  }, []);
+
+  // Handle ClickUp OAuth callback redirect
+  useEffect(() => {
+    if (searchParams.get('clickup_connected') === 'true') {
+      toast.success('ClickUp conectado com sucesso!');
+      fetchClickUpOAuth();
+      searchParams.delete('clickup_connected');
+      setSearchParams(searchParams, { replace: true });
+    }
+    const clickupError = searchParams.get('clickup_error');
+    if (clickupError) {
+      toast.error(`Erro ao conectar ClickUp: ${clickupError}`);
+      searchParams.delete('clickup_error');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, []);
 
   const getSettingValue = (key) => settings.find((s) => s.key === key)?.value;
 
@@ -93,6 +126,30 @@ export default function SettingsPage() {
       setClickupResult({ connected: false, error: 'Erro na requisição' });
     } finally {
       setClickupTesting(false);
+    }
+  };
+
+  const connectClickUp = async () => {
+    setClickupConnecting(true);
+    try {
+      const { data } = await api.get('/webhooks/clickup/oauth/url');
+      window.location.href = data.url;
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao iniciar conexão');
+      setClickupConnecting(false);
+    }
+  };
+
+  const disconnectClickUp = async () => {
+    setClickupDisconnecting(true);
+    try {
+      await api.delete('/webhooks/clickup/oauth');
+      toast.success('ClickUp desconectado');
+      setClickupOAuth({ connected: false });
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Erro ao desconectar');
+    } finally {
+      setClickupDisconnecting(false);
     }
   };
 
@@ -280,11 +337,70 @@ export default function SettingsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-zinc-800/50 border text-sm">
-                    <span className="text-muted-foreground">Token configurado via</span>
-                    <Badge variant="outline">CLICKUP_API_TOKEN</Badge>
-                    <span className="text-muted-foreground">no arquivo .env</span>
-                  </div>
+                  {/* OAuth Connection Status */}
+                  {clickupOAuth?.connected && clickupOAuth.source === 'oauth' ? (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-sm">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 size={16} className="text-green-400 shrink-0" />
+                        <span className="text-green-400">
+                          Conectado — @{clickupOAuth.username} ({clickupOAuth.email})
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={disconnectClickUp}
+                        disabled={clickupDisconnecting}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      >
+                        {clickupDisconnecting ? (
+                          <Loader2 size={14} className="mr-1 animate-spin" />
+                        ) : (
+                          <Unplug size={14} className="mr-1" />
+                        )}
+                        Desconectar
+                      </Button>
+                    </div>
+                  ) : clickupOAuth?.connected && clickupOAuth.source === 'env' ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-zinc-800/50 border text-sm">
+                        <span className="text-muted-foreground">Token configurado via</span>
+                        <Badge variant="outline">CLICKUP_API_TOKEN</Badge>
+                        <span className="text-muted-foreground">no .env (legado)</span>
+                      </div>
+                      <Button
+                        onClick={connectClickUp}
+                        disabled={clickupConnecting}
+                        className="bg-purple-600 hover:bg-purple-700"
+                        size="sm"
+                      >
+                        {clickupConnecting ? (
+                          <Loader2 size={14} className="mr-2 animate-spin" />
+                        ) : (
+                          <Plug size={14} className="mr-2" />
+                        )}
+                        Migrar para OAuth
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-zinc-800/50 border text-sm">
+                      <XCircle size={16} className="text-red-400 shrink-0" />
+                      <span className="text-muted-foreground">ClickUp não conectado</span>
+                      <Button
+                        onClick={connectClickUp}
+                        disabled={clickupConnecting}
+                        className="ml-auto bg-purple-600 hover:bg-purple-700"
+                        size="sm"
+                      >
+                        {clickupConnecting ? (
+                          <Loader2 size={14} className="mr-2 animate-spin" />
+                        ) : (
+                          <Plug size={14} className="mr-2" />
+                        )}
+                        Conectar ClickUp
+                      </Button>
+                    </div>
+                  )}
 
                   {clickupResult && (
                     <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${

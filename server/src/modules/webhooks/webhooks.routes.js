@@ -13,4 +13,10 @@ router.post('/clickup/register', authenticate, ceoOnly, controller.registerClick
 router.post('/clickup/sync', authenticate, ceoOnly, controller.sync);
 router.get('/events', authenticate, ceoOnly, controller.listEvents);
 
+// ClickUp OAuth
+router.get('/clickup/oauth/url', authenticate, ceoOnly, controller.clickupOAuthUrl);
+router.get('/clickup/oauth/callback', controller.clickupOAuthCallback); // public — ClickUp redirects here
+router.delete('/clickup/oauth', authenticate, ceoOnly, controller.clickupOAuthDisconnect);
+router.get('/clickup/oauth/status', authenticate, controller.clickupOAuthStatus);
+
 module.exports = router;

@@ -38,6 +38,7 @@ module.exports = {
     webhookSecret: process.env.CLICKUP_WEBHOOK_SECRET,
     clientId: process.env.CLICKUP_CLIENT_ID,
     clientSecret: process.env.CLICKUP_CLIENT_SECRET,
+    redirectUri: process.env.CLICKUP_REDIRECT_URI || 'https://server-production-bea3.up.railway.app/api/webhooks/clickup/oauth/callback',
   },
 
   meta: {
