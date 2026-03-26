@@ -93,7 +93,10 @@ class InstagramPublishService {
       caption,
     });
 
-    // Step 2: Publish
+    // Step 2: Wait for processing (large images need time)
+    await this._pollContainerStatus(containerId, accessToken);
+
+    // Step 3: Publish
     const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
     const permalink = await this._getPermalink(mediaId, accessToken);
 
