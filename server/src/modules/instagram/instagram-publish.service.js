@@ -27,6 +27,9 @@ class InstagramPublishService {
         mediaUrls = await this.resolveMediaUrls(post.clickup_task_id, mediaUrls);
       }
 
+      // Normalize all URLs (proxy ClickUp, convert Google Drive, etc.)
+      mediaUrls = mediaUrls.map((m) => ({ ...m, url: this._normalizeMediaUrl(m.url) }));
+
       let result;
       switch (post.post_type) {
         case 'image':
