@@ -38,20 +38,21 @@ class InstagramOAuthService {
     // Step 1: Exchange code for short-lived token
     const codeData = await this._exchangeCode(code);
     const shortToken = codeData.access_token;
-    const igUserId = String(codeData.user_id);
 
     // Step 2: Exchange for long-lived token (60 days)
     const longTokenData = await this._exchangeForLongLived(shortToken);
     const finalToken = longTokenData.access_token;
     const expiresIn = longTokenData.expires_in || 5184000;
 
-    // Step 3: Get username (best-effort)
+    // Step 3: Get user info (id, username) from /me — avoids JS number precision loss
+    let igUserId = String(codeData.user_id); // fallback
     let igUsername = null;
     try {
       const igUser = await this._getIgUser(finalToken);
+      igUserId = igUser.id; // string from API, no precision loss
       igUsername = igUser.username;
     } catch (err) {
-      logger.warn('Could not fetch IG username', { error: err.message });
+      logger.warn('Could not fetch IG user info', { error: err.message });
     }
 
     // Step 4: Encrypt and save
