@@ -342,9 +342,12 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-sm">
                       <div className="flex items-center gap-2">
                         <CheckCircle2 size={16} className="text-green-400 shrink-0" />
-                        <span className="text-green-400">
-                          Conectado — @{clickupOAuth.username} ({clickupOAuth.email})
-                        </span>
+                        <div>
+                          <span className="text-green-400 font-medium">
+                            Conectado via OAuth — @{clickupOAuth.username}
+                          </span>
+                          <p className="text-green-400/70 text-xs">{clickupOAuth.email}</p>
+                        </div>
                       </div>
                       <Button
                         variant="ghost"
@@ -362,11 +365,13 @@ export default function SettingsPage() {
                       </Button>
                     </div>
                   ) : clickupOAuth?.connected && clickupOAuth.source === 'env' ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 p-3 rounded-lg bg-zinc-800/50 border text-sm">
-                        <span className="text-muted-foreground">Token configurado via</span>
-                        <Badge variant="outline">CLICKUP_API_TOKEN</Badge>
-                        <span className="text-muted-foreground">no .env (legado)</span>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 size={16} className="text-amber-400 shrink-0" />
+                        <div>
+                          <span className="text-amber-400 font-medium">Conectado via token manual</span>
+                          <p className="text-amber-400/70 text-xs">Variável CLICKUP_API_TOKEN no servidor</p>
+                        </div>
                       </div>
                       <Button
                         onClick={connectClickUp}
@@ -379,17 +384,19 @@ export default function SettingsPage() {
                         ) : (
                           <Plug size={14} className="mr-2" />
                         )}
-                        Migrar para OAuth
+                        Conectar via OAuth
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-zinc-800/50 border text-sm">
-                      <XCircle size={16} className="text-red-400 shrink-0" />
-                      <span className="text-muted-foreground">ClickUp não conectado</span>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm">
+                      <div className="flex items-center gap-2">
+                        <XCircle size={16} className="text-red-400 shrink-0" />
+                        <span className="text-red-400">ClickUp não conectado</span>
+                      </div>
                       <Button
                         onClick={connectClickUp}
                         disabled={clickupConnecting}
-                        className="ml-auto bg-purple-600 hover:bg-purple-700"
+                        className="bg-purple-600 hover:bg-purple-700"
                         size="sm"
                       >
                         {clickupConnecting ? (
@@ -415,7 +422,7 @@ export default function SettingsPage() {
                       )}
                       <span>
                         {clickupResult.connected
-                          ? `Conectado — ${clickupResult.user} (${clickupResult.email})`
+                          ? `Teste OK — ${clickupResult.user} (${clickupResult.email})`
                           : clickupResult.error}
                       </span>
                     </div>
@@ -436,103 +443,20 @@ export default function SettingsPage() {
                       Testar Conexão
                     </Button>
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { fetchWebhooks(); fetchWebhookEvents(); }}
-                    >
-                      <Webhook size={14} className="mr-2" />
-                      Ver Webhooks
-                    </Button>
-                  </div>
-
-                  {/* Data Sync */}
-                  <div className="border-t pt-4 mt-4">
-                    <h4 className="font-medium mb-2">Importação de Dados</h4>
-                    <p className="text-sm text-zinc-500 mb-3">
-                      Importa membros, clientes e tarefas do ClickUp para o banco de dados.
-                    </p>
-                    <Button
                       onClick={runClickUpSync}
                       disabled={syncing}
                       className="bg-purple-600 hover:bg-purple-700"
+                      size="sm"
                     >
                       {syncing ? <><Loader2 size={14} className="mr-2 animate-spin" /> Sincronizando...</> : <><RefreshCw size={14} className="mr-2" /> Sincronizar ClickUp</>}
                     </Button>
-
-                    {syncResult && (
-                      <div className="mt-3 p-3 bg-zinc-800/50 rounded-lg text-sm space-y-1">
-                        <p><strong>Membros:</strong> {syncResult.members.created} criados, {syncResult.members.updated} atualizados</p>
-                        <p><strong>Clientes:</strong> {syncResult.clients.created} criados, {syncResult.clients.updated} atualizados</p>
-                        <p><strong>Entregas:</strong> {syncResult.deliveries.created} criadas, {syncResult.deliveries.updated} atualizadas, {syncResult.deliveries.skipped} ignoradas ({syncResult.deliveries.total} total no ClickUp)</p>
-                      </div>
-                    )}
                   </div>
 
-                  {/* Webhook Management */}
-                  {webhooks.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Webhooks registrados</p>
-                      {webhooks.map((wh) => (
-                        <div key={wh.id} className="flex items-center gap-2 p-2 rounded bg-zinc-800/50 border text-xs">
-                          <Badge variant={wh.health?.status === 'active' ? 'default' : 'secondary'}>
-                            {wh.health?.status || 'unknown'}
-                          </Badge>
-                          <span className="truncate flex-1 font-mono">{wh.endpoint}</span>
-                          <span className="text-muted-foreground">{wh.events?.length || 0} eventos</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Registrar Webhook</p>
-                    <div className="flex gap-2">
-                      <Input
-                        value={webhookUrl}
-                        onChange={(e) => setWebhookUrl(e.target.value)}
-                        placeholder="https://seu-servidor.com/api/webhooks/clickup"
-                        className="text-sm"
-                      />
-                      <Button
-                        size="sm"
-                        onClick={registerWebhook}
-                        disabled={webhookRegistering}
-                      >
-                        {webhookRegistering ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          'Registrar'
-                        )}
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Eventos: taskCreated, taskUpdated, taskStatusUpdated, taskAssigneeUpdated, etc.
-                    </p>
-                  </div>
-
-                  {/* Recent webhook events */}
-                  {webhookEvents.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Últimos Eventos</p>
-                        <Button variant="ghost" size="sm" onClick={fetchWebhookEvents}>
-                          <RefreshCw size={12} className="mr-1" /> Atualizar
-                        </Button>
-                      </div>
-                      <div className="max-h-48 overflow-y-auto space-y-1">
-                        {webhookEvents.map((ev) => (
-                          <div key={ev.id} className="flex items-center gap-2 p-1.5 rounded text-xs bg-zinc-800/50">
-                            <Badge
-                              variant="secondary"
-                              className={ev.status === 'processed' ? 'bg-emerald-500/15 text-emerald-400' : ev.status === 'failed' ? 'bg-red-500/15 text-red-400' : ''}
-                            >
-                              {ev.status}
-                            </Badge>
-                            <span className="font-mono">{ev.event_type}</span>
-                            <span className="text-muted-foreground ml-auto">{formatDate(ev.created_at)}</span>
-                          </div>
-                        ))}
-                      </div>
+                  {syncResult && (
+                    <div className="p-3 bg-zinc-800/50 rounded-lg text-sm space-y-1">
+                      <p><strong>Membros:</strong> {syncResult.members.created} criados, {syncResult.members.updated} atualizados</p>
+                      <p><strong>Clientes:</strong> {syncResult.clients.created} criados, {syncResult.clients.updated} atualizados</p>
+                      <p><strong>Entregas:</strong> {syncResult.deliveries.created} criadas, {syncResult.deliveries.updated} atualizadas, {syncResult.deliveries.skipped} ignoradas ({syncResult.deliveries.total} total no ClickUp)</p>
                     </div>
                   )}
                 </CardContent>
