@@ -200,6 +200,11 @@ class InstagramPublishService {
     if (driveMatch) {
       return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
     }
+    // Proxy ClickUp attachments through our server (ClickUp CDN blocks Instagram)
+    if (url.includes('clickup-attachments.com')) {
+      const baseUrl = env.meta.redirectUri.replace('/api/instagram/oauth/callback', '');
+      return `${baseUrl}/api/instagram/media-proxy?url=${encodeURIComponent(url)}`;
+    }
     return url;
   }
 

@@ -237,6 +237,28 @@ class InstagramController {
       next(err);
     }
   }
+
+  async mediaProxy(req, res, next) {
+    try {
+      const { url } = req.query;
+      if (!url) return res.status(400).json({ error: 'Missing url parameter' });
+
+      const upstream = await fetch(url);
+      if (!upstream.ok) return res.status(502).json({ error: 'Failed to fetch media' });
+
+      const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+      const contentLength = upstream.headers.get('content-length');
+
+      res.set('Content-Type', contentType);
+      res.set('Cache-Control', 'public, max-age=3600');
+      if (contentLength) res.set('Content-Length', contentLength);
+
+      const { Readable } = require('stream');
+      Readable.fromWeb(upstream.body).pipe(res);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new InstagramController();

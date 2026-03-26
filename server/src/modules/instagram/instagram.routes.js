@@ -8,6 +8,9 @@ const router = express.Router();
 // Callback is public (Meta redirects here)
 router.get('/oauth/callback', controller.handleOAuthCallback.bind(controller));
 
+// Media proxy — public so Instagram can fetch images
+router.get('/media-proxy', controller.mediaProxy.bind(controller));
+
 // Authenticated endpoints
 router.use(authenticate);
 
