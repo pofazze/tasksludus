@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "nodemon src/app.js",
-    "start": "node src/app.js",
+    "start": "npx knex migrate:latest && node src/app.js",
     "lint": "eslint src/",
     "test": "jest --runInBand"
   },
