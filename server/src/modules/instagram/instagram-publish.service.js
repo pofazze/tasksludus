@@ -177,9 +177,8 @@ class InstagramPublishService {
 
       const childId = await this._createContainer(igUserId, accessToken, params);
 
-      if (isVideo) {
-        await this._pollContainerStatus(childId, accessToken);
-      }
+      // Always poll — Instagram needs processing time for all media types
+      await this._pollContainerStatus(childId, accessToken);
 
       childIds.push(childId);
     }
@@ -191,7 +190,10 @@ class InstagramPublishService {
       children: childIds.join(','),
     });
 
-    // Step 3: Publish
+    // Step 3: Poll carousel container before publishing
+    await this._pollContainerStatus(containerId, accessToken);
+
+    // Step 4: Publish
     const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
     const permalink = await this._getPermalink(mediaId, accessToken);
 
