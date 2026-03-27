@@ -70,6 +70,17 @@ class InstagramPublishService {
         await this._moveToPublicacao(post.clickup_task_id);
       }
 
+      // Fallback: update delivery status directly (webhook may be delayed)
+      if (post.delivery_id) {
+        await db('deliveries')
+          .where({ id: post.delivery_id })
+          .update({ status: 'publicacao', completed_at: new Date(), updated_at: new Date() });
+      } else if (post.clickup_task_id) {
+        await db('deliveries')
+          .where({ clickup_task_id: post.clickup_task_id })
+          .update({ status: 'publicacao', completed_at: new Date(), updated_at: new Date() });
+      }
+
       return updated;
     } catch (err) {
       const retryCount = (post.retry_count || 0) + 1;

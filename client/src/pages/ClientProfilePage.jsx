@@ -85,19 +85,26 @@ export default function ClientProfilePage() {
   const [kanbanMonth, setKanbanMonth] = useState(getCurrentMonth());
 
   useEffect(() => {
+    let active = true;
+
     const fetchProfile = async () => {
       try {
         const { data } = await api.get(`/clients/${id}/profile`);
-        setProfile(data);
+        if (active) setProfile(data);
       } catch {
-        toast.error('Erro ao carregar perfil do cliente');
-        navigate('/clients');
+        if (active && loading) {
+          toast.error('Erro ao carregar perfil do cliente');
+          navigate('/clients');
+        }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
+
     fetchProfile();
-  }, [id, navigate]);
+    const interval = setInterval(fetchProfile, 30_000);
+    return () => { active = false; clearInterval(interval); };
+  }, [id]);
 
   // Fetch draft count for Agendamento tab badge
   useEffect(() => {

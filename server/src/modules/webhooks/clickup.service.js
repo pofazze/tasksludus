@@ -144,7 +144,10 @@ class ClickUpWebhookService {
 
     // Auto-create Instagram draft when task moves to "agendamento"
     if (newStatus === 'agendamento') {
-      await this.autoCreateScheduledPost(clickupTaskId, delivery, task);
+      const freshDelivery = delivery || await db('deliveries')
+        .where({ clickup_task_id: clickupTaskId })
+        .first();
+      await this.autoCreateScheduledPost(clickupTaskId, freshDelivery, task);
     }
 
     // "publicação" is now set BY TasksLudus after publishing — ignore webhook to prevent loop

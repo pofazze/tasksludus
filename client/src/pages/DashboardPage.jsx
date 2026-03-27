@@ -27,7 +27,6 @@ export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState(null);
   const [deliveries, setDeliveries] = useState([]);
   const [ranking, setRanking] = useState([]);
   const [goals, setGoals] = useState([]);
@@ -43,12 +42,13 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    let active = true;
+
     const fetchDashboard = async () => {
       try {
         const month = currentMonth();
         const requests = [
           api.get('/deliveries', { params: { month } }).catch(() => ({ data: [] })),
-          api.get('/deliveries/stats').catch(() => ({ data: { total: 0, by_content_type: {}, by_difficulty: {} } })),
           api.get('/ranking', { params: { month } }).catch(() => ({ data: [] })),
         ];
 
@@ -62,21 +62,24 @@ export default function DashboardPage() {
         }
 
         const results = await Promise.all(requests);
+        if (!active) return;
+
         setDeliveries(results[0].data);
-        setStats(results[1].data);
-        setRanking(results[2].data);
-        if (results[3]) setGoals(results[3].data);
-        if (results[4]) setUsersList(results[4].data);
-        if (results[5]) setClients(results[5].data);
-        if (results[6]) setCalculations(results[6].data);
+        setRanking(results[1].data);
+        if (results[2]) setGoals(results[2].data);
+        if (results[3]) setUsersList(results[3].data);
+        if (results[4]) setClients(results[4].data);
+        if (results[5]) setCalculations(results[5].data);
       } catch {
-        toast.error('Erro ao carregar dashboard');
+        if (loading) toast.error('Erro ao carregar dashboard');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     fetchDashboard();
+    const interval = setInterval(fetchDashboard, 30_000);
+    return () => { active = false; clearInterval(interval); };
   }, []);
 
   if (loading) return <PageLoading />;
@@ -95,10 +98,15 @@ export default function DashboardPage() {
   })).filter((d) => d.total > 0 || ['planejamento', 'captacao', 'design', 'aprovacao', 'publicacao'].includes(d.key));
 
   // By type for pie
-  const byTypeData = Object.entries(stats?.by_content_type || {}).map(([name, count]) => ({
-    name: CONTENT_TYPE_LABELS[name] || name,
-    value: count,
-  }));
+  const byTypeMap = {};
+  deliveries.forEach((d) => {
+    if (d.content_type) {
+      byTypeMap[d.content_type] = (byTypeMap[d.content_type] || 0) + 1;
+    }
+  });
+  const byTypeData = Object.entries(byTypeMap)
+    .map(([name, count]) => ({ name: CONTENT_TYPE_LABELS[name] || name, value: count }))
+    .sort((a, b) => b.value - a.value);
 
   // Workload per user
   const workloadMap = {};
