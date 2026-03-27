@@ -12,6 +12,7 @@ import {
   PIPELINE_ORDER,
   DIFFICULTY_LABELS,
 } from '@/lib/constants';
+import useServerEvent from '@/hooks/useServerEvent';
 import AgendamentoTab from '@/components/instagram/AgendamentoTab';
 import PostReviewView from '@/components/instagram/PostReviewView';
 import PageLoading from '@/components/common/PageLoading';
@@ -84,27 +85,29 @@ export default function ClientProfilePage() {
   // Kanban month filter
   const [kanbanMonth, setKanbanMonth] = useState(getCurrentMonth());
 
-  useEffect(() => {
-    let active = true;
-
-    const fetchProfile = async () => {
-      try {
-        const { data } = await api.get(`/clients/${id}/profile`);
-        if (active) setProfile(data);
-      } catch {
-        if (active && loading) {
-          toast.error('Erro ao carregar perfil do cliente');
-          navigate('/clients');
-        }
-      } finally {
-        if (active) setLoading(false);
+  const fetchProfile = async () => {
+    try {
+      const { data } = await api.get(`/clients/${id}/profile`);
+      setProfile(data);
+    } catch {
+      if (loading) {
+        toast.error('Erro ao carregar perfil do cliente');
+        navigate('/clients');
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchProfile();
-    const interval = setInterval(fetchProfile, 30_000);
-    return () => { active = false; clearInterval(interval); };
   }, [id]);
+
+  // Re-fetch when server pushes relevant events
+  useServerEvent(
+    ['delivery:created', 'delivery:updated', 'delivery:deleted', 'post:updated'],
+    fetchProfile
+  );
 
   // Fetch draft count for Agendamento tab badge
   useEffect(() => {

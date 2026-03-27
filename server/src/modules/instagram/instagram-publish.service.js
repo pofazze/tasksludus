@@ -3,6 +3,7 @@ const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const oauthService = require('./instagram-oauth.service');
 const clickupOAuth = require('../webhooks/clickup-oauth.service');
+const eventBus = require('../../utils/event-bus');
 
 const GRAPH_URL = 'https://graph.instagram.com/v25.0';
 
@@ -75,6 +76,9 @@ class InstagramPublishService {
         .returning('*');
 
       logger.info('Post published', { postId, igMediaId: result.mediaId });
+      eventBus.emit('sse', { type: 'post:updated', payload: { id: postId, status: 'published' } });
+      eventBus.emit('sse', { type: 'delivery:updated', payload: { clickup_task_id: post.clickup_task_id } });
+      eventBus.emit('sse', { type: 'ranking:updated' });
 
       // Move ClickUp task to "publicação" after successful publish
       if (post.clickup_task_id) {
@@ -105,6 +109,7 @@ class InstagramPublishService {
         });
 
       logger.error('Post publish failed', { postId, error: err.message, retryCount });
+      eventBus.emit('sse', { type: 'post:updated', payload: { id: postId, status: 'failed' } });
       throw err;
     }
   }

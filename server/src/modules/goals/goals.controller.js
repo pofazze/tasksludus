@@ -5,6 +5,7 @@ const {
   createUserGoalSchema,
   updateUserGoalSchema,
 } = require('./goals.validation');
+const eventBus = require('../../utils/event-bus');
 
 class GoalsController {
   // --- Goal Templates ---
@@ -34,6 +35,7 @@ class GoalsController {
       if (error) return res.status(400).json({ error: error.details[0].message });
 
       const template = await goalsService.createTemplate(value);
+      eventBus.emit('sse', { type: 'goals:updated' });
       res.status(201).json(template);
     } catch (err) {
       next(err);
@@ -46,6 +48,7 @@ class GoalsController {
       if (error) return res.status(400).json({ error: error.details[0].message });
 
       const template = await goalsService.updateTemplate(req.params.id, value);
+      eventBus.emit('sse', { type: 'goals:updated' });
       res.json(template);
     } catch (err) {
       next(err);
@@ -55,6 +58,7 @@ class GoalsController {
   async deleteTemplate(req, res, next) {
     try {
       await goalsService.deleteTemplate(req.params.id);
+      eventBus.emit('sse', { type: 'goals:updated' });
       res.status(204).end();
     } catch (err) {
       next(err);
@@ -88,6 +92,7 @@ class GoalsController {
       if (error) return res.status(400).json({ error: error.details[0].message });
 
       const goal = await goalsService.createUserGoal(value, req.user.id);
+      eventBus.emit('sse', { type: 'goals:updated' });
       res.status(201).json(goal);
     } catch (err) {
       next(err);
@@ -100,6 +105,7 @@ class GoalsController {
       if (error) return res.status(400).json({ error: error.details[0].message });
 
       const goal = await goalsService.updateUserGoal(req.params.id, value);
+      eventBus.emit('sse', { type: 'goals:updated' });
       res.json(goal);
     } catch (err) {
       next(err);

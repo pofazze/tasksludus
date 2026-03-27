@@ -4,6 +4,7 @@ const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const autoAssign = require('./automations/auto-assign');
 const clickupOAuth = require('./clickup-oauth.service');
+const eventBus = require('../../utils/event-bus');
 
 const PUBLISHABLE_FORMATS = new Set([
   'reel', 'feed', 'story', 'carrossel', 'video',
@@ -121,6 +122,10 @@ class ClickUpWebhookService {
       await db('deliveries')
         .where({ id: delivery.id })
         .update(updates);
+      eventBus.emit('sse', { type: 'delivery:updated', payload: { id: delivery.id, status: newStatus } });
+      if (newStatus === 'publicacao') {
+        eventBus.emit('sse', { type: 'ranking:updated' });
+      }
       logger.info(`Delivery ${delivery.id} status → ${newStatus}`);
     } else {
       logger.info(`No delivery found for ClickUp task ${clickupTaskId} — will auto-create`);
@@ -210,6 +215,7 @@ class ClickUpWebhookService {
     if (Object.keys(updates).length > 0) {
       updates.updated_at = new Date();
       await db('deliveries').where({ id: delivery.id }).update(updates);
+      eventBus.emit('sse', { type: 'delivery:updated', payload: { id: delivery.id } });
       logger.info(`Delivery ${delivery.id} updated from ClickUp`);
     }
   }
@@ -265,6 +271,7 @@ class ClickUpWebhookService {
       await db('deliveries')
         .where({ id: delivery.id })
         .update({ status: 'cancelado', updated_at: new Date() });
+      eventBus.emit('sse', { type: 'delivery:deleted', payload: { id: delivery.id } });
       logger.info(`Delivery ${delivery.id} marked as cancelado (ClickUp task deleted)`);
     }
   }
@@ -337,6 +344,7 @@ class ClickUpWebhookService {
       });
 
       logger.info(`Auto-created delivery for ClickUp task ${clickupTaskId}: "${task.name}"`);
+      eventBus.emit('sse', { type: 'delivery:created' });
     } catch (err) {
       logger.error(`Failed to auto-create delivery for ${clickupTaskId}: ${err.message}`);
     }
@@ -436,6 +444,7 @@ class ClickUpWebhookService {
         } else {
           logger.info(`Updated Instagram draft for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media)`);
         }
+        eventBus.emit('sse', { type: 'post:updated', payload: { clickup_task_id: clickupTaskId } });
         return;
       }
 
@@ -458,6 +467,7 @@ class ClickUpWebhookService {
       } else {
         logger.info(`Auto-created Instagram draft for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media, no entrega date)`);
       }
+      eventBus.emit('sse', { type: 'post:updated', payload: { clickup_task_id: clickupTaskId } });
     } catch (err) {
       logger.error(`Failed to auto-create scheduled post for ${clickupTaskId}: ${err.message}`);
     }

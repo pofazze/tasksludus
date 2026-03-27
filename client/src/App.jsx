@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import useAuthStore from '@/stores/authStore';
+import useSSE from '@/hooks/useSSE';
 import AuthLayout from '@/components/layout/AuthLayout';
 import ProtectedRoute from '@/components/layout/ProtectedRoute';
 import LoginPage from '@/pages/LoginPage';
@@ -28,6 +29,7 @@ const ALL_INTERNAL = ['ceo', 'director', 'manager', 'account_manager', 'producer
 
 function App() {
   const loadUser = useAuthStore((s) => s.loadUser);
+  useSSE();
 
   useEffect(() => {
     loadUser();

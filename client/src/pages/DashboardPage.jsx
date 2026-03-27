@@ -12,6 +12,7 @@ import {
   PIPELINE_STATUS_COLORS,
   PIPELINE_ORDER,
 } from '@/lib/constants';
+import useServerEvent from '@/hooks/useServerEvent';
 import PageLoading from '@/components/common/PageLoading';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -41,46 +42,46 @@ export default function DashboardPage() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
   };
 
-  useEffect(() => {
-    let active = true;
+  const fetchDashboard = async () => {
+    try {
+      const month = currentMonth();
+      const requests = [
+        api.get('/deliveries', { params: { month } }).catch(() => ({ data: [] })),
+        api.get('/ranking', { params: { month } }).catch(() => ({ data: [] })),
+      ];
 
-    const fetchDashboard = async () => {
-      try {
-        const month = currentMonth();
-        const requests = [
-          api.get('/deliveries', { params: { month } }).catch(() => ({ data: [] })),
-          api.get('/ranking', { params: { month } }).catch(() => ({ data: [] })),
-        ];
-
-        if (isMgmt) {
-          requests.push(
-            api.get('/goals', { params: { month } }).catch(() => ({ data: [] })),
-            api.get('/users').catch(() => ({ data: [] })),
-            api.get('/clients').catch(() => ({ data: [] })),
-            api.get('/boost', { params: { month } }).catch(() => ({ data: [] })),
-          );
-        }
-
-        const results = await Promise.all(requests);
-        if (!active) return;
-
-        setDeliveries(results[0].data);
-        setRanking(results[1].data);
-        if (results[2]) setGoals(results[2].data);
-        if (results[3]) setUsersList(results[3].data);
-        if (results[4]) setClients(results[4].data);
-        if (results[5]) setCalculations(results[5].data);
-      } catch {
-        if (loading) toast.error('Erro ao carregar dashboard');
-      } finally {
-        if (active) setLoading(false);
+      if (isMgmt) {
+        requests.push(
+          api.get('/goals', { params: { month } }).catch(() => ({ data: [] })),
+          api.get('/users').catch(() => ({ data: [] })),
+          api.get('/clients').catch(() => ({ data: [] })),
+          api.get('/boost', { params: { month } }).catch(() => ({ data: [] })),
+        );
       }
-    };
 
+      const results = await Promise.all(requests);
+      setDeliveries(results[0].data);
+      setRanking(results[1].data);
+      if (results[2]) setGoals(results[2].data);
+      if (results[3]) setUsersList(results[3].data);
+      if (results[4]) setClients(results[4].data);
+      if (results[5]) setCalculations(results[5].data);
+    } catch {
+      if (loading) toast.error('Erro ao carregar dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDashboard();
-    const interval = setInterval(fetchDashboard, 30_000);
-    return () => { active = false; clearInterval(interval); };
   }, []);
+
+  // Re-fetch when server pushes relevant events
+  useServerEvent(
+    ['delivery:created', 'delivery:updated', 'delivery:deleted', 'post:updated', 'ranking:updated', 'goals:updated'],
+    fetchDashboard
+  );
 
   if (loading) return <PageLoading />;
 

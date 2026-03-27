@@ -20,6 +20,7 @@ const rankingRoutes = require('./modules/ranking/ranking.routes');
 const simulatorRoutes = require('./modules/simulator/simulator.routes');
 const webhooksRoutes = require('./modules/webhooks/webhooks.routes');
 const instagramRoutes = require('./modules/instagram/instagram.routes');
+const eventsRoutes = require('./modules/events/events.routes');
 
 const app = express();
 
@@ -76,6 +77,7 @@ app.use('/api/ranking', rankingRoutes);
 app.use('/api/simulator', simulatorRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/instagram', instagramRoutes);
+app.use('/api/events', eventsRoutes);
 
 // 404 handler
 app.use((_req, res) => {

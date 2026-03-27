@@ -1,5 +1,6 @@
 const deliveriesService = require('./deliveries.service');
 const { createDeliverySchema, updateDeliverySchema } = require('./deliveries.validation');
+const eventBus = require('../../utils/event-bus');
 
 class DeliveriesController {
   async list(req, res, next) {
@@ -29,6 +30,7 @@ class DeliveriesController {
       if (error) return res.status(400).json({ error: error.details[0].message });
 
       const delivery = await deliveriesService.create(value);
+      eventBus.emit('sse', { type: 'delivery:created', payload: { id: delivery.id } });
       res.status(201).json(delivery);
     } catch (err) {
       next(err);
@@ -41,6 +43,7 @@ class DeliveriesController {
       if (error) return res.status(400).json({ error: error.details[0].message });
 
       const delivery = await deliveriesService.update(req.params.id, value);
+      eventBus.emit('sse', { type: 'delivery:updated', payload: { id: delivery.id } });
       res.json(delivery);
     } catch (err) {
       next(err);
