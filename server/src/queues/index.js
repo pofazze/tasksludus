@@ -25,10 +25,15 @@ async function schedulePost(postId, scheduledAt) {
 }
 
 async function cancelScheduledPost(postId) {
-  const job = await instagramPublishQueue.getJob(`post-${postId}`);
-  if (job) {
-    await job.remove();
-    logger.info('Scheduled post removed from queue', { postId });
+  try {
+    const job = await instagramPublishQueue.getJob(`post-${postId}`);
+    if (job) {
+      await job.remove();
+      logger.info('Scheduled post removed from queue', { postId });
+    }
+  } catch (err) {
+    // Job may be locked by an active worker — safe to ignore
+    logger.warn('Could not remove scheduled job (may be processing)', { postId, error: err.message });
   }
 }
 
