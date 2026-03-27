@@ -158,9 +158,8 @@ class InstagramPublishService {
 
     const containerId = await this._createContainer(igUserId, accessToken, params);
 
-    if (isVideo) {
-      await this._pollContainerStatus(containerId, accessToken);
-    }
+    // Always poll — Instagram needs processing time for both images and videos
+    await this._pollContainerStatus(containerId, accessToken);
 
     const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
     return { containerId, mediaId, permalink: null }; // Stories have no permalink
