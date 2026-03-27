@@ -84,8 +84,9 @@ export default function DashboardPage() {
 
   if (loading) return <PageLoading />;
 
-  const totalPublished = deliveries.filter((d) => d.status === 'publicacao' || d.status === 'completed').length;
-  const totalInPipeline = deliveries.filter((d) => d.status !== 'publicacao' && d.status !== 'completed').length;
+  const activeDeliveries = deliveries.filter((d) => d.status !== 'cancelado');
+  const totalPublished = activeDeliveries.filter((d) => d.status === 'publicacao' || d.status === 'completed').length;
+  const totalInPipeline = activeDeliveries.filter((d) => d.status !== 'publicacao' && d.status !== 'completed').length;
   const initials = (name) => name?.split(' ').map((n) => n[0]).join('').slice(0, 2) || '?';
   const getClientName = (id) => clients.find((c) => c.id === id)?.name;
   const getUserName = (id) => usersList.find((u) => u.id === id)?.name;

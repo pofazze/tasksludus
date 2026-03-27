@@ -16,7 +16,11 @@ class DeliveriesService {
     if (filters.client_id) query.where('deliveries.client_id', filters.client_id);
     if (filters.month) query.where('deliveries.month', filters.month);
     if (filters.content_type) query.where('deliveries.content_type', filters.content_type);
-    if (filters.status) query.where('deliveries.status', filters.status);
+    if (filters.status) {
+      query.where('deliveries.status', filters.status);
+    } else {
+      query.whereNot('deliveries.status', 'cancelado');
+    }
     return query;
   }
 

@@ -257,8 +257,16 @@ class ClickUpWebhookService {
    * Handle task deletion
    */
   async handleTaskDeleted(clickupTaskId, _event) {
-    // Don't delete, just log. Deliveries are important records.
-    logger.info(`ClickUp task ${clickupTaskId} deleted — delivery preserved`);
+    const delivery = await db('deliveries')
+      .where({ clickup_task_id: clickupTaskId })
+      .first();
+
+    if (delivery) {
+      await db('deliveries')
+        .where({ id: delivery.id })
+        .update({ status: 'cancelado', updated_at: new Date() });
+      logger.info(`Delivery ${delivery.id} marked as cancelado (ClickUp task deleted)`);
+    }
   }
 
   /**
