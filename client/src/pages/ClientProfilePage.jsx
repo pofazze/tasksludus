@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '@/services/api';
@@ -104,10 +104,8 @@ export default function ClientProfilePage() {
   }, [id]);
 
   // Re-fetch when server pushes relevant events
-  useServerEvent(
-    ['delivery:created', 'delivery:updated', 'delivery:deleted', 'post:updated'],
-    fetchProfile
-  );
+  const profileEvents = useMemo(() => ['delivery:created', 'delivery:updated', 'delivery:deleted', 'post:updated'], []);
+  useServerEvent(profileEvents, fetchProfile);
 
   // Fetch draft count for Agendamento tab badge
   useEffect(() => {

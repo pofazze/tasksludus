@@ -5,6 +5,7 @@ import {
   listScheduledPosts, deleteScheduledPost, publishNow,
 } from '@/services/instagram';
 import useAuthStore from '@/stores/authStore';
+import useServerEvent from '@/hooks/useServerEvent';
 import { isManagement } from '@/lib/roles';
 import PageLoading from '@/components/common/PageLoading';
 import ScheduledPostForm from '@/components/instagram/ScheduledPostForm';
@@ -121,6 +122,10 @@ export default function ScheduleCalendarPage() {
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
+
+  // Re-fetch when server pushes post events
+  const postEvents = useMemo(() => ['post:updated', 'delivery:updated'], []);
+  useServerEvent(postEvents, fetchPosts);
 
   const calendarDays = useMemo(() => getCalendarDays(year, month), [year, month]);
 

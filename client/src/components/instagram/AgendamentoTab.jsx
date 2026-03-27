@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { listScheduledPosts } from '@/services/instagram';
 import { CONTENT_TYPE_LABELS } from '@/lib/constants';
+import useServerEvent from '@/hooks/useServerEvent';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,6 +44,10 @@ export default function AgendamentoTab({ clientId, onReviewPost }) {
   };
 
   useEffect(() => { fetchPosts(); }, [clientId]);
+
+  // Re-fetch when server pushes post events
+  const postEvents = useMemo(() => ['post:updated', 'delivery:updated'], []);
+  useServerEvent(postEvents, fetchPosts);
 
   const drafts = useMemo(() => posts.filter((p) => p.status === 'draft'), [posts]);
   const scheduled = useMemo(() => posts.filter((p) => p.status === 'scheduled'), [posts]);
