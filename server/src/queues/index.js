@@ -65,10 +65,10 @@ async function setupRepeatable() {
     await deliverySyncQueue.removeRepeatableByKey(job.key);
   }
   await deliverySyncQueue.add('sync-deliveries', {}, {
-    repeat: { pattern: '*/30 * * * *' },
-    jobId: 'delivery-sync-30m',
+    repeat: { pattern: '*/5 * * * *' },
+    jobId: 'delivery-sync-5m',
   });
-  logger.info('Delivery sync repeatable job configured (every 30m)');
+  logger.info('Delivery sync repeatable job configured (every 5m)');
 }
 
 module.exports = {
