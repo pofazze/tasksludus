@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export default function useSSE() {
   const esRef = useRef(null);
@@ -10,7 +10,7 @@ export default function useSSE() {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const es = new EventSource(`${API_URL}/api/events/stream?token=${token}`);
+      const es = new EventSource(`${BASE_URL}/events/stream?token=${token}`);
       esRef.current = es;
 
       es.onmessage = (e) => {

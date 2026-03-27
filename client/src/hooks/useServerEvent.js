@@ -1,15 +1,16 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 
 export default function useServerEvent(eventTypes, callback) {
-  const stableCallback = useCallback(callback, []);
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
 
   useEffect(() => {
     const handler = (e) => {
       if (eventTypes.includes(e.detail?.type)) {
-        stableCallback(e.detail);
+        callbackRef.current(e.detail);
       }
     };
     window.addEventListener('sse', handler);
     return () => window.removeEventListener('sse', handler);
-  }, [eventTypes, stableCallback]);
+  }, [eventTypes]);
 }
