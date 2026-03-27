@@ -92,6 +92,7 @@ try {
   const { setupRepeatable } = require('./queues');
   require('./queues/instagram-publish.worker');
   require('./queues/token-refresh.worker');
+  require('./queues/delivery-sync.worker');
   setupRepeatable().catch((err) => logger.error('Failed to setup repeatable jobs', { error: err.message }));
   logger.info('BullMQ workers initialized');
 } catch (err) {

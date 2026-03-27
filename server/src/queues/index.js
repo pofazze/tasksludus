@@ -9,6 +9,7 @@ const connection = {
 
 const instagramPublishQueue = new Queue('instagram-publish', { connection });
 const tokenRefreshQueue = new Queue('token-refresh', { connection });
+const deliverySyncQueue = new Queue('delivery-sync', { connection });
 
 async function schedulePost(postId, scheduledAt) {
   const delay = new Date(scheduledAt).getTime() - Date.now();
@@ -57,11 +58,23 @@ async function setupRepeatable() {
     jobId: 'token-refresh-6h',
   });
   logger.info('Token refresh repeatable job configured (every 6h)');
+
+  // Delivery sync: every 30 minutes
+  const syncRepeatable = await deliverySyncQueue.getRepeatableJobs();
+  for (const job of syncRepeatable) {
+    await deliverySyncQueue.removeRepeatableByKey(job.key);
+  }
+  await deliverySyncQueue.add('sync-deliveries', {}, {
+    repeat: { pattern: '*/30 * * * *' },
+    jobId: 'delivery-sync-30m',
+  });
+  logger.info('Delivery sync repeatable job configured (every 30m)');
 }
 
 module.exports = {
   instagramPublishQueue,
   tokenRefreshQueue,
+  deliverySyncQueue,
   schedulePost,
   cancelScheduledPost,
   reschedulePost,
