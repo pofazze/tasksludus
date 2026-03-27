@@ -437,8 +437,8 @@ export default function ClientProfilePage() {
                     <span className="text-xs text-muted-foreground">{cards.length}</span>
                   </div>
 
-                  {/* Cards stack */}
-                  <div className="space-y-2 min-h-[60px]">
+                  {/* Cards stack — max 5 visible, scroll for more */}
+                  <div className="space-y-2 min-h-[60px] max-h-[340px] overflow-y-auto pr-0.5 scrollbar-thin">
                     {cards.map((d) => (
                       <button
                         key={d.id}
