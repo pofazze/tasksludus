@@ -105,6 +105,19 @@ class WebhooksController {
   }
 
   /**
+   * Bulk sync all deliveries with current ClickUp status
+   * POST /api/webhooks/clickup/sync-all
+   */
+  async syncAll(_req, res, next) {
+    try {
+      const result = await clickupService.syncAllDeliveries();
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
    * Get ClickUp OAuth authorization URL
    * GET /api/webhooks/clickup/oauth/url
    */

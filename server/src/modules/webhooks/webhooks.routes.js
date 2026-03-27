@@ -11,6 +11,7 @@ router.post('/clickup', controller.clickup);
 router.get('/clickup', authenticate, ceoOnly, controller.listClickup);
 router.post('/clickup/register', authenticate, ceoOnly, controller.registerClickup);
 router.post('/clickup/sync', authenticate, ceoOnly, controller.sync);
+router.post('/clickup/sync-all', authenticate, ceoOnly, controller.syncAll);
 router.get('/events', authenticate, ceoOnly, controller.listEvents);
 
 // ClickUp OAuth

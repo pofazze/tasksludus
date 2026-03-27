@@ -342,15 +342,6 @@ class ClickUpWebhookService {
    */
   async autoCreateScheduledPost(clickupTaskId, delivery, task) {
     try {
-      // Check if a scheduled_post already exists for this task
-      const existing = await db('scheduled_posts')
-        .where({ clickup_task_id: clickupTaskId })
-        .first();
-      if (existing) {
-        logger.info(`Scheduled post already exists for task ${clickupTaskId}`);
-        return;
-      }
-
       if (!delivery) {
         logger.warn(`Cannot auto-create scheduled post: no delivery for task ${clickupTaskId}`);
         return;
@@ -406,6 +397,39 @@ class ClickUpWebhookService {
       // Determine status: scheduled (future date) or draft (no date / past date)
       const isFutureDate = scheduledAt && scheduledAt > new Date();
       const postStatus = isFutureDate ? 'scheduled' : 'draft';
+
+      // Check if a scheduled_post already exists for this task
+      const existing = await db('scheduled_posts')
+        .where({ clickup_task_id: clickupTaskId })
+        .first();
+
+      if (existing) {
+        // Already published — don't touch
+        if (existing.status === 'published') {
+          logger.info(`Scheduled post already published for task ${clickupTaskId}`);
+          return;
+        }
+
+        // Update existing post with fresh data from ClickUp
+        const updates = {
+          caption: taskWithAttachments.name || '',
+          post_type: postType,
+          media_urls: JSON.stringify(mediaUrls),
+          status: postStatus,
+          scheduled_at: isFutureDate ? scheduledAt : null,
+          updated_at: new Date(),
+        };
+        await db('scheduled_posts').where({ id: existing.id }).update(updates);
+
+        if (isFutureDate) {
+          const { schedulePost } = require('../../queues');
+          await schedulePost(existing.id, scheduledAt);
+          logger.info(`Updated & re-scheduled Instagram post for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media)`);
+        } else {
+          logger.info(`Updated Instagram draft for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media)`);
+        }
+        return;
+      }
 
       const [post] = await db('scheduled_posts').insert({
         client_id: delivery.client_id,
@@ -577,6 +601,63 @@ class ClickUpWebhookService {
       'apresentacao': 'apresentacao',
     };
     return map[normalized] || 'video';
+  }
+
+  /**
+   * Bulk sync all deliveries with current ClickUp task status.
+   * One-time use to backfill deliveries created before webhooks were active.
+   */
+  async syncAllDeliveries() {
+    const deliveries = await db('deliveries')
+      .whereNotNull('clickup_task_id')
+      .select('id', 'clickup_task_id', 'status', 'content_type', 'title');
+
+    let updated = 0;
+    let errors = 0;
+
+    for (const delivery of deliveries) {
+      try {
+        const task = await this.fetchTask(delivery.clickup_task_id);
+        if (!task) { errors++; continue; }
+
+        const newStatus = this.mapClickUpStatus(task.status?.status);
+        const updates = {};
+
+        if (newStatus && newStatus !== delivery.status) {
+          updates.status = newStatus;
+          if (newStatus === 'publicacao') updates.completed_at = new Date();
+        }
+
+        if (task.name && task.name !== delivery.title) {
+          updates.title = task.name;
+        }
+
+        // Sync content_type from Formato field
+        const formatoField = task.custom_fields?.find((cf) => cf.name === 'Formato');
+        if (formatoField?.value != null && formatoField.type_config?.options) {
+          const option = formatoField.type_config.options[formatoField.value];
+          if (option) {
+            const mapped = this.mapContentType(option.name);
+            if (mapped !== delivery.content_type) updates.content_type = mapped;
+          }
+        }
+
+        if (Object.keys(updates).length > 0) {
+          updates.updated_at = new Date();
+          await db('deliveries').where({ id: delivery.id }).update(updates);
+          updated++;
+        }
+
+        // Rate limit: 600ms between requests (ClickUp allows 100 req/min)
+        await new Promise((r) => setTimeout(r, 600));
+      } catch (err) {
+        logger.error(`syncAllDeliveries error for delivery ${delivery.id}: ${err.message}`);
+        errors++;
+      }
+    }
+
+    logger.info('syncAllDeliveries complete', { total: deliveries.length, updated, errors });
+    return { total: deliveries.length, updated, errors };
   }
 
   /**

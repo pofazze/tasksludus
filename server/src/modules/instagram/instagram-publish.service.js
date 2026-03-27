@@ -31,14 +31,25 @@ class InstagramPublishService {
       // Normalize all URLs (proxy ClickUp, convert Google Drive, etc.)
       mediaUrls = mediaUrls.map((m) => ({ ...m, url: this._normalizeMediaUrl(m.url) }));
 
+      // Detect actual media type and override post_type if mismatched
+      const actualMediaType = mediaUrls[0]?.type; // 'image' or 'video' from MIME detection
+      let effectivePostType = post.post_type;
+      if (post.post_type === 'video' && actualMediaType === 'image') {
+        effectivePostType = 'image';
+        logger.warn('Post type mismatch: post_type=video but media is image, publishing as image', { postId });
+      } else if (post.post_type === 'image' && actualMediaType === 'video') {
+        effectivePostType = 'reel';
+        logger.warn('Post type mismatch: post_type=image but media is video, publishing as reel', { postId });
+      }
+
       let result;
-      switch (post.post_type) {
+      switch (effectivePostType) {
         case 'image':
           result = await this.publishImage(igUserId, accessToken, mediaUrls[0]?.url, post.caption);
           break;
         case 'video':
         case 'reel':
-          result = await this.publishVideo(igUserId, accessToken, mediaUrls[0]?.url, post.caption, post.post_type === 'reel');
+          result = await this.publishVideo(igUserId, accessToken, mediaUrls[0]?.url, post.caption, effectivePostType === 'reel');
           break;
         case 'story':
           result = await this.publishStory(igUserId, accessToken, mediaUrls[0]);
@@ -47,7 +58,7 @@ class InstagramPublishService {
           result = await this.publishCarousel(igUserId, accessToken, mediaUrls, post.caption);
           break;
         default:
-          throw new Error(`Unsupported post type: ${post.post_type}`);
+          throw new Error(`Unsupported post type: ${effectivePostType}`);
       }
 
       const [updated] = await db('scheduled_posts')
