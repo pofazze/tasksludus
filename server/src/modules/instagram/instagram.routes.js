@@ -1,5 +1,5 @@
 const express = require('express');
-const { authenticate, managementLevel } = require('../../middleware/auth');
+const { authenticate, managementLevel, managementOrSocialMedia } = require('../../middleware/auth');
 const controller = require('./instagram.controller');
 
 const router = express.Router();
@@ -21,9 +21,9 @@ router.get('/oauth/status/:clientId', controller.getConnectionStatus.bind(contro
 // Scheduled posts
 router.get('/scheduled', controller.listScheduledPosts.bind(controller));
 router.get('/scheduled/:id', controller.getScheduledPost.bind(controller));
-router.post('/scheduled', managementLevel, controller.createScheduledPost.bind(controller));
+router.post('/scheduled', managementOrSocialMedia, controller.createScheduledPost.bind(controller));
 router.put('/scheduled/:id', controller.updateScheduledPost.bind(controller));
-router.delete('/scheduled/:id', managementLevel, controller.deleteScheduledPost.bind(controller));
+router.delete('/scheduled/:id', managementOrSocialMedia, controller.deleteScheduledPost.bind(controller));
 router.post('/scheduled/:id/publish-now', controller.publishNow.bind(controller));
 
 // Calendar
