@@ -9,7 +9,7 @@
 :root {
     --background: #09090B;
     --foreground: #FAFAFA;
-    --card: #111114;
+    --card: #18181B;
     --card-foreground: #FAFAFA;
     --popover: #151518;
     --popover-foreground: #FAFAFA;
@@ -121,6 +121,10 @@
 @layer base {
     * {
         @apply border-border outline-ring/50;
+        font-feature-settings: 'tnum' var(--tnum, );
+    }
+    .tabular-nums {
+        --tnum: 'tnum';
     }
     body {
         @apply bg-background text-foreground antialiased;
