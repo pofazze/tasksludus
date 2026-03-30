@@ -73,10 +73,22 @@ function managementLevel(req, res, next) {
   next();
 }
 
+// CEO, Director, Manager, or Social Media producer
+function managementOrSocialMedia(req, res, next) {
+  if (['ceo', 'director', 'manager'].includes(req.user.role)) {
+    return next();
+  }
+  if (req.user.role === 'producer' && req.user.producer_type === 'social_media') {
+    return next();
+  }
+  return res.status(403).json({ error: 'Management or Social Media access only' });
+}
+
 module.exports = {
   authenticate,
   authorize,
   ceoOnly,
   adminLevel,
   managementLevel,
+  managementOrSocialMedia,
 };
