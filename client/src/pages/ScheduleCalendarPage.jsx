@@ -56,9 +56,9 @@ const MONTH_NAMES = [
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 const STATUS_STYLES = {
-  draft: 'bg-zinc-700/40 text-zinc-400',
-  scheduled: 'bg-purple-500/15 text-purple-400',
-  publishing: 'bg-amber-500/15 text-amber-400',
+  draft: 'bg-zinc-500/15 text-zinc-400',
+  scheduled: 'bg-amber-500/15 text-amber-400',
+  publishing: 'bg-blue-500/15 text-blue-400',
   published: 'bg-emerald-500/15 text-emerald-400',
   failed: 'bg-red-500/15 text-red-400',
   cancelled: 'bg-zinc-600/30 text-zinc-500',
