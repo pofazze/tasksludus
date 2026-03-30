@@ -7,7 +7,7 @@ const clickupOAuth = require('./clickup-oauth.service');
 const eventBus = require('../../utils/event-bus');
 
 const PUBLISHABLE_FORMATS = new Set([
-  'reel', 'feed', 'story', 'carrossel',
+  'reel', 'feed', 'story', 'carrossel', 'video',
 ]);
 
 class ClickUpWebhookService {
