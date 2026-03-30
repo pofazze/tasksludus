@@ -84,7 +84,7 @@ const TYPE_ICONS = {
 
 export default function ScheduleCalendarPage() {
   const user = useAuthStore((s) => s.user);
-  const canManage = isManagement(user?.role);
+  const canManage = isManagement(user?.role) || user?.producer_type === 'social_media';
 
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [month, setMonth] = useState(() => new Date().getMonth());
