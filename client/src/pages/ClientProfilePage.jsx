@@ -54,7 +54,7 @@ export default function ClientProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const canManage = isManagement(user?.role);
+  const canManage = isManagement(user?.role) || user?.producer_type === 'social_media';
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
