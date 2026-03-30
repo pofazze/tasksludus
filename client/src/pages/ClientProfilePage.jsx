@@ -339,45 +339,92 @@ export default function ClientProfilePage() {
   // ═══════════════════════════════════════════════════════
   // PROFILE VIEW
   // ═══════════════════════════════════════════════════════
+  const clientInitials = client.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || '?';
+
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/clients')}>
-          <ArrowLeft size={18} />
-        </Button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold font-display truncate">{client.name}</h1>
-          {client.company && (
-            <p className="text-sm text-muted-foreground">{client.company}</p>
+      <div className="mb-8">
+        <button
+          onClick={() => navigate('/clients')}
+          className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer mb-4"
+        >
+          <ArrowLeft size={12} /> Voltar para clientes
+        </button>
+
+        <div className="flex items-start gap-4">
+          {/* Avatar */}
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#9A48EA]/15 text-[#9A48EA] text-lg font-bold shrink-0">
+            {clientInitials}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold font-display truncate">{client.name}</h1>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                client.is_active !== false
+                  ? 'bg-emerald-500/15 text-emerald-400'
+                  : 'bg-zinc-500/15 text-zinc-400'
+              }`}>
+                {client.is_active !== false ? 'Ativo' : 'Inativo'}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 mt-1">
+              {client.company && (
+                <span className="text-sm text-zinc-500">{client.company}</span>
+              )}
+              {client.instagram_account && (
+                <a
+                  href={`https://instagram.com/${client.instagram_account.replace('@', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-pink-400 hover:text-pink-300 text-sm inline-flex items-center gap-1 transition-colors"
+                >
+                  <Instagram size={12} />
+                  {client.instagram_account.startsWith('@') ? client.instagram_account : `@${client.instagram_account}`}
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Compact metrics row */}
+        <div className="flex flex-wrap gap-x-6 gap-y-2 mt-5 px-1">
+          <div className="flex items-center gap-1.5">
+            <Package size={13} className="text-zinc-500" />
+            <span className="text-sm font-semibold tabular-nums">{metrics.totalDeliveries}</span>
+            <span className="text-xs text-zinc-500">entregas</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2 size={13} className="text-emerald-400" />
+            <span className="text-sm font-semibold tabular-nums text-emerald-400">{metrics.publishedCount}</span>
+            <span className="text-xs text-zinc-500">publicadas</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Clock size={13} className="text-amber-400" />
+            <span className="text-sm font-semibold tabular-nums text-amber-400">{metrics.inProduction}</span>
+            <span className="text-xs text-zinc-500">em produção</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Filter size={13} className="text-zinc-500" />
+            <span className="text-sm font-semibold tabular-nums">{distinctFormats}</span>
+            <span className="text-xs text-zinc-500">formatos</span>
+          </div>
+          {client.instagram_account && (
+            <>
+              <div className="flex items-center gap-1.5">
+                <Instagram size={13} className="text-pink-400" />
+                <span className="text-sm font-semibold tabular-nums text-pink-400">{metrics.igSummary.totalPosts}</span>
+                <span className="text-xs text-zinc-500">posts IG</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <TrendingUp size={13} className="text-pink-400" />
+                <span className="text-sm font-semibold tabular-nums text-pink-400">{fmtNumber(metrics.igSummary.totalReach)}</span>
+                <span className="text-xs text-zinc-500">alcance</span>
+              </div>
+            </>
           )}
         </div>
-        {client.instagram_account && (
-          <a
-            href={`https://instagram.com/${client.instagram_account.replace('@', '')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-pink-400 hover:underline text-sm inline-flex items-center gap-1 shrink-0"
-          >
-            <Instagram size={14} />
-            {client.instagram_account.startsWith('@') ? client.instagram_account : `@${client.instagram_account}`}
-            <ExternalLink size={10} />
-          </a>
-        )}
-      </div>
-
-      {/* ─── Metrics Bar ───────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
-        <MetricCard label="Total Entregas" value={metrics.totalDeliveries} icon={<Package size={14} />} />
-        <MetricCard label="Publicadas" value={metrics.publishedCount} icon={<CheckCircle2 size={14} />} accent="emerald" />
-        <MetricCard label="Em Produção" value={metrics.inProduction} icon={<Clock size={14} />} accent="amber" />
-        <MetricCard label="Formatos" value={distinctFormats} icon={<Filter size={14} />} />
-        {client.instagram_account && (
-          <>
-            <MetricCard label="Posts IG" value={metrics.igSummary.totalPosts} icon={<Instagram size={14} />} accent="pink" />
-            <MetricCard label="Alcance IG" value={fmtNumber(metrics.igSummary.totalReach)} icon={<TrendingUp size={14} />} accent="pink" />
-          </>
-        )}
       </div>
 
       {/* ─── Kanban Board ──────────────────────────────── */}
@@ -444,20 +491,20 @@ export default function ClientProfilePage() {
       </div>
 
       {/* ─── Tabs ──────────────────────────────────────── */}
-      <div className="flex gap-1 mb-4 border-b border-zinc-800">
+      <div className="flex gap-0.5 mb-5 rounded-lg bg-zinc-900 p-1 border border-zinc-800 w-fit">
         <TabButton active={activeTab === 'entregas'} onClick={() => setActiveTab('entregas')}>
-          Entregas
+          <Package size={13} className="mr-1.5" /> Entregas
         </TabButton>
         <TabButton active={activeTab === 'agendamento'} onClick={() => setActiveTab('agendamento')}>
-          <Calendar size={14} className="mr-1.5" /> Agendamento
+          <Calendar size={13} className="mr-1.5" /> Agendamento
           {draftCount > 0 && (
-            <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0 bg-amber-500/15 text-amber-400">
+            <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-400 px-1">
               {draftCount}
-            </Badge>
+            </span>
           )}
         </TabButton>
         <TabButton active={activeTab === 'instagram'} onClick={() => setActiveTab('instagram')}>
-          <Instagram size={14} className="mr-1.5" /> Instagram
+          <Instagram size={13} className="mr-1.5" /> Instagram
         </TabButton>
       </div>
 
@@ -738,6 +785,7 @@ export default function ClientProfilePage() {
 
 // ─── Sub-components ───────────────────────────────────────
 
+// MetricCard kept for potential reuse in delivery detail view
 function MetricCard({ label, value, icon, accent }) {
   const accentStyles = {
     emerald: 'text-emerald-400',
@@ -761,10 +809,10 @@ function TabButton({ active, onClick, children }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center px-4 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+      className={`inline-flex items-center px-3.5 py-1.5 rounded-md text-sm font-medium transition-all cursor-pointer ${
         active
-          ? 'border-purple-500 text-purple-400'
-          : 'border-transparent text-muted-foreground hover:text-foreground'
+          ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+          : 'text-zinc-500 hover:text-zinc-300'
       }`}
     >
       {children}

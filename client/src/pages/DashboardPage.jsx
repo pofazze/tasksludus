@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   CheckCircle2, Clock, Trophy, TrendingUp,
   ArrowRight, Package, Crown, Medal, Award,
+  BarChart3, Layers, User,
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -281,7 +282,7 @@ export default function DashboardPage() {
 
           {/* Section 3: Compact Pipeline */}
           <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Pipeline de Produção</h2>
-          <div className="flex gap-1 overflow-x-auto">
+          <div className="flex gap-1 overflow-x-auto mb-8">
             {PIPELINE_ORDER.map((status) => {
               const count = deliveries.filter((d) => d.status === status).length;
               return (
@@ -298,6 +299,144 @@ export default function DashboardPage() {
               );
             })}
           </div>
+
+          {/* Section 4: Workload + Deliveries by Format (side-by-side) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Workload per team member */}
+            <div>
+              <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                Carga de Trabalho
+              </h2>
+              <Card>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-zinc-800/50">
+                    {(() => {
+                      const workload = {};
+                      activeDeliveries.forEach((d) => {
+                        if (!d.user_id || d.status === 'publicacao' || d.status === 'completed') return;
+                        if (!workload[d.user_id]) workload[d.user_id] = { name: d.user_name || 'Sem responsável', count: 0 };
+                        workload[d.user_id].count++;
+                      });
+                      const sorted = Object.values(workload).sort((a, b) => b.count - a.count);
+                      const maxCount = sorted[0]?.count || 1;
+
+                      if (sorted.length === 0) {
+                        return <p className="text-center text-muted-foreground py-6 text-sm">Sem entregas em produção</p>;
+                      }
+
+                      return sorted.map((w) => (
+                        <div key={w.name} className="flex items-center gap-3 px-4 py-2.5">
+                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-zinc-800 shrink-0">
+                            <User size={14} className="text-zinc-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{w.name}</p>
+                            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-1">
+                              <div
+                                className="h-full rounded-full bg-[#9A48EA] transition-all duration-500"
+                                style={{ width: `${(w.count / maxCount) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-sm font-bold tabular-nums text-zinc-300 shrink-0">{w.count}</span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Deliveries by format */}
+            <div>
+              <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
+                Entregas por Formato
+              </h2>
+              <Card>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-zinc-800/50">
+                    {(() => {
+                      const byFormat = {};
+                      activeDeliveries.forEach((d) => {
+                        const key = d.content_type || 'outros';
+                        byFormat[key] = (byFormat[key] || 0) + 1;
+                      });
+                      const sorted = Object.entries(byFormat).sort(([, a], [, b]) => b - a);
+                      const maxCount = sorted[0]?.[1] || 1;
+
+                      if (sorted.length === 0) {
+                        return <p className="text-center text-muted-foreground py-6 text-sm">Nenhuma entrega este mês</p>;
+                      }
+
+                      const formatColors = {
+                        reel: 'bg-blue-500',
+                        feed: 'bg-emerald-500',
+                        story: 'bg-amber-500',
+                        carrossel: 'bg-purple-500',
+                        banner: 'bg-pink-500',
+                        caixinha: 'bg-orange-500',
+                        analise: 'bg-cyan-500',
+                        pdf: 'bg-red-500',
+                        video: 'bg-indigo-500',
+                        mockup: 'bg-teal-500',
+                      };
+
+                      return sorted.map(([type, count]) => (
+                        <div key={type} className="flex items-center gap-3 px-4 py-2.5">
+                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-zinc-800 shrink-0">
+                            <Layers size={14} className="text-zinc-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">{CONTENT_TYPE_LABELS[type] || type}</p>
+                            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-1">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${formatColors[type] || 'bg-zinc-500'}`}
+                                style={{ width: `${(count / maxCount) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-sm font-bold tabular-nums text-zinc-300 shrink-0">{count}</span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Section 5: Recent Deliveries */}
+          <Card>
+            <div className="flex items-center justify-between px-6 pt-6 pb-2">
+              <h3 className="text-base font-semibold">Entregas Recentes</h3>
+              <button onClick={() => navigate('/deliveries')} className="cursor-pointer text-sm text-[#9A48EA] hover:underline flex items-center gap-1">
+                Ver todas <ArrowRight size={12} />
+              </button>
+            </div>
+            <CardContent className="space-y-2">
+              {activeDeliveries.slice(0, 10).map((d) => (
+                <div key={d.id} className="flex items-center gap-3 py-1.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{d.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {d.client_name && <span>{d.client_name} · </span>}
+                      {CONTENT_TYPE_LABELS[d.content_type] || d.content_type}
+                      {d.user_name && <span className="text-zinc-600"> · {d.user_name}</span>}
+                    </p>
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    className={PIPELINE_STATUS_COLORS[d.status] || 'bg-zinc-800/50 text-zinc-300'}
+                  >
+                    {PIPELINE_STATUSES[d.status] || d.status}
+                  </Badge>
+                </div>
+              ))}
+              {activeDeliveries.length === 0 && (
+                <p className="text-center text-muted-foreground py-4">Nenhuma entrega este mês</p>
+              )}
+            </CardContent>
+          </Card>
         </>
       ) : (
         /* ========== PRODUCER VIEW ========== */

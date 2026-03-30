@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '@/services/api';
@@ -13,9 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  ArrowLeft, Bot, ExternalLink, Eye, Instagram, Pencil, Plus,
+  ArrowLeft, ArrowRight, Bot, Building2, ExternalLink, Instagram, Pencil, Plus, Search, Users,
 } from 'lucide-react';
 
 const EMPTY_FORM = {
@@ -39,6 +38,8 @@ export default function ClientsPage() {
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [touched, setTouched] = useState({});
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const fetchClients = async () => {
     try {
@@ -62,6 +63,24 @@ export default function ClientsPage() {
 
   useEffect(() => { fetchClients(); }, []);
 
+  const filteredClients = useMemo(() => {
+    let list = clients;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter((c) =>
+        c.name?.toLowerCase().includes(q) ||
+        c.company?.toLowerCase().includes(q) ||
+        c.instagram_account?.toLowerCase().includes(q)
+      );
+    }
+    if (statusFilter === 'active') list = list.filter((c) => c.is_active);
+    if (statusFilter === 'inactive') list = list.filter((c) => !c.is_active);
+    return list;
+  }, [clients, search, statusFilter]);
+
+  const activeCount = clients.filter((c) => c.is_active).length;
+  const inactiveCount = clients.filter((c) => !c.is_active).length;
+
   const nameError = touched.name && form.name.length < 2 ? 'Nome deve ter pelo menos 2 caracteres' : '';
 
   const openNew = () => {
@@ -72,7 +91,8 @@ export default function ClientsPage() {
     setView('form');
   };
 
-  const openEdit = (c) => {
+  const openEdit = (e, c) => {
+    e.stopPropagation();
     setEditId(c.id);
     setForm({
       name: c.name,
@@ -113,7 +133,8 @@ export default function ClientsPage() {
     }
   };
 
-  const toggleAutomation = async (client) => {
+  const toggleAutomation = async (e, client) => {
+    e.stopPropagation();
     const next = !client.automations_enabled;
     try {
       await api.put(`/clients/${client.id}`, { automations_enabled: next });
@@ -124,14 +145,22 @@ export default function ClientsPage() {
     }
   };
 
+  const initials = (name) => name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || '?';
+
   if (loading) return <PageLoading />;
 
   return (
     <div>
       {view === 'list' && (
         <>
+          {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold font-display">Clientes</h1>
+            <div>
+              <h1 className="text-2xl font-bold font-display">Clientes</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {activeCount} ativos · {inactiveCount} inativos
+              </p>
+            </div>
             {canManage && (
               <Button onClick={openNew}>
                 <Plus size={16} className="mr-2" /> Novo Cliente
@@ -139,99 +168,151 @@ export default function ClientsPage() {
             )}
           </div>
 
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>Instagram</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Automações</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {clients.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell>
-                        <button
-                          onClick={() => navigate(`/clients/${c.id}`)}
-                          className="font-medium hover:text-purple-400 transition-colors cursor-pointer text-left"
-                        >
-                          {c.name}
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{c.company || '—'}</TableCell>
-                      <TableCell>
-                        {c.instagram_account ? (
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={`https://instagram.com/${c.instagram_account.replace('@', '')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-sm text-pink-400 hover:underline"
-                            >
-                              <Instagram size={14} />
-                              {c.instagram_account.startsWith('@') ? c.instagram_account : `@${c.instagram_account}`}
-                              <ExternalLink size={10} />
-                            </a>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={c.is_active ? 'default' : 'secondary'}>
-                          {c.is_active ? 'Ativo' : 'Inativo'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {canManage ? (
-                          <button
-                            onClick={() => toggleAutomation(c)}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
-                              c.automations_enabled
-                                ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                                : 'bg-zinc-800/50 text-zinc-500 hover:bg-zinc-700/50'
-                            }`}
-                          >
-                            <Bot size={12} />
-                            {c.automations_enabled ? 'Ligado' : 'Desligado'}
-                          </button>
-                        ) : (
-                          <Badge variant={c.automations_enabled ? 'default' : 'secondary'}>
-                            <Bot size={12} className="mr-1" />
-                            {c.automations_enabled ? 'Ligado' : 'Desligado'}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => navigate(`/clients/${c.id}`)} title="Ver perfil">
-                            <Eye size={16} />
-                          </Button>
-                          {canManage && (
-                            <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
-                              <Pencil size={16} />
-                            </Button>
+          {/* Search + Filter bar */}
+          <div className="flex items-center gap-3 mb-5">
+            <div className="relative flex-1 max-w-sm">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por nome, empresa ou Instagram..."
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center gap-1 rounded-lg border border-zinc-800 p-0.5">
+              {[
+                { key: 'all', label: 'Todos' },
+                { key: 'active', label: 'Ativos' },
+                { key: 'inactive', label: 'Inativos' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setStatusFilter(key)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                    statusFilter === key
+                      ? 'bg-zinc-800 text-zinc-100'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Client card grid */}
+          {filteredClients.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {filteredClients.map((c) => (
+                <Card
+                  key={c.id}
+                  className="group cursor-pointer transition-all duration-150 hover:ring-zinc-700 hover:shadow-md"
+                  onClick={() => navigate(`/clients/${c.id}`)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      {/* Avatar */}
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#9A48EA]/15 text-[#9A48EA] text-sm font-bold shrink-0">
+                        {initials(c.name)}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-semibold truncate group-hover:text-[#9A48EA] transition-colors">
+                            {c.name}
+                          </h3>
+                          {!c.is_active && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-500/15 text-zinc-400 shrink-0">
+                              Inativo
+                            </span>
                           )}
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {clients.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        Nenhum cliente cadastrado
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                        {c.company && (
+                          <p className="text-xs text-zinc-500 truncate flex items-center gap-1 mt-0.5">
+                            <Building2 size={10} />
+                            {c.company}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {canManage && (
+                          <button
+                            onClick={(e) => openEdit(e, c)}
+                            className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Editar"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        )}
+                        <ArrowRight size={14} className="text-zinc-600 ml-1" />
+                      </div>
+                    </div>
+
+                    {/* Bottom row: Instagram + Automations */}
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-zinc-800/50">
+                      {c.instagram_account ? (
+                        <a
+                          href={`https://instagram.com/${c.instagram_account.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-xs text-pink-400 hover:text-pink-300 transition-colors"
+                        >
+                          <Instagram size={12} />
+                          {c.instagram_account.startsWith('@') ? c.instagram_account : `@${c.instagram_account}`}
+                        </a>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs text-zinc-600">
+                          <Instagram size={12} />
+                          Sem conta
+                        </span>
+                      )}
+
+                      <span className="flex-1" />
+
+                      {canManage ? (
+                        <button
+                          onClick={(e) => toggleAutomation(e, c)}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
+                            c.automations_enabled
+                              ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
+                              : 'bg-zinc-800/50 text-zinc-600 hover:bg-zinc-700/50'
+                          }`}
+                        >
+                          <Bot size={10} />
+                          {c.automations_enabled ? 'Auto' : 'Manual'}
+                        </button>
+                      ) : (
+                        <span className={`inline-flex items-center gap-1 text-[11px] ${
+                          c.automations_enabled ? 'text-emerald-400' : 'text-zinc-600'
+                        }`}>
+                          <Bot size={10} />
+                          {c.automations_enabled ? 'Auto' : 'Manual'}
+                        </span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Users size={40} className="text-zinc-700 mb-3" />
+              <p className="text-sm text-zinc-500">
+                {search || statusFilter !== 'all'
+                  ? 'Nenhum cliente encontrado com esses filtros'
+                  : 'Nenhum cliente cadastrado'}
+              </p>
+              {canManage && !search && statusFilter === 'all' && (
+                <Button onClick={openNew} variant="outline" className="mt-4">
+                  <Plus size={16} className="mr-2" /> Adicionar primeiro cliente
+                </Button>
+              )}
+            </div>
+          )}
         </>
       )}
 
