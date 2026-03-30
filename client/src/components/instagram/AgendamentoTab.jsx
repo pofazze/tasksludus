@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { listScheduledPosts } from '@/services/instagram';
 import { CONTENT_TYPE_LABELS } from '@/lib/constants';
@@ -7,6 +6,7 @@ import useServerEvent from '@/hooks/useServerEvent';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import PostReviewSheet from '@/components/instagram/PostReviewSheet';
 import {
   Calendar, ChevronDown, ChevronRight, Clock, ExternalLink,
   FileText, Image, Loader2, Send,
@@ -29,10 +29,11 @@ function mediaCount(post) {
 }
 
 export default function AgendamentoTab({ clientId }) {
-  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [publishedOpen, setPublishedOpen] = useState(false);
+  const [reviewPost, setReviewPost] = useState(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const fetchPosts = async () => {
     try {
@@ -50,6 +51,11 @@ export default function AgendamentoTab({ clientId }) {
   // Re-fetch when server pushes post events
   const postEvents = useMemo(() => ['post:updated', 'delivery:updated'], []);
   useServerEvent(postEvents, fetchPosts);
+
+  function openSheet(post) {
+    setReviewPost(post);
+    setSheetOpen(true);
+  }
 
   const drafts = useMemo(() => posts.filter((p) => p.status === 'draft'), [posts]);
   const scheduled = useMemo(() => posts.filter((p) => p.status === 'scheduled'), [posts]);
@@ -87,7 +93,7 @@ export default function AgendamentoTab({ clientId }) {
         ) : (
           <div className="space-y-2">
             {drafts.map((post) => (
-              <PostCard key={post.id} post={post} onReview={() => navigate(`/schedule/${post.id}`)} />
+              <PostCard key={post.id} post={post} onReview={() => openSheet(post)} />
             ))}
           </div>
         )}
@@ -100,7 +106,7 @@ export default function AgendamentoTab({ clientId }) {
         ) : (
           <div className="space-y-2">
             {scheduled.map((post) => (
-              <PostCard key={post.id} post={post} onReview={() => navigate(`/schedule/${post.id}`)} />
+              <PostCard key={post.id} post={post} onReview={() => openSheet(post)} />
             ))}
           </div>
         )}
@@ -118,11 +124,19 @@ export default function AgendamentoTab({ clientId }) {
         >
           <div className="space-y-2">
             {published.map((post) => (
-              <PostCard key={post.id} post={post} onReview={() => navigate(`/schedule/${post.id}`)} readOnly />
+              <PostCard key={post.id} post={post} onReview={() => openSheet(post)} readOnly />
             ))}
           </div>
         </Section>
       )}
+
+      {/* Review Sheet */}
+      <PostReviewSheet
+        post={reviewPost}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onUpdated={fetchPosts}
+      />
     </div>
   );
 }

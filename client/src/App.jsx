@@ -22,7 +22,6 @@ import BoostPage from '@/pages/BoostPage';
 import ClientProfilePage from '@/pages/ClientProfilePage';
 import ScheduleCalendarPage from '@/pages/ScheduleCalendarPage';
 import React from 'react';
-const PostReviewPage = React.lazy(() => import('./pages/PostReviewPage'));
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 
 const MANAGEMENT = ['ceo', 'director', 'manager'];
@@ -62,9 +61,6 @@ function App() {
           <Route path="/deliveries" element={<DeliveriesPage />} />
           <Route path="/schedule" element={
             <ProtectedRoute roles={ALL_INTERNAL}><ScheduleCalendarPage /></ProtectedRoute>
-          } />
-          <Route path="/schedule/:id" element={
-            <ProtectedRoute roles={ALL_INTERNAL}><React.Suspense fallback={<div />}><PostReviewPage /></React.Suspense></ProtectedRoute>
           } />
           <Route path="/goals" element={
             <ProtectedRoute roles={MANAGEMENT}><GoalsPage /></ProtectedRoute>
