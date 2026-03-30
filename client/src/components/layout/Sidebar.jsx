@@ -64,7 +64,19 @@ export default function Sidebar() {
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
 
-  const items = navItems[user?.role] || [];
+  let items = navItems[user?.role] || [];
+  // Social media producers get additional nav items
+  if (user?.role === 'producer' && user?.producer_type === 'social_media') {
+    items = [
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/clients', icon: Package, label: 'Clientes' },
+      { to: '/deliveries', icon: BarChart3, label: 'Entregas' },
+      { to: '/schedule', icon: CalendarDays, label: 'Agenda' },
+      { to: '/simulator', icon: TrendingUp, label: 'Simulador' },
+      { to: '/comofunciona', icon: Rocket, label: 'Como funciona' },
+      { to: '/ranking', icon: Trophy, label: 'Ranking' },
+    ];
+  }
   const initials = user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2) || '?';
 
   const handleLogout = () => {
