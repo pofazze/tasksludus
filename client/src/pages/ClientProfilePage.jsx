@@ -14,7 +14,7 @@ import {
 } from '@/lib/constants';
 import useServerEvent from '@/hooks/useServerEvent';
 import AgendamentoTab from '@/components/instagram/AgendamentoTab';
-import PostReviewView from '@/components/instagram/PostReviewView';
+
 import PageLoading from '@/components/common/PageLoading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   ArrowLeft, Calendar, CheckCircle2, Clock, ExternalLink, Eye,
-  Filter, Instagram, Loader2, Package, RefreshCw, TrendingUp, User,
+  Filter, Image as ImageIcon, Instagram, Loader2, Package, RefreshCw, TrendingUp, User, Users,
 } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -59,10 +59,9 @@ export default function ClientProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Internal views: 'profile' | 'delivery' | 'post-review'
+  // Internal views: 'profile' | 'delivery'
   const [view, setView] = useState('profile');
   const [selectedDelivery, setSelectedDelivery] = useState(null);
-  const [selectedPost, setSelectedPost] = useState(null);
   const [phases, setPhases] = useState([]);
   const [phasesLoading, setPhasesLoading] = useState(false);
 
@@ -144,24 +143,9 @@ export default function ClientProfilePage() {
   const backToProfile = () => {
     setView('profile');
     setSelectedDelivery(null);
-    setSelectedPost(null);
     setPhases([]);
   };
 
-  const openPostReview = (post) => {
-    setSelectedPost(post);
-    setView('post-review');
-  };
-
-  const handlePostSaved = () => {
-    setView('profile');
-    setSelectedPost(null);
-    setActiveTab('agendamento');
-    // Refresh draft count
-    listScheduledPosts({ client_id: id, status: 'draft' })
-      .then((data) => setDraftCount(data.length))
-      .catch(() => {});
-  };
 
   // ─── Instagram sync ───────────────────────────────────
   const syncInstagram = async () => {
@@ -349,20 +333,6 @@ export default function ClientProfilePage() {
           <p className="text-sm text-muted-foreground py-6">Nenhuma fase registrada para esta entrega.</p>
         )}
       </div>
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // POST REVIEW VIEW
-  // ═══════════════════════════════════════════════════════
-  if (view === 'post-review' && selectedPost) {
-    return (
-      <PostReviewView
-        post={selectedPost}
-        clientName={client.name}
-        onBack={backToProfile}
-        onSaved={handlePostSaved}
-      />
     );
   }
 
@@ -594,7 +564,7 @@ export default function ClientProfilePage() {
 
       {/* ─── Tab: Agendamento ──────────────────────────── */}
       {activeTab === 'agendamento' && (
-        <AgendamentoTab clientId={id} onReviewPost={openPostReview} />
+        <AgendamentoTab clientId={id} />
       )}
 
       {/* ─── Tab: Instagram ────────────────────────────── */}
@@ -690,85 +660,64 @@ export default function ClientProfilePage() {
 
           {igPosts.length > 0 ? (
             <>
-              {/* Summary Metrics */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                <Card>
-                  <CardContent className="pt-4 pb-3 px-4 text-center">
-                    <p className="text-xs text-muted-foreground">Posts</p>
-                    <p className="text-xl font-bold">{metrics.igSummary.totalPosts}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4 pb-3 px-4 text-center">
-                    <p className="text-xs text-muted-foreground">Impressões</p>
-                    <p className="text-xl font-bold">{fmtNumber(metrics.igSummary.totalImpressions)}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4 pb-3 px-4 text-center">
-                    <p className="text-xs text-muted-foreground">Alcance</p>
-                    <p className="text-xl font-bold">{fmtNumber(metrics.igSummary.totalReach)}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4 pb-3 px-4 text-center">
-                    <p className="text-xs text-muted-foreground">Engajamento</p>
-                    <p className="text-xl font-bold">{fmtNumber(metrics.igSummary.totalEngagement)}</p>
-                  </CardContent>
-                </Card>
+              {/* Metrics summary bar */}
+              <div className="grid grid-cols-4 gap-3 mb-4">
+                {[
+                  { label: 'Posts', value: igPosts.length },
+                  { label: 'Impressões', value: igPosts.reduce((s, p) => s + (p.metrics?.impressions || 0), 0) },
+                  { label: 'Alcance', value: igPosts.reduce((s, p) => s + (p.metrics?.reach || 0), 0) },
+                  { label: 'Engajamento', value: igPosts.reduce((s, p) => s + (p.metrics?.engagement || 0), 0) },
+                ].map(({ label, value }) => (
+                  <Card key={label}>
+                    <CardContent className="px-3 pt-3 pb-2">
+                      <p className="text-[11px] text-zinc-500">{label}</p>
+                      <p className="text-base font-semibold text-zinc-100 tabular-nums">
+                        {value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
 
-              {/* Posts Table */}
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead className="text-right">Impressões</TableHead>
-                        <TableHead className="text-right">Alcance</TableHead>
-                        <TableHead className="text-right">Engajamento</TableHead>
-                        <TableHead className="text-right">Salvos</TableHead>
-                        <TableHead>Link</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {igPosts.map((post) => (
-                        <TableRow key={post.id}>
-                          <TableCell>
-                            <Badge variant="secondary" className={
-                              post.post_type === 'reel' ? 'bg-purple-500/15 text-purple-400' :
-                              post.post_type === 'carousel' ? 'bg-blue-500/15 text-blue-400' :
-                              post.post_type === 'story' ? 'bg-orange-500/15 text-orange-400' :
-                              'bg-zinc-800/50 text-zinc-400'
-                            }>
-                              {post.post_type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{fmtDate(post.posted_at)}</TableCell>
-                          <TableCell className="text-right">{fmtNumber(post.metrics?.impressions)}</TableCell>
-                          <TableCell className="text-right">{fmtNumber(post.metrics?.reach)}</TableCell>
-                          <TableCell className="text-right">{fmtNumber(post.metrics?.engagement)}</TableCell>
-                          <TableCell className="text-right">{fmtNumber(post.metrics?.saves)}</TableCell>
-                          <TableCell>
-                            {post.post_url ? (
-                              <a
-                                href={post.post_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center text-pink-400 hover:underline"
-                              >
-                                <Eye size={14} />
-                              </a>
-                            ) : '—'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              {/* Visual grid */}
+              <div className="grid grid-cols-3 gap-1.5">
+                {igPosts.map((p) => (
+                  <a
+                    key={p.id}
+                    href={p.post_url || p.permalink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative aspect-square rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer"
+                  >
+                    {p.media_url ? (
+                      <img src={p.media_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-zinc-700">
+                        <ImageIcon size={24} />
+                      </div>
+                    )}
+                    {/* Type badge */}
+                    {p.media_type && p.media_type !== 'IMAGE' && (
+                      <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-black/60 text-white">
+                        {p.media_type === 'VIDEO' ? 'Reel' : p.media_type === 'CAROUSEL_ALBUM' ? 'Carrossel' : p.media_type}
+                      </span>
+                    )}
+                    {/* Metrics overlay on hover */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white text-xs">
+                      {p.metrics?.impressions != null && (
+                        <span className="flex items-center gap-1 tabular-nums">
+                          <Eye size={12} /> {p.metrics.impressions >= 1000 ? `${(p.metrics.impressions / 1000).toFixed(1)}k` : p.metrics.impressions}
+                        </span>
+                      )}
+                      {p.metrics?.reach != null && (
+                        <span className="flex items-center gap-1 tabular-nums">
+                          <Users size={12} /> {p.metrics.reach >= 1000 ? `${(p.metrics.reach / 1000).toFixed(1)}k` : p.metrics.reach}
+                        </span>
+                      )}
+                    </div>
+                  </a>
+                ))}
+              </div>
             </>
           ) : (
             <div className="text-center py-12 space-y-3">

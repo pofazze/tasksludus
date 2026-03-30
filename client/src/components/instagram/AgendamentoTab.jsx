@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { listScheduledPosts } from '@/services/instagram';
 import { CONTENT_TYPE_LABELS } from '@/lib/constants';
@@ -27,7 +28,8 @@ function mediaCount(post) {
   return urls.length;
 }
 
-export default function AgendamentoTab({ clientId, onReviewPost }) {
+export default function AgendamentoTab({ clientId }) {
+  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [publishedOpen, setPublishedOpen] = useState(false);
@@ -85,7 +87,7 @@ export default function AgendamentoTab({ clientId, onReviewPost }) {
         ) : (
           <div className="space-y-2">
             {drafts.map((post) => (
-              <PostCard key={post.id} post={post} onReview={() => onReviewPost(post)} />
+              <PostCard key={post.id} post={post} onReview={() => navigate(`/schedule/${post.id}`)} />
             ))}
           </div>
         )}
@@ -98,7 +100,7 @@ export default function AgendamentoTab({ clientId, onReviewPost }) {
         ) : (
           <div className="space-y-2">
             {scheduled.map((post) => (
-              <PostCard key={post.id} post={post} onReview={() => onReviewPost(post)} />
+              <PostCard key={post.id} post={post} onReview={() => navigate(`/schedule/${post.id}`)} />
             ))}
           </div>
         )}
@@ -116,7 +118,7 @@ export default function AgendamentoTab({ clientId, onReviewPost }) {
         >
           <div className="space-y-2">
             {published.map((post) => (
-              <PostCard key={post.id} post={post} onReview={() => onReviewPost(post)} readOnly />
+              <PostCard key={post.id} post={post} onReview={() => navigate(`/schedule/${post.id}`)} readOnly />
             ))}
           </div>
         </Section>
