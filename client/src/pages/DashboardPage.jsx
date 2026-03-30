@@ -9,6 +9,7 @@ import {
   PIPELINE_STATUS_COLORS,
   PIPELINE_ORDER,
   PRODUCER_TYPE_LABELS,
+  CONTENT_TYPE_LABELS,
 } from '@/lib/constants';
 import useServerEvent from '@/hooks/useServerEvent';
 import PageLoading from '@/components/common/PageLoading';
@@ -27,7 +28,6 @@ export default function DashboardPage() {
   const [deliveries, setDeliveries] = useState([]);
   const [ranking, setRanking] = useState([]);
   const [goals, setGoals] = useState([]);
-  const [usersList, setUsersList] = useState([]);
 
   const isMgmt = isManagement(user?.role);
 
@@ -47,7 +47,6 @@ export default function DashboardPage() {
       if (isMgmt) {
         requests.push(
           api.get('/goals', { params: { month } }).catch(() => ({ data: [] })),
-          api.get('/users').catch(() => ({ data: [] })),
         );
       }
 
@@ -55,7 +54,6 @@ export default function DashboardPage() {
       setDeliveries(results[0].data);
       setRanking(results[1].data);
       if (results[2]) setGoals(results[2].data);
-      if (results[3]) setUsersList(results[3].data);
     } catch {
       if (loading) toast.error('Erro ao carregar dashboard');
     } finally {
@@ -148,7 +146,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6 font-display">Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
 
       {isMgmt ? (
         /* ========== MANAGEMENT VIEW ========== */
@@ -164,7 +162,7 @@ export default function DashboardPage() {
                   <Package size={22} className="text-[#9A48EA]" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">Entregas do Mes</p>
+                  <p className="text-sm text-muted-foreground">Entregas do Mês</p>
                   <p className="text-2xl font-bold tabular-nums">{activeDeliveries.length}</p>
                 </div>
                 <ArrowRight size={16} className="text-muted-foreground" />
@@ -194,7 +192,7 @@ export default function DashboardPage() {
                   <Clock size={22} className="text-blue-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">Em Producao</p>
+                  <p className="text-sm text-muted-foreground">Em Produção</p>
                   <p className="text-2xl font-bold tabular-nums">{totalInPipeline}</p>
                 </div>
               </CardContent>
@@ -204,7 +202,7 @@ export default function DashboardPage() {
           {/* Section 2: Team Production Leaderboard */}
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Producao do Time
+              Produção do Time
             </h2>
             <button
               onClick={() => navigate('/ranking')}
@@ -250,7 +248,7 @@ export default function DashboardPage() {
                         <div className="h-2 bg-zinc-800 rounded-full overflow-hidden mb-1">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${progressBarColor(row.pct)}`}
-                            style={{ width: `${Math.min(row.pct ?? 0, 100)}%` }}
+                            style={{ width: row.pct !== null ? `${Math.min(row.pct, 100)}%` : `${row.total > 0 ? Math.min(row.total * 5, 100) : 0}%` }}
                           />
                         </div>
 
@@ -267,9 +265,11 @@ export default function DashboardPage() {
                       <span className="text-lg font-bold tabular-nums shrink-0">{row.total}</span>
 
                       {/* Multiplier badge */}
-                      <Badge variant="secondary" className="bg-purple-500/15 text-purple-400 shrink-0">
-                        {row.multiplier}x
-                      </Badge>
+                      {row.multiplier != null && (
+                        <Badge variant="secondary" className="bg-purple-500/15 text-purple-400 shrink-0">
+                          {row.multiplier}x
+                        </Badge>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -280,7 +280,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Section 3: Compact Pipeline */}
-          <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Pipeline de Producao</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Pipeline de Produção</h2>
           <div className="flex gap-1 overflow-x-auto">
             {PIPELINE_ORDER.map((status) => {
               const count = deliveries.filter((d) => d.status === status).length;
@@ -333,7 +333,7 @@ export default function DashboardPage() {
                   <Clock size={22} className="text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Em Producao</p>
+                  <p className="text-sm text-muted-foreground">Em Produção</p>
                   <p className="text-2xl font-bold tabular-nums">{myInPipeline}</p>
                 </div>
               </CardContent>
@@ -390,7 +390,7 @@ export default function DashboardPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{d.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {d.content_type || 'Sem tipo'}
+                      {CONTENT_TYPE_LABELS[d.content_type] || d.content_type}
                     </p>
                   </div>
                   <Badge
@@ -402,7 +402,7 @@ export default function DashboardPage() {
                 </div>
               ))}
               {myDeliveries.length === 0 && (
-                <p className="text-center text-muted-foreground py-4">Nenhuma entrega este mes</p>
+                <p className="text-center text-muted-foreground py-4">Nenhuma entrega este mês</p>
               )}
             </CardContent>
           </Card>
