@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import {
@@ -85,6 +86,7 @@ const TYPE_ICONS = {
 export default function ScheduleCalendarPage() {
   const user = useAuthStore((s) => s.user);
   const canManage = isManagement(user?.role) || user?.producer_type === 'social_media';
+  const navigate = useNavigate();
 
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [month, setMonth] = useState(() => new Date().getMonth());
@@ -257,7 +259,7 @@ export default function ScheduleCalendarPage() {
                   key={i}
                   type="button"
                   onClick={() => setSelectedDate(day.date)}
-                  className={`relative min-h-[80px] p-1.5 border-b border-r border-zinc-800/50 text-left transition-colors cursor-pointer ${
+                  className={`relative min-h-[100px] p-1.5 border-b border-r border-zinc-800/50 text-left transition-colors cursor-pointer ${
                     !day.isCurrentMonth ? 'opacity-30' : ''
                   } ${isSelected ? 'bg-purple-500/8 ring-1 ring-inset ring-purple-500/30' : 'hover:bg-white/[0.02]'}`}
                 >
@@ -274,7 +276,8 @@ export default function ScheduleCalendarPage() {
                       return (
                         <div
                           key={p.id}
-                          className={`flex items-center gap-1 px-1 py-0.5 rounded text-[10px] truncate ${STATUS_STYLES[p.status] || 'bg-zinc-800'}`}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/schedule/${p.id}`); }}
+                          className={`flex items-center gap-1 px-1 py-0.5 rounded text-[10px] truncate cursor-pointer hover:brightness-125 ${STATUS_STYLES[p.status] || 'bg-zinc-800'}`}
                         >
                           <TypeIcon size={9} className="shrink-0" />
                           <span className="truncate">{p.client_name || 'Post'}</span>
@@ -357,7 +360,7 @@ export default function ScheduleCalendarPage() {
                       {/* Actions */}
                       {canManage && !['published', 'publishing'].includes(p.status) && (
                         <div className="flex gap-1 shrink-0">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditPost(p)} title="Editar">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(`/schedule/${p.id}`)} title="Editar">
                             <Edit2 size={13} />
                           </Button>
                           <Button
