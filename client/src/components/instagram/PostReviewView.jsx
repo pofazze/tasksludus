@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
-  ArrowDown, ArrowLeft, ArrowUp, Calendar, Clock, ExternalLink,
-  Image, Loader2, Send, Trash2, Video,
+  ArrowDown, ArrowLeft, ArrowUp, Calendar, CheckCircle, Clock, ExternalLink,
+  Image, Loader2, Send, Trash2, Video, XCircle,
 } from 'lucide-react';
 
 function parseMedia(post) {
@@ -33,18 +33,23 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
 
   const [caption, setCaption] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [media, setMedia] = useState([]);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [coverConfirmed, setCoverConfirmed] = useState(false);
 
   useEffect(() => {
     setCaption(post.caption || '');
     setScheduledAt(formatDateTimeLocal(post.scheduled_at));
+    setThumbnailUrl(post.thumbnail_url || '');
     setMedia(parseMedia(post));
+    setCoverConfirmed(!post.thumbnail_url);
   }, [post]);
 
   const format = post.delivery_content_type || post.post_type;
   const formatLabel = CONTENT_TYPE_LABELS[format] || format;
+  const isReel = post.post_type === 'reel' || format === 'reel';
   const clickupUrl = post.clickup_task_id ? `https://app.clickup.com/t/${post.clickup_task_id}` : null;
 
   const moveMedia = (index, direction) => {
@@ -65,6 +70,7 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
       await updateScheduledPost(post.id, {
         caption,
         media_urls: media,
+        thumbnail_url: isReel ? (thumbnailUrl || null) : null,
         scheduled_at: null,
       });
       toast.success('Rascunho salvo');
@@ -77,6 +83,7 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
   };
 
   const handleSchedule = async () => {
+    if (isReel && thumbnailUrl && !coverConfirmed) return toast.error('Confirme a capa do Reel antes de agendar');
     if (!scheduledAt) return toast.error('Defina data e hora para agendar');
     const dt = new Date(scheduledAt);
     if (dt <= new Date()) return toast.error('A data deve ser no futuro');
@@ -86,6 +93,7 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
       await updateScheduledPost(post.id, {
         caption,
         media_urls: media,
+        thumbnail_url: isReel ? (thumbnailUrl || null) : null,
         scheduled_at: dt.toISOString(),
       });
       toast.success('Post agendado');
@@ -98,10 +106,11 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
   };
 
   const handlePublishNow = async () => {
+    if (isReel && thumbnailUrl && !coverConfirmed) return toast.error('Confirme a capa do Reel antes de publicar');
     if (!confirm('Publicar este post agora?')) return;
     setPublishing(true);
     try {
-      await updateScheduledPost(post.id, { caption, media_urls: media });
+      await updateScheduledPost(post.id, { caption, media_urls: media, thumbnail_url: isReel ? (thumbnailUrl || null) : null });
       await publishNow(post.id);
       toast.success('Publicação iniciada');
       onSaved?.();
@@ -234,6 +243,99 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
             onChange={(e) => setScheduledAt(e.target.value)}
             className="max-w-xs"
           />
+        </div>
+      )}
+
+      {/* Cover Image (Reels only) */}
+      {isReel && (
+        <div className="space-y-1.5 mb-6">
+          <Label className="text-sm font-semibold">Capa do Reel</Label>
+          {readOnly ? (
+            thumbnailUrl ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={thumbnailUrl}
+                  alt="Capa"
+                  className="w-16 h-28 rounded object-cover border border-zinc-700"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+                <span className="text-xs text-muted-foreground truncate">{thumbnailUrl}</span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhuma capa definida</p>
+            )
+          ) : thumbnailUrl ? (
+            <div className={`rounded-lg border p-4 ${coverConfirmed ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
+              <div className="flex gap-4">
+                <img
+                  src={thumbnailUrl}
+                  alt="Capa"
+                  className="w-24 h-[170px] rounded-lg object-cover border border-zinc-700 shrink-0"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+                <div className="flex-1 min-w-0 space-y-3">
+                  {coverConfirmed ? (
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <CheckCircle size={16} />
+                      <span className="text-sm font-medium">Capa confirmada</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-amber-400">
+                      <Image size={16} />
+                      <span className="text-sm font-medium">Confirme a capa do Reel</span>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {coverConfirmed
+                      ? 'Esta imagem sera usada como capa na aba de Reels do Instagram.'
+                      : 'Uma imagem foi detectada nos anexos. Confirme se ela deve ser usada como capa deste Reel.'}
+                  </p>
+                  <div className="flex gap-2">
+                    {!coverConfirmed ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                          onClick={() => setCoverConfirmed(true)}
+                        >
+                          <CheckCircle size={14} className="mr-1.5" />
+                          Sim, usar como capa
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                          onClick={() => { setThumbnailUrl(''); setCoverConfirmed(true); }}
+                        >
+                          <XCircle size={14} className="mr-1.5" />
+                          Nao usar
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-zinc-400"
+                        onClick={() => { setThumbnailUrl(''); setCoverConfirmed(true); }}
+                      >
+                        <Trash2 size={14} className="mr-1.5" />
+                        Remover capa
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Input
+                value={thumbnailUrl}
+                onChange={(e) => { setThumbnailUrl(e.target.value); setCoverConfirmed(false); }}
+                placeholder="URL da imagem de capa (opcional)"
+              />
+            </>
+          )}
         </div>
       )}
 

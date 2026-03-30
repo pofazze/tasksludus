@@ -50,7 +50,7 @@ class InstagramPublishService {
           break;
         case 'video':
         case 'reel':
-          result = await this.publishVideo(igUserId, accessToken, mediaUrls[0]?.url, post.caption, effectivePostType === 'reel');
+          result = await this.publishVideo(igUserId, accessToken, mediaUrls[0]?.url, post.caption, effectivePostType === 'reel', post.thumbnail_url);
           break;
         case 'story':
           result = await this.publishStory(igUserId, accessToken, mediaUrls[0]);
@@ -131,13 +131,19 @@ class InstagramPublishService {
     return { containerId, mediaId, permalink };
   }
 
-  async publishVideo(igUserId, accessToken, videoUrl, caption, isReel = true) {
+  async publishVideo(igUserId, accessToken, videoUrl, caption, isReel = true, coverUrl = null) {
     // Step 1: Create container (always REELS for video)
-    const containerId = await this._createContainer(igUserId, accessToken, {
+    const params = {
       video_url: videoUrl,
       caption,
       media_type: 'REELS',
-    });
+    };
+    // Add cover image for Reels if provided (cover_url overrides thumb_offset)
+    if (coverUrl) {
+      params.cover_url = this._normalizeMediaUrl(coverUrl);
+      logger.info('Reel cover image set', { coverUrl: params.cover_url });
+    }
+    const containerId = await this._createContainer(igUserId, accessToken, params);
 
     // Step 2: Poll until ready
     await this._pollContainerStatus(containerId, accessToken);

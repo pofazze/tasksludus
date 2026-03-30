@@ -7,8 +7,7 @@ const clickupOAuth = require('./clickup-oauth.service');
 const eventBus = require('../../utils/event-bus');
 
 const PUBLISHABLE_FORMATS = new Set([
-  'reel', 'feed', 'story', 'carrossel', 'video',
-  'foto_com_frase', 'video_com_frase',
+  'reel', 'feed', 'story', 'carrossel',
 ]);
 
 class ClickUpWebhookService {
@@ -390,7 +389,7 @@ class ClickUpWebhookService {
 
       // Extract media URLs from attachments
       const attachments = taskWithAttachments.attachments || [];
-      const mediaUrls = attachments
+      const allMedia = attachments
         .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
         .map((a, i) => ({
           url: a.url,
@@ -402,13 +401,23 @@ class ClickUpWebhookService {
       const postTypeMap = {
         reel: 'reel',
         carrossel: 'carousel',
-        feed: 'image',
+        feed: 'image', // feed can be image or video — effectivePostType in publish handles mismatch
         story: 'story',
-        video: 'video',
-        foto_com_frase: 'image',
-        video_com_frase: 'video',
       };
       const postType = postTypeMap[delivery.content_type] || 'image';
+
+      // For Reels: if there's a video + image, use the image as cover and only the video as media
+      let mediaUrls = allMedia;
+      let thumbnailUrl = null;
+      if (postType === 'reel') {
+        const videos = allMedia.filter((m) => m.type === 'video');
+        const images = allMedia.filter((m) => m.type === 'image');
+        if (videos.length > 0 && images.length > 0) {
+          thumbnailUrl = images[0].url;
+          mediaUrls = videos.map((v, i) => ({ ...v, order: i }));
+          logger.info(`Reel auto-cover detected: using first image as cover`, { clickupTaskId });
+        }
+      }
 
       // Determine status: scheduled (future date) or draft (no date / past date)
       const isFutureDate = scheduledAt && scheduledAt > new Date();
@@ -431,6 +440,7 @@ class ClickUpWebhookService {
           caption: taskWithAttachments.name || '',
           post_type: postType,
           media_urls: JSON.stringify(mediaUrls),
+          thumbnail_url: thumbnailUrl,
           status: postStatus,
           scheduled_at: isFutureDate ? scheduledAt : null,
           updated_at: new Date(),
@@ -455,6 +465,7 @@ class ClickUpWebhookService {
         caption: taskWithAttachments.name || '',
         post_type: postType,
         media_urls: JSON.stringify(mediaUrls),
+        thumbnail_url: thumbnailUrl,
         status: postStatus,
         scheduled_at: isFutureDate ? scheduledAt : null,
       }).returning('*');
@@ -601,16 +612,11 @@ class ClickUpWebhookService {
       'reel': 'reel',
       'feed': 'feed',
       'story': 'story',
-      'cortes': 'cortes',
       'banner': 'banner',
       'caixinha': 'caixinha',
       'carrossel': 'carrossel',
-      'corte': 'corte',
-      'foto com frase': 'foto_com_frase',
       'análise': 'analise',
       'analise': 'analise',
-      'video com frase': 'video_com_frase',
-      'vídeo com frase': 'video_com_frase',
       'pdf': 'pdf',
       'vídeo': 'video',
       'video': 'video',
@@ -618,7 +624,7 @@ class ClickUpWebhookService {
       'apresentação': 'apresentacao',
       'apresentacao': 'apresentacao',
     };
-    return map[normalized] || 'video';
+    return map[normalized] || 'feed';
   }
 
   /**

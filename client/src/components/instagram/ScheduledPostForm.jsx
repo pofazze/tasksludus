@@ -16,7 +16,6 @@ import {
 const POST_TYPES = [
   { value: 'image', label: 'Imagem', icon: Image },
   { value: 'reel', label: 'Reel', icon: Film },
-  { value: 'video', label: 'Video', icon: Video },
   { value: 'story', label: 'Story', icon: MessageCircle },
   { value: 'carousel', label: 'Carrossel', icon: Layers },
 ];
@@ -29,6 +28,7 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
     post_type: 'image',
     caption: '',
     media_urls: [],
+    thumbnail_url: '',
     scheduled_at: '',
   });
   const [saving, setSaving] = useState(false);
@@ -42,10 +42,11 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
         post_type: post.post_type || 'image',
         caption: post.caption || '',
         media_urls: mediaUrls,
+        thumbnail_url: post.thumbnail_url || '',
         scheduled_at: post.scheduled_at ? formatDateTimeLocal(post.scheduled_at) : '',
       });
     } else {
-      setForm({ client_id: '', post_type: 'image', caption: '', media_urls: [], scheduled_at: '' });
+      setForm({ client_id: '', post_type: 'image', caption: '', media_urls: [], thumbnail_url: '', scheduled_at: '' });
     }
   }, [post, open]);
 
@@ -80,6 +81,7 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
     try {
       const payload = {
         ...form,
+        thumbnail_url: form.post_type === 'reel' ? (form.thumbnail_url || null) : null,
         scheduled_at: asDraft ? null : (form.scheduled_at || null),
       };
       if (!asDraft && !form.scheduled_at) {
@@ -202,6 +204,36 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
               </Button>
             </div>
           </div>
+
+          {/* Cover Image (Reels only) */}
+          {form.post_type === 'reel' && (
+            <div className="space-y-1.5">
+              <Label>Capa do Reel</Label>
+              <Input
+                value={form.thumbnail_url}
+                onChange={(e) => setForm((f) => ({ ...f, thumbnail_url: e.target.value }))}
+                placeholder="URL da imagem de capa (opcional)"
+              />
+              {form.thumbnail_url && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <img
+                    src={form.thumbnail_url}
+                    alt="Capa"
+                    className="w-16 h-28 rounded object-cover border border-zinc-700"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, thumbnail_url: '' }))}
+                    className="text-xs text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+              <p className="text-[11px] text-muted-foreground">Imagem exibida como capa na aba de Reels do Instagram</p>
+            </div>
+          )}
 
           {/* DateTime */}
           <div className="space-y-1.5">
