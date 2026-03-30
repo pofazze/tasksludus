@@ -1,28 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '@/services/api';
 import useAuthStore from '@/stores/authStore';
-import { isManagement, isCeo } from '@/lib/roles';
-import { formatCurrency } from '@/lib/utils';
+import { isManagement } from '@/lib/roles';
 import {
-  CONTENT_TYPE_LABELS,
   PIPELINE_STATUSES,
   PIPELINE_STATUS_COLORS,
   PIPELINE_ORDER,
+  PRODUCER_TYPE_LABELS,
 } from '@/lib/constants';
 import useServerEvent from '@/hooks/useServerEvent';
 import PageLoading from '@/components/common/PageLoading';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  BarChart3, CheckCircle2, Clock, Target, Trophy, TrendingUp,
-  Users, ArrowRight, Package, DollarSign,
+  CheckCircle2, Clock, Trophy, TrendingUp,
+  ArrowRight, Package, Crown, Medal, Award,
 } from 'lucide-react';
-
-const PIE_COLORS = ['#9A48EA', '#3B82F6', '#F97316', '#EAB308', '#22C55E', '#EC4899', '#6366F1', '#14B8A6'];
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -32,8 +28,6 @@ export default function DashboardPage() {
   const [ranking, setRanking] = useState([]);
   const [goals, setGoals] = useState([]);
   const [usersList, setUsersList] = useState([]);
-  const [clients, setClients] = useState([]);
-  const [calculations, setCalculations] = useState([]);
 
   const isMgmt = isManagement(user?.role);
 
@@ -54,8 +48,6 @@ export default function DashboardPage() {
         requests.push(
           api.get('/goals', { params: { month } }).catch(() => ({ data: [] })),
           api.get('/users').catch(() => ({ data: [] })),
-          api.get('/clients').catch(() => ({ data: [] })),
-          api.get('/boost', { params: { month } }).catch(() => ({ data: [] })),
         );
       }
 
@@ -64,8 +56,6 @@ export default function DashboardPage() {
       setRanking(results[1].data);
       if (results[2]) setGoals(results[2].data);
       if (results[3]) setUsersList(results[3].data);
-      if (results[4]) setClients(results[4].data);
-      if (results[5]) setCalculations(results[5].data);
     } catch {
       if (loading) toast.error('Erro ao carregar dashboard');
     } finally {
@@ -89,343 +79,224 @@ export default function DashboardPage() {
   const totalPublished = activeDeliveries.filter((d) => d.status === 'publicacao' || d.status === 'completed').length;
   const totalInPipeline = activeDeliveries.filter((d) => d.status !== 'publicacao' && d.status !== 'completed').length;
   const initials = (name) => name?.split(' ').map((n) => n[0]).join('').slice(0, 2) || '?';
-  const getClientName = (id) => clients.find((c) => c.id === id)?.name;
-  const getUserName = (id) => usersList.find((u) => u.id === id)?.name;
-
-  // Pipeline data for chart
-  const pipelineData = PIPELINE_ORDER.map((status) => ({
-    name: PIPELINE_STATUSES[status],
-    total: deliveries.filter((d) => d.status === status).length,
-    key: status,
-  })).filter((d) => d.total > 0 || ['planejamento', 'captacao', 'design', 'aprovacao', 'publicacao'].includes(d.key));
-
-  // By type for pie
-  const byTypeMap = {};
-  deliveries.forEach((d) => {
-    if (d.content_type) {
-      byTypeMap[d.content_type] = (byTypeMap[d.content_type] || 0) + 1;
-    }
-  });
-  const byTypeData = Object.entries(byTypeMap)
-    .map(([name, count]) => ({ name: CONTENT_TYPE_LABELS[name] || name, value: count }))
-    .sort((a, b) => b.value - a.value);
-
-  // Workload per user
-  const workloadMap = {};
-  deliveries.forEach((d) => {
-    if (!workloadMap[d.user_id]) workloadMap[d.user_id] = { total: 0, published: 0 };
-    workloadMap[d.user_id].total++;
-    if (d.status === 'publicacao' || d.status === 'completed') workloadMap[d.user_id].published++;
-  });
-  const workloadData = Object.entries(workloadMap)
-    .map(([uid, data]) => ({
-      name: getUserName(uid) || 'Desconhecido',
-      total: data.total,
-      publicadas: data.published,
-    }))
-    .sort((a, b) => b.total - a.total);
 
   // For non-management (producers): personal view
   const myDeliveries = deliveries.filter((d) => d.user_id === user?.id);
   const myPublished = myDeliveries.filter((d) => d.status === 'publicacao' || d.status === 'completed').length;
   const myInPipeline = myDeliveries.filter((d) => d.status !== 'publicacao' && d.status !== 'completed').length;
-  const myRank = ranking.find((r) => r.user_id === user?.id);
+  const myRank = ranking.find((r) => r.id === user?.id);
 
-  // Commissions summary (management)
-  const totalSuggestedBonus = calculations.reduce((s, c) => s + (parseFloat(c.suggested_bonus) || 0), 0);
-  const totalFinalBonus = calculations.reduce((s, c) => s + (parseFloat(c.final_bonus) || parseFloat(c.suggested_bonus) || 0), 0);
-  const closedCalcs = calculations.filter((c) => c.status === 'closed').length;
+  // -- Management: build leaderboard data --
+  // Build per-user delivery counts from deliveries array
+  const userDeliveryCounts = {};
+  deliveries.forEach((d) => {
+    if (!userDeliveryCounts[d.user_id]) userDeliveryCounts[d.user_id] = { published: 0, inProduction: 0 };
+    if (d.status === 'publicacao' || d.status === 'completed') {
+      userDeliveryCounts[d.user_id].published++;
+    } else if (d.status !== 'cancelado') {
+      userDeliveryCounts[d.user_id].inProduction++;
+    }
+  });
+
+  // Build per-user goal target lookup from goals array
+  const userGoalMap = {};
+  goals.forEach((g) => {
+    if (g.monthly_target != null) {
+      userGoalMap[g.user_id] = parseInt(g.monthly_target, 10);
+    }
+  });
+
+  // Merge ranking + goals + delivery counts into leaderboard rows
+  const leaderboard = ranking.map((entry) => {
+    const userId = entry.id;
+    const counts = userDeliveryCounts[userId] || { published: 0, inProduction: 0 };
+    const meta = userGoalMap[userId] ?? null;
+    const total = entry.total_deliveries || 0;
+    const pct = meta ? Math.round((total / meta) * 100) : null;
+
+    return {
+      userId,
+      name: entry.name,
+      avatarUrl: entry.avatar_url,
+      producerType: entry.producer_type,
+      total,
+      published: counts.published,
+      inProduction: counts.inProduction,
+      multiplier: entry.multiplier,
+      rank: entry.rank,
+      meta,
+      pct,
+    };
+  });
+
+  // Progress bar color based on % of meta achieved
+  const progressBarColor = (pct) => {
+    if (pct === null) return 'bg-zinc-700';
+    if (pct >= 100) return 'bg-[#9A48EA]';
+    if (pct >= 80) return 'bg-emerald-500';
+    if (pct >= 50) return 'bg-amber-500';
+    return 'bg-red-500';
+  };
+
+  // Position icon for leaderboard
+  const positionIcon = (rank) => {
+    if (rank === 1) return <Crown size={20} className="text-yellow-400" />;
+    if (rank === 2) return <Medal size={20} className="text-zinc-400" />;
+    if (rank === 3) return <Award size={20} className="text-amber-600" />;
+    return <span className="text-sm font-bold text-muted-foreground tabular-nums">{rank}</span>;
+  };
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6 font-display">Dashboard</h1>
 
       {isMgmt ? (
-        /* ========== MANAGEMENT / CEO VIEW ========== */
+        /* ========== MANAGEMENT VIEW ========== */
         <>
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/deliveries')}>
+          {/* Section 1: KPI Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <Card
+              className="cursor-pointer hover:shadow-md transition-shadow duration-150"
+              onClick={() => navigate('/deliveries')}
+            >
               <CardContent className="flex items-center gap-4 pt-6">
                 <div className="rounded-lg p-2.5 bg-purple-500/15">
                   <Package size={22} className="text-[#9A48EA]" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">Total Entregas</p>
-                  <p className="text-2xl font-bold">{deliveries.length}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {totalPublished} publicadas · {totalInPipeline} em produção
-                  </p>
+                  <p className="text-sm text-muted-foreground">Entregas do Mes</p>
+                  <p className="text-2xl font-bold tabular-nums">{activeDeliveries.length}</p>
                 </div>
                 <ArrowRight size={16} className="text-muted-foreground" />
               </CardContent>
             </Card>
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/users')}>
-              <CardContent className="flex items-center gap-4 pt-6">
-                <div className="rounded-lg p-2.5 bg-blue-500/15">
-                  <Users size={22} className="text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">Equipe Ativa</p>
-                  <p className="text-2xl font-bold">{usersList.filter((u) => u.is_active).length}</p>
-                </div>
-                <ArrowRight size={16} className="text-muted-foreground" />
-              </CardContent>
-            </Card>
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/goals')}>
+
+            <Card>
               <CardContent className="flex items-center gap-4 pt-6">
                 <div className="rounded-lg p-2.5 bg-emerald-500/15">
-                  <TrendingUp size={22} className="text-emerald-400" />
+                  <CheckCircle2 size={22} className="text-emerald-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">Metas Ativas</p>
-                  <p className="text-2xl font-bold">{goals.length}</p>
+                  <p className="text-sm text-muted-foreground">Publicadas</p>
+                  <p className="text-2xl font-bold tabular-nums">{totalPublished}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {activeDeliveries.length > 0
+                      ? `${Math.round((totalPublished / activeDeliveries.length) * 100)}% do total`
+                      : '0% do total'}
+                  </p>
                 </div>
-                <ArrowRight size={16} className="text-muted-foreground" />
               </CardContent>
             </Card>
-            {isCeo(user?.role) ? (
-              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/boost')}>
-                <CardContent className="flex items-center gap-4 pt-6">
-                  <div className="rounded-lg p-2.5 bg-emerald-500/15">
-                    <DollarSign size={22} className="text-emerald-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">Boost do Mês</p>
-                    <p className="text-2xl font-bold">{formatCurrency(totalFinalBonus)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {closedCalcs}/{calculations.length} fechados
-                    </p>
-                  </div>
-                  <ArrowRight size={16} className="text-muted-foreground" />
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/ranking')}>
-                <CardContent className="flex items-center gap-4 pt-6">
-                  <div className="rounded-lg p-2.5 bg-yellow-500/15">
-                    <Trophy size={22} className="text-yellow-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">Ranking</p>
-                    <p className="text-2xl font-bold">{ranking.length} produtores</p>
-                  </div>
-                  <ArrowRight size={16} className="text-muted-foreground" />
-                </CardContent>
-              </Card>
-            )}
+
+            <Card>
+              <CardContent className="flex items-center gap-4 pt-6">
+                <div className="rounded-lg p-2.5 bg-blue-500/15">
+                  <Clock size={22} className="text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground">Em Producao</p>
+                  <p className="text-2xl font-bold tabular-nums">{totalInPipeline}</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Pipeline Overview */}
-          <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Pipeline de Produção</h2>
-          <div className="flex gap-1 mb-6 overflow-x-auto">
+          {/* Section 2: Team Production Leaderboard */}
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Producao do Time
+            </h2>
+            <button
+              onClick={() => navigate('/ranking')}
+              className="cursor-pointer text-sm text-[#9A48EA] hover:underline flex items-center gap-1 transition-colors duration-150"
+            >
+              Ver ranking <ArrowRight size={12} />
+            </button>
+          </div>
+
+          <Card className="mb-8">
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {leaderboard.length > 0 ? (
+                  leaderboard.map((row) => (
+                    <div
+                      key={row.userId}
+                      className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors duration-150 hover:bg-muted/30"
+                      onClick={() => navigate('/ranking')}
+                    >
+                      {/* Position */}
+                      <div className="w-7 flex items-center justify-center shrink-0">
+                        {positionIcon(row.rank)}
+                      </div>
+
+                      {/* Avatar */}
+                      <Avatar className="h-9 w-9 shrink-0">
+                        <AvatarImage src={row.avatarUrl} />
+                        <AvatarFallback className="text-xs">{initials(row.name)}</AvatarFallback>
+                      </Avatar>
+
+                      {/* Name + badge + progress + stats */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium truncate">{row.name}</span>
+                          {row.producerType && PRODUCER_TYPE_LABELS[row.producerType] && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                              {PRODUCER_TYPE_LABELS[row.producerType]}
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="h-2 bg-zinc-800 rounded-full overflow-hidden mb-1">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${progressBarColor(row.pct)}`}
+                            style={{ width: `${Math.min(row.pct ?? 0, 100)}%` }}
+                          />
+                        </div>
+
+                        {/* Stats line */}
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          {row.published} pub · {row.inProduction} prod
+                          {row.meta != null && (
+                            <> · Meta: {row.meta} ({row.pct}%)</>
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Total count */}
+                      <span className="text-lg font-bold tabular-nums shrink-0">{row.total}</span>
+
+                      {/* Multiplier badge */}
+                      <Badge variant="secondary" className="bg-purple-500/15 text-purple-400 shrink-0">
+                        {row.multiplier}x
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">Sem dados de ranking</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section 3: Compact Pipeline */}
+          <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Pipeline de Producao</h2>
+          <div className="flex gap-1 overflow-x-auto">
             {PIPELINE_ORDER.map((status) => {
               const count = deliveries.filter((d) => d.status === status).length;
               return (
                 <div
                   key={status}
-                  className={`flex flex-col items-center px-3 py-2 rounded-lg text-xs whitespace-nowrap ${
+                  onClick={() => navigate(`/deliveries?status=${status}`)}
+                  className={`flex flex-col items-center px-3 py-2 rounded-lg text-xs whitespace-nowrap cursor-pointer transition-opacity duration-150 hover:opacity-80 ${
                     count > 0 ? PIPELINE_STATUS_COLORS[status] : 'bg-zinc-800/30 text-zinc-600'
                   }`}
                 >
-                  <span className="font-bold text-lg">{count}</span>
+                  <span className="font-bold text-lg tabular-nums">{count}</span>
                   <span>{PIPELINE_STATUSES[status]}</span>
                 </div>
               );
             })}
-          </div>
-
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Carga de Trabalho por Pessoa</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {workloadData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={workloadData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#27272A" />
-                      <XAxis type="number" allowDecimals={false} fontSize={12} tick={{ fill: '#71717A' }} />
-                      <YAxis dataKey="name" type="category" fontSize={12} width={100} tick={{ fill: '#A1A1AA' }} />
-                      <Tooltip contentStyle={{ backgroundColor: '#1C1C22', border: '1px solid #27272A', borderRadius: '8px', color: '#FAFAFA' }} />
-                      <Bar dataKey="total" name="Total" fill="#9A48EA" radius={[0, 4, 4, 0]} />
-                      <Bar dataKey="publicadas" name="Publicadas" fill="#22C55E" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-center text-muted-foreground py-12">Sem dados</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Entregas por Formato</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {byTypeData.length > 0 ? (
-                  <div className="flex items-center justify-center gap-6">
-                    <ResponsiveContainer width="50%" height={250}>
-                      <PieChart>
-                        <Pie
-                          data={byTypeData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={90}
-                          dataKey="value"
-                          stroke="none"
-                        >
-                          {byTypeData.map((_, idx) => (
-                            <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip contentStyle={{ backgroundColor: '#1C1C22', border: '1px solid #27272A', borderRadius: '8px', color: '#FAFAFA' }} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="space-y-2">
-                      {byTypeData.map((entry, idx) => (
-                        <div key={entry.name} className="flex items-center gap-2 text-sm">
-                          <div
-                            className="w-3 h-3 rounded-full shrink-0"
-                            style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }}
-                          />
-                          <span>{entry.name}</span>
-                          <span className="font-semibold">{entry.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-12">Sem dados</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Commissions Breakdown (CEO only) */}
-          {isCeo(user?.role) && calculations.length > 0 && (
-            <>
-              <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Boost do Mês</h2>
-              <Card className="mb-6">
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    {calculations.map((c) => (
-                      <div key={c.id} className="flex items-center justify-between px-4 py-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="text-xs">
-                              {c.user_name?.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{c.user_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {c.total_deliveries} entregas · {c.multiplier_applied}x
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="text-sm font-semibold">
-                              {formatCurrency(c.final_bonus ?? c.suggested_bonus)}
-                            </p>
-                            {c.final_bonus != null && parseFloat(c.final_bonus) !== parseFloat(c.suggested_bonus) && (
-                              <p className="text-xs text-muted-foreground line-through">
-                                {formatCurrency(c.suggested_bonus)}
-                              </p>
-                            )}
-                          </div>
-                          <Badge
-                            variant="secondary"
-                            className={
-                              c.status === 'closed' ? 'bg-emerald-500/15 text-emerald-400' :
-                              c.status === 'adjusted' ? 'bg-orange-500/15 text-orange-400' :
-                              'bg-blue-500/15 text-blue-400'
-                            }
-                          >
-                            {c.status === 'closed' ? 'Fechado' : c.status === 'adjusted' ? 'Ajustado' : 'Calculado'}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="flex items-center justify-between px-4 py-3 bg-muted/50">
-                      <p className="text-sm font-semibold">Total</p>
-                      <p className="text-sm font-bold">{formatCurrency(totalFinalBonus)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-
-          {/* Ranking + Recent Deliveries */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">Top Ranking do Mês</CardTitle>
-                <button onClick={() => navigate('/ranking')} className="text-sm text-[#9A48EA] hover:underline flex items-center gap-1">
-                  Ver completo <ArrowRight size={12} />
-                </button>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {ranking.slice(0, 5).map((entry, idx) => (
-                  <div key={entry.user_id} className="flex items-center gap-3">
-                    <span className={`text-lg font-bold w-6 text-center ${
-                      idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-zinc-500' : idx === 2 ? 'text-amber-700' : 'text-muted-foreground'
-                    }`}>
-                      {entry.rank}
-                    </span>
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={entry.avatar_url} />
-                      <AvatarFallback className="text-xs">{initials(entry.name)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{entry.name}</p>
-                      <p className="text-xs text-muted-foreground">{entry.total_deliveries} entregas</p>
-                    </div>
-                    <Badge variant="secondary" className="bg-purple-500/15 text-purple-400">
-                      {entry.multiplier}x
-                    </Badge>
-                  </div>
-                ))}
-                {ranking.length === 0 && (
-                  <p className="text-center text-muted-foreground py-4">Sem dados de ranking</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">Entregas Recentes</CardTitle>
-                <button onClick={() => navigate('/deliveries')} className="text-sm text-[#9A48EA] hover:underline flex items-center gap-1">
-                  Ver todas <ArrowRight size={12} />
-                </button>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {deliveries.slice(0, 8).map((d) => (
-                  <div key={d.id} className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{d.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {CONTENT_TYPE_LABELS[d.content_type] || d.content_type}
-                        {getUserName(d.user_id) && ` · ${getUserName(d.user_id)}`}
-                      </p>
-                    </div>
-                    <Badge
-                      variant="secondary"
-                      className={PIPELINE_STATUS_COLORS[d.status] || (d.status === 'completed' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-800/50 text-zinc-300')}
-                    >
-                      {PIPELINE_STATUSES[d.status] || d.status}
-                    </Badge>
-                  </div>
-                ))}
-                {deliveries.length === 0 && (
-                  <p className="text-center text-muted-foreground py-4">Nenhuma entrega este mês</p>
-                )}
-              </CardContent>
-            </Card>
           </div>
         </>
       ) : (
@@ -436,11 +307,11 @@ export default function DashboardPage() {
             <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/deliveries')}>
               <CardContent className="flex items-center gap-4 pt-6">
                 <div className="rounded-lg p-2.5 bg-purple-500/15">
-                  <BarChart3 size={22} className="text-purple-400" />
+                  <TrendingUp size={22} className="text-purple-400" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Minhas Entregas</p>
-                  <p className="text-2xl font-bold">{myDeliveries.length}</p>
+                  <p className="text-2xl font-bold tabular-nums">{myDeliveries.length}</p>
                 </div>
                 <ArrowRight size={16} className="text-muted-foreground" />
               </CardContent>
@@ -452,7 +323,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Publicadas</p>
-                  <p className="text-2xl font-bold">{myPublished}</p>
+                  <p className="text-2xl font-bold tabular-nums">{myPublished}</p>
                 </div>
               </CardContent>
             </Card>
@@ -462,8 +333,8 @@ export default function DashboardPage() {
                   <Clock size={22} className="text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Em Produção</p>
-                  <p className="text-2xl font-bold">{myInPipeline}</p>
+                  <p className="text-sm text-muted-foreground">Em Producao</p>
+                  <p className="text-2xl font-bold tabular-nums">{myInPipeline}</p>
                 </div>
               </CardContent>
             </Card>
@@ -474,8 +345,8 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Meu Ranking</p>
-                  <p className="text-2xl font-bold">
-                    {myRank ? `#${myRank.rank}` : '—'}
+                  <p className="text-2xl font-bold tabular-nums">
+                    {myRank ? `#${myRank.rank}` : '\u2014'}
                   </p>
                   {myRank && (
                     <p className="text-xs text-muted-foreground">{myRank.multiplier}x multiplicador</p>
@@ -498,7 +369,7 @@ export default function DashboardPage() {
                     count > 0 ? PIPELINE_STATUS_COLORS[status] : 'bg-zinc-800/30 text-zinc-600'
                   }`}
                 >
-                  <span className="font-bold text-lg">{count}</span>
+                  <span className="font-bold text-lg tabular-nums">{count}</span>
                   <span>{PIPELINE_STATUSES[status]}</span>
                 </div>
               );
@@ -507,19 +378,19 @@ export default function DashboardPage() {
 
           {/* Recent deliveries */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Minhas Entregas Recentes</CardTitle>
-              <button onClick={() => navigate('/deliveries')} className="text-sm text-[#9A48EA] hover:underline flex items-center gap-1">
+            <div className="flex items-center justify-between px-6 pt-6 pb-2">
+              <h3 className="text-base font-semibold">Minhas Entregas Recentes</h3>
+              <button onClick={() => navigate('/deliveries')} className="cursor-pointer text-sm text-[#9A48EA] hover:underline flex items-center gap-1">
                 Ver todas <ArrowRight size={12} />
               </button>
-            </CardHeader>
+            </div>
             <CardContent className="space-y-3">
               {myDeliveries.slice(0, 10).map((d) => (
                 <div key={d.id} className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{d.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {CONTENT_TYPE_LABELS[d.content_type] || d.content_type}
+                      {d.content_type || 'Sem tipo'}
                     </p>
                   </div>
                   <Badge
@@ -531,7 +402,7 @@ export default function DashboardPage() {
                 </div>
               ))}
               {myDeliveries.length === 0 && (
-                <p className="text-center text-muted-foreground py-4">Nenhuma entrega este mês</p>
+                <p className="text-center text-muted-foreground py-4">Nenhuma entrega este mes</p>
               )}
             </CardContent>
           </Card>
