@@ -29,7 +29,17 @@ app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());
-app.use(cors({ origin: env.clientUrl, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowed = env.clientUrl.split(',').map((u) => u.trim());
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 
 // Rate limiting
 const limiter = rateLimit({
