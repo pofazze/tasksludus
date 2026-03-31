@@ -24,9 +24,9 @@ import ScheduleCalendarPage from '@/pages/ScheduleCalendarPage';
 import React from 'react';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 
-const MANAGEMENT = ['ceo', 'director', 'manager'];
-const ADMIN = ['ceo', 'director'];
-const ALL_INTERNAL = ['ceo', 'director', 'manager', 'account_manager', 'producer'];
+const MANAGEMENT = ['dev', 'ceo', 'director', 'manager'];
+const ADMIN = ['dev', 'ceo', 'director'];
+const ALL_INTERNAL = ['dev', 'ceo', 'director', 'manager', 'account_manager', 'producer'];
 
 function App() {
   const loadUser = useAuthStore((s) => s.loadUser);
@@ -63,22 +63,22 @@ function App() {
             <ProtectedRoute roles={ALL_INTERNAL}><ScheduleCalendarPage /></ProtectedRoute>
           } />
           <Route path="/goals" element={
-            <ProtectedRoute roles={MANAGEMENT}><GoalsPage /></ProtectedRoute>
+            <ProtectedRoute roles={['dev']}><GoalsPage /></ProtectedRoute>
           } />
           <Route path="/boost" element={
-            <ProtectedRoute roles={ADMIN}><CalculationsPage /></ProtectedRoute>
+            <ProtectedRoute roles={['dev']}><CalculationsPage /></ProtectedRoute>
           } />
           <Route path="/ranking" element={
             <ProtectedRoute roles={ALL_INTERNAL}><RankingPage /></ProtectedRoute>
           } />
           <Route path="/roles" element={
-            <ProtectedRoute roles={['ceo']}><SalariesPage /></ProtectedRoute>
+            <ProtectedRoute roles={['dev']}><SalariesPage /></ProtectedRoute>
           } />
           <Route path="/settings" element={
-            <ProtectedRoute roles={['ceo']}><SettingsPage /></ProtectedRoute>
+            <ProtectedRoute roles={['dev', 'ceo']}><SettingsPage /></ProtectedRoute>
           } />
           <Route path="/simulator" element={
-            <ProtectedRoute roles={['producer']}><SimulatorPage /></ProtectedRoute>
+            <ProtectedRoute roles={['dev', 'producer']}><SimulatorPage /></ProtectedRoute>
           } />
           <Route path="/comofunciona" element={
             <ProtectedRoute roles={ALL_INTERNAL}><BoostPage /></ProtectedRoute>

@@ -18,7 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { X, GripVertical, Film, Image as ImageIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, proxyMediaUrl } from '@/lib/utils';
 
 function SortableItem({ item, index, onRemove, readOnly }) {
   const {
@@ -79,7 +79,7 @@ function SortableItem({ item, index, onRemove, readOnly }) {
         </div>
       ) : (
         <img
-          src={item.url}
+          src={proxyMediaUrl(item.url)}
           alt={`Mídia ${index + 1}`}
           className="w-full h-full object-cover"
           onError={(e) => {

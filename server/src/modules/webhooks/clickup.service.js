@@ -152,10 +152,10 @@ class ClickUpWebhookService {
         .where({ clickup_task_id: clickupTaskId })
         .first();
       await this.autoCreateScheduledPost(clickupTaskId, freshDelivery, task);
+    } else {
+      // Task moved AWAY from agendamento — clean up draft/scheduled post
+      await this.cleanupScheduledPost(clickupTaskId);
     }
-
-    // "publicação" is now set BY TasksLudus after publishing — ignore webhook to prevent loop
-    // (no auto-publish trigger here)
   }
 
   /**
@@ -193,7 +193,7 @@ class ClickUpWebhookService {
   }
 
   /**
-   * Handle task update (title, custom fields, etc.)
+   * Handle task update (title, custom fields, attachments)
    */
   async handleTaskUpdated(clickupTaskId, historyItems, _event) {
     const delivery = await db('deliveries')
@@ -202,12 +202,17 @@ class ClickUpWebhookService {
     if (!delivery) return;
 
     const updates = {};
+    let hasAttachmentChange = false;
+
     for (const item of historyItems) {
       if (item.field === 'name' && item.after) {
         updates.title = item.after;
       }
       if (item.field === 'content_type' && item.after) {
         updates.content_type = this.mapContentType(item.after);
+      }
+      if (item.field === 'attachment' || item.field === 'attachments') {
+        hasAttachmentChange = true;
       }
     }
 
@@ -216,6 +221,101 @@ class ClickUpWebhookService {
       await db('deliveries').where({ id: delivery.id }).update(updates);
       eventBus.emit('sse', { type: 'delivery:updated', payload: { id: delivery.id } });
       logger.info(`Delivery ${delivery.id} updated from ClickUp`);
+    }
+
+    // If attachments or content_type changed and task is in agendamento, refresh scheduled post
+    // (refreshScheduledPostMedia also syncs post_type from delivery.content_type)
+    const needsRefresh = hasAttachmentChange || updates.content_type;
+    if (needsRefresh && delivery.status === 'agendamento') {
+      // Use updated content_type if it changed
+      const freshDelivery = updates.content_type
+        ? { ...delivery, content_type: updates.content_type }
+        : delivery;
+      await this.refreshScheduledPostMedia(clickupTaskId, freshDelivery);
+    }
+  }
+
+  /**
+   * Clean up scheduled post when task moves away from agendamento
+   */
+  async cleanupScheduledPost(clickupTaskId) {
+    try {
+      const post = await db('scheduled_posts')
+        .where({ clickup_task_id: clickupTaskId })
+        .whereIn('status', ['draft', 'scheduled'])
+        .first();
+      if (!post) return;
+
+      const { cancelScheduledPost } = require('../../queues');
+      await cancelScheduledPost(post.id);
+      await db('scheduled_posts').where({ id: post.id }).del();
+      eventBus.emit('sse', { type: 'post:updated', payload: { clickup_task_id: clickupTaskId } });
+      logger.info(`Scheduled post deleted: task ${clickupTaskId} moved out of agendamento`);
+    } catch (err) {
+      logger.error(`cleanupScheduledPost error: ${err.message}`);
+    }
+  }
+
+  /**
+   * Refresh media_urls on a scheduled post from ClickUp attachments
+   */
+  async refreshScheduledPostMedia(clickupTaskId, delivery) {
+    try {
+      const post = await db('scheduled_posts')
+        .where({ clickup_task_id: clickupTaskId })
+        .whereIn('status', ['draft', 'scheduled'])
+        .first();
+      if (!post) return;
+
+      const task = await this.fetchTask(clickupTaskId);
+      if (!task?.attachments) return;
+
+      const allMedia = task.attachments
+        .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
+        .map((a, i) => ({
+          url: a.url,
+          type: a.mimetype?.startsWith('video/') ? 'video' : 'image',
+          order: i,
+        }));
+
+      // Derive correct post_type from delivery (may differ from stale post.post_type)
+      const postTypeMap = {
+        reel: 'reel', video: 'reel', carrossel: 'carousel', feed: 'image', story: 'story',
+      };
+      const derivedPostType = delivery?.content_type
+        ? (postTypeMap[delivery.content_type] || post.post_type)
+        : post.post_type;
+
+      // For Reels/Video: separate cover from media
+      let mediaUrls = allMedia;
+      let thumbnailUrl = post.thumbnail_url;
+      if (['reel', 'video'].includes(derivedPostType)) {
+        const videos = allMedia.filter((m) => m.type === 'video');
+        const images = allMedia.filter((m) => m.type === 'image');
+        if (videos.length > 0 && images.length > 0) {
+          thumbnailUrl = images[0].url;
+          mediaUrls = videos.map((v, i) => ({ ...v, order: i }));
+        } else {
+          thumbnailUrl = null;
+          mediaUrls = allMedia;
+        }
+      }
+
+      const updateData = {
+        media_urls: JSON.stringify(mediaUrls),
+        thumbnail_url: thumbnailUrl,
+        updated_at: new Date(),
+      };
+      // Sync post_type if it drifted from delivery's content_type
+      if (derivedPostType !== post.post_type) {
+        updateData.post_type = derivedPostType;
+        logger.info(`Syncing post_type: ${post.post_type} → ${derivedPostType}`, { clickupTaskId });
+      }
+      await db('scheduled_posts').where({ id: post.id }).update(updateData);
+      eventBus.emit('sse', { type: 'post:updated', payload: { clickup_task_id: clickupTaskId } });
+      logger.info(`Scheduled post media refreshed`, { clickupTaskId, mediaCount: mediaUrls.length });
+    } catch (err) {
+      logger.error(`refreshScheduledPostMedia error: ${err.message}`);
     }
   }
 
@@ -320,7 +420,7 @@ class ClickUpWebhookService {
       }
 
       // Extract content_type from Formato custom field
-      let contentType = 'video';
+      let contentType = null;
       const formatoField = task.custom_fields?.find((cf) => cf.name === 'Formato');
       if (formatoField?.value != null && formatoField.type_config?.options) {
         const option = formatoField.type_config.options[formatoField.value];
@@ -362,8 +462,8 @@ class ClickUpWebhookService {
         return;
       }
 
-      // Filter non-publishable formats (PDF, Mockup, Banner, etc.)
-      if (!PUBLISHABLE_FORMATS.has(delivery.content_type)) {
+      // Filter non-publishable formats (PDF, Mockup, Banner, etc.) — null content_type is allowed (user selects in app)
+      if (delivery.content_type && !PUBLISHABLE_FORMATS.has(delivery.content_type)) {
         logger.info(`Skipping auto-draft: format "${delivery.content_type}" not publishable`);
         return;
       }
@@ -387,6 +487,12 @@ class ClickUpWebhookService {
       );
       const scheduledAt = entregaField?.value ? new Date(Number(entregaField.value)) : null;
 
+      // Extract "Legenda" custom field for caption (fallback to task name)
+      const legendaField = taskWithAttachments.custom_fields?.find(
+        (cf) => cf.name?.toLowerCase() === 'legenda'
+      );
+      const caption = legendaField?.value?.trim() || taskWithAttachments.name || '';
+
       // Extract media URLs from attachments
       const attachments = taskWithAttachments.attachments || [];
       const allMedia = attachments
@@ -400,16 +506,17 @@ class ClickUpWebhookService {
       // Map delivery content_type to post_type
       const postTypeMap = {
         reel: 'reel',
+        video: 'reel', // Instagram videos are published as reels
         carrossel: 'carousel',
         feed: 'image', // feed can be image or video — effectivePostType in publish handles mismatch
         story: 'story',
       };
-      const postType = postTypeMap[delivery.content_type] || 'image';
+      const postType = delivery.content_type ? (postTypeMap[delivery.content_type] || 'image') : null;
 
-      // For Reels: if there's a video + image, use the image as cover and only the video as media
+      // For Reels/Video: if there's a video + image, use the image as cover and only the video as media
       let mediaUrls = allMedia;
       let thumbnailUrl = null;
-      if (postType === 'reel') {
+      if (['reel', 'video'].includes(postType)) {
         const videos = allMedia.filter((m) => m.type === 'video');
         const images = allMedia.filter((m) => m.type === 'image');
         if (videos.length > 0 && images.length > 0) {
@@ -429,23 +536,24 @@ class ClickUpWebhookService {
         .first();
 
       if (existing) {
-        // Already published — don't touch
-        if (existing.status === 'published') {
-          logger.info(`Scheduled post already published for task ${clickupTaskId}`);
-          return;
-        }
-
-        // Update existing post with fresh data from ClickUp
+        // Reset published/failed posts back to draft/scheduled when task returns to agendamento
         const updates = {
-          caption: taskWithAttachments.name || '',
+          caption,
           post_type: postType,
           media_urls: JSON.stringify(mediaUrls),
           thumbnail_url: thumbnailUrl,
           status: postStatus,
           scheduled_at: isFutureDate ? scheduledAt : null,
+          error_message: null,
+          retry_count: 0,
+          ig_container_id: existing.status === 'published' ? null : existing.ig_container_id,
+          ig_media_id: existing.status === 'published' ? null : existing.ig_media_id,
+          ig_permalink: existing.status === 'published' ? null : existing.ig_permalink,
+          published_at: existing.status === 'published' ? null : existing.published_at,
           updated_at: new Date(),
         };
         await db('scheduled_posts').where({ id: existing.id }).update(updates);
+        logger.info(`Reset scheduled post for task ${clickupTaskId} (was ${existing.status}, now ${postStatus})`);
 
         if (isFutureDate) {
           const { schedulePost } = require('../../queues');
@@ -462,7 +570,7 @@ class ClickUpWebhookService {
         client_id: delivery.client_id,
         delivery_id: delivery.id,
         clickup_task_id: clickupTaskId,
-        caption: taskWithAttachments.name || '',
+        caption,
         post_type: postType,
         media_urls: JSON.stringify(mediaUrls),
         thumbnail_url: thumbnailUrl,
@@ -606,7 +714,7 @@ class ClickUpWebhookService {
    * Map ClickUp Formato option name to our content_type key
    */
   mapContentType(formatName) {
-    if (!formatName) return 'video';
+    if (!formatName) return null;
     const normalized = formatName.toLowerCase().trim();
     const map = {
       'reel': 'reel',

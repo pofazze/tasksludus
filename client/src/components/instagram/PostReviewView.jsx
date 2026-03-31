@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { updateScheduledPost, publishNow } from '@/services/instagram';
 import { CONTENT_TYPE_LABELS } from '@/lib/constants';
+import { proxyMediaUrl } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -216,7 +217,7 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
       {/* Caption */}
       <div className="space-y-1.5 mb-6">
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-semibold">Caption</Label>
+          <Label className="text-sm font-semibold">Legenda</Label>
           <span className={`text-xs ${caption.length > 2200 ? 'text-red-400' : 'text-muted-foreground'}`}>
             {caption.length}/2200
           </span>
@@ -254,7 +255,7 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
             thumbnailUrl ? (
               <div className="flex items-center gap-3">
                 <img
-                  src={thumbnailUrl}
+                  src={proxyMediaUrl(thumbnailUrl)}
                   alt="Capa"
                   className="w-16 h-28 rounded object-cover border border-zinc-700"
                   onError={(e) => { e.target.style.display = 'none'; }}
@@ -268,7 +269,7 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
             <div className={`rounded-lg border p-4 ${coverConfirmed ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
               <div className="flex gap-4">
                 <img
-                  src={thumbnailUrl}
+                  src={proxyMediaUrl(thumbnailUrl)}
                   alt="Capa"
                   className="w-24 h-[170px] rounded-lg object-cover border border-zinc-700 shrink-0"
                   onError={(e) => { e.target.style.display = 'none'; }}
@@ -353,7 +354,7 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
                   </div>
                 ) : m.url ? (
                   <img
-                    src={m.url}
+                    src={proxyMediaUrl(m.url)}
                     alt=""
                     className="w-12 h-12 rounded object-cover shrink-0"
                     onError={(e) => { e.target.outerHTML = '<div class="w-12 h-12 rounded bg-zinc-800 flex items-center justify-center shrink-0"><svg class="text-zinc-500" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>'; }}

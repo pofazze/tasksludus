@@ -15,6 +15,7 @@ class InstagramPublishService {
     const post = await db('scheduled_posts').where({ id: postId }).first();
     if (!post) throw Object.assign(new Error('Post not found'), { status: 404 });
     if (post.status === 'published') return post;
+    if (!post.post_type) throw Object.assign(new Error('Formato não definido — selecione antes de publicar'), { status: 400 });
 
     await db('scheduled_posts').where({ id: postId }).update({ status: 'publishing', updated_at: new Date() });
 
@@ -29,28 +30,40 @@ class InstagramPublishService {
         mediaUrls = await this.resolveMediaUrls(post.clickup_task_id, mediaUrls);
       }
 
-      // Normalize all URLs (proxy ClickUp, convert Google Drive, etc.)
-      mediaUrls = mediaUrls.map((m) => ({ ...m, url: this._normalizeMediaUrl(m.url) }));
+      // Normalize URLs for Instagram API (Google Drive only — ClickUp URLs stay raw, Instagram fetches directly)
+      mediaUrls = mediaUrls.map((m) => ({ ...m, url: this._normalizeMediaUrlForApi(m.url) }));
 
-      // Detect actual media type and override post_type if mismatched
-      const actualMediaType = mediaUrls[0]?.type; // 'image' or 'video' from MIME detection
+      logger.info('Publishing post — resolved media URLs', {
+        postId,
+        postType: post.post_type,
+        mediaCount: mediaUrls.length,
+        urls: mediaUrls.map((m) => ({ type: m.type, urlPrefix: m.url?.slice(0, 120) })),
+        thumbnailUrl: post.thumbnail_url?.slice(0, 120),
+      });
+
+      // Separate media by type for smart selection
+      const videoMedia = mediaUrls.find((m) => m.type === 'video');
+      const imageMedia = mediaUrls.find((m) => m.type === 'image');
       let effectivePostType = post.post_type;
-      if (post.post_type === 'video' && actualMediaType === 'image') {
+
+      // For video/reel posts: use the video attachment (not the cover image)
+      // For image posts: if only video found, publish as reel
+      if (['video', 'reel'].includes(effectivePostType) && !videoMedia && imageMedia) {
         effectivePostType = 'image';
-        logger.warn('Post type mismatch: post_type=video but media is image, publishing as image', { postId });
-      } else if (post.post_type === 'image' && actualMediaType === 'video') {
+        logger.warn('Post type mismatch: post_type=video/reel but only images found, publishing as image', { postId });
+      } else if (effectivePostType === 'image' && !imageMedia && videoMedia) {
         effectivePostType = 'reel';
-        logger.warn('Post type mismatch: post_type=image but media is video, publishing as reel', { postId });
+        logger.warn('Post type mismatch: post_type=image but only video found, publishing as reel', { postId });
       }
 
       let result;
       switch (effectivePostType) {
         case 'image':
-          result = await this.publishImage(igUserId, accessToken, mediaUrls[0]?.url, post.caption);
+          result = await this.publishImage(igUserId, accessToken, (imageMedia || mediaUrls[0])?.url, post.caption);
           break;
         case 'video':
         case 'reel':
-          result = await this.publishVideo(igUserId, accessToken, mediaUrls[0]?.url, post.caption, effectivePostType === 'reel', post.thumbnail_url);
+          result = await this.publishVideo(igUserId, accessToken, (videoMedia || mediaUrls[0])?.url, post.caption, effectivePostType === 'reel', post.thumbnail_url);
           break;
         case 'story':
           result = await this.publishStory(igUserId, accessToken, mediaUrls[0]);
@@ -132,26 +145,36 @@ class InstagramPublishService {
   }
 
   async publishVideo(igUserId, accessToken, videoUrl, caption, isReel = true, coverUrl = null) {
-    // Step 1: Create container (always REELS for video)
+    const normalizedCover = coverUrl ? this._normalizeMediaUrlForApi(coverUrl) : null;
+
+    // Try with cover first, fallback without if it fails
+    if (normalizedCover) {
+      try {
+        logger.info('Reel cover image set', { coverUrl: normalizedCover });
+        const result = await this._publishVideoContainer(igUserId, accessToken, videoUrl, caption, normalizedCover);
+        return result;
+      } catch (err) {
+        logger.warn('Reel publish with cover failed, retrying without cover', { error: err.message, coverUrl: normalizedCover });
+      }
+    }
+
+    // Publish without cover (either no cover provided or cover attempt failed)
+    return this._publishVideoContainer(igUserId, accessToken, videoUrl, caption, null);
+  }
+
+  async _publishVideoContainer(igUserId, accessToken, videoUrl, caption, coverUrl) {
     const params = {
       video_url: videoUrl,
       caption,
       media_type: 'REELS',
     };
-    // Add cover image for Reels if provided (cover_url overrides thumb_offset)
     if (coverUrl) {
-      params.cover_url = this._normalizeMediaUrl(coverUrl);
-      logger.info('Reel cover image set', { coverUrl: params.cover_url });
+      params.cover_url = coverUrl;
     }
     const containerId = await this._createContainer(igUserId, accessToken, params);
-
-    // Step 2: Poll until ready
     await this._pollContainerStatus(containerId, accessToken);
-
-    // Step 3: Publish
     const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
     const permalink = await this._getPermalink(mediaId, accessToken);
-
     return { containerId, mediaId, permalink };
   }
 
@@ -226,7 +249,7 @@ class InstagramPublishService {
       return task.attachments
         .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
         .map((a, i) => ({
-          url: this._normalizeMediaUrl(a.url),
+          url: a.url,
           type: a.mimetype?.startsWith('video/') ? 'video' : 'image',
           order: i,
         }));
@@ -236,16 +259,27 @@ class InstagramPublishService {
     }
   }
 
+  _normalizeMediaUrlForApi(url) {
+    // For Instagram API: only convert Google Drive links
+    // ClickUp URLs stay raw — Instagram fetches server-to-server (no CORS issues)
+    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+    if (driveMatch) {
+      return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+    }
+    return url;
+  }
+
   _normalizeMediaUrl(url) {
     // Convert Google Drive view links to direct download
     const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
     if (driveMatch) {
       return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
     }
-    // Proxy ClickUp attachments through our server (ClickUp CDN blocks Instagram)
+    // Proxy ClickUp attachments through our server (for browser display only)
     if (url.includes('clickup-attachments.com')) {
       const baseUrl = env.meta.redirectUri.replace('/api/instagram/oauth/callback', '');
-      return `${baseUrl}/api/instagram/media-proxy?url=${encodeURIComponent(url)}`;
+      const decoded = decodeURIComponent(url);
+      return `${baseUrl}/api/instagram/media-proxy?url=${encodeURIComponent(decoded)}`;
     }
     return url;
   }
@@ -342,13 +376,15 @@ class InstagramPublishService {
       const res = await fetch(url);
       const data = await res.json();
 
+      logger.info('Polling container status', { containerId, status_code: data.status_code, status: data.status, attempt, fullResponse: JSON.stringify(data).slice(0, 500) });
+
       if (data.status_code === 'FINISHED') return;
       if (data.status_code === 'ERROR') {
+        logger.error('IG container processing FAILED', { containerId, status: data.status, fullData: JSON.stringify(data) });
         throw new Error(`Media processing failed: ${data.status || 'unknown error'}`);
       }
 
       attempt++;
-      logger.debug('Polling container status', { containerId, status: data.status_code, attempt });
     }
 
     throw new Error('Media processing timed out after 5 minutes');

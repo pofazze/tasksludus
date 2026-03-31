@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, Film } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, proxyMediaUrl } from '@/lib/utils';
 
 function CarouselPreview({ media, className }) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
@@ -36,14 +36,13 @@ function CarouselPreview({ media, className }) {
   // Single image — no carousel needed
   if (media.length === 1) {
     const item = media[0];
+    const src = proxyMediaUrl(item.url);
     return (
       <div className={cn('aspect-square rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden', className)}>
         {item.type === 'video' ? (
-          <div className="w-full h-full flex items-center justify-center">
-            <Film size={40} className="text-zinc-600" />
-          </div>
+          <video src={src} controls className="w-full h-full object-cover" />
         ) : (
-          <img src={item.url} alt="Preview" className="w-full h-full object-cover" />
+          <img src={src} alt="Preview" className="w-full h-full object-cover" />
         )}
       </div>
     );
@@ -54,17 +53,18 @@ function CarouselPreview({ media, className }) {
       {/* Carousel */}
       <div className="overflow-hidden rounded-xl border border-zinc-800" ref={emblaRef}>
         <div className="flex">
-          {media.map((item, i) => (
-            <div key={item.url} className="flex-[0_0_100%] min-w-0 aspect-square bg-zinc-900">
-              {item.type === 'video' ? (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Film size={40} className="text-zinc-600" />
-                </div>
-              ) : (
-                <img src={item.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
-              )}
-            </div>
-          ))}
+          {media.map((item, i) => {
+            const src = proxyMediaUrl(item.url);
+            return (
+              <div key={item.url} className="flex-[0_0_100%] min-w-0 aspect-square bg-zinc-900">
+                {item.type === 'video' ? (
+                  <video src={src} controls className="w-full h-full object-cover" />
+                ) : (
+                  <img src={src} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

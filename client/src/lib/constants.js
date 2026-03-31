@@ -59,6 +59,7 @@ export const STATUS_LABELS = {
 };
 
 export const ROLE_LABELS = {
+  dev: 'Dev',
   ceo: 'CEO',
   director: 'Diretor',
   manager: 'Gerente',

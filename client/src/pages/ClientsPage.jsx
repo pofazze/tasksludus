@@ -25,6 +25,7 @@ const EMPTY_FORM = {
   is_active: true,
   clickup_list_id: '',
   automations_enabled: false,
+  category: '',
 };
 
 export default function ClientsPage() {
@@ -78,6 +79,17 @@ export default function ClientsPage() {
     return list;
   }, [clients, search, statusFilter]);
 
+  const groupedClients = useMemo(() => {
+    const health = filteredClients.filter((c) => c.category === 'health');
+    const experts = filteredClients.filter((c) => c.category === 'experts');
+    const other = filteredClients.filter((c) => !c.category || (c.category !== 'health' && c.category !== 'experts'));
+    const groups = [];
+    if (health.length > 0) groups.push({ label: 'Ludus Health', clients: health });
+    if (experts.length > 0) groups.push({ label: 'Ludus Experts', clients: experts });
+    if (other.length > 0) groups.push({ label: 'Outros', clients: other });
+    return groups;
+  }, [filteredClients]);
+
   const activeCount = clients.filter((c) => c.is_active).length;
   const inactiveCount = clients.filter((c) => !c.is_active).length;
 
@@ -102,6 +114,7 @@ export default function ClientsPage() {
       is_active: c.is_active ?? true,
       clickup_list_id: c.clickup_list_id || '',
       automations_enabled: c.automations_enabled ?? false,
+      category: c.category || '',
     });
     setTouched({});
     fetchUsers();
@@ -117,6 +130,7 @@ export default function ClientsPage() {
       ...form,
       user_id: form.user_id || null,
       clickup_list_id: form.clickup_list_id || null,
+      category: form.category || null,
     };
     try {
       if (editId) {
@@ -201,9 +215,16 @@ export default function ClientsPage() {
           </div>
 
           {/* Client card grid */}
-          {filteredClients.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {filteredClients.map((c) => (
+          {groupedClients.length > 0 ? (
+            <div className="space-y-8">
+              {groupedClients.map(({ label: groupLabel, clients: groupClients }) => (
+              <div key={groupLabel}>
+                <div className="flex items-center gap-2 mb-3">
+                  <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">{groupLabel}</h2>
+                  <span className="text-xs text-zinc-600">({groupClients.length})</span>
+                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {groupClients.map((c) => (
                 <Card
                   key={c.id}
                   className="group cursor-pointer transition-all duration-150 hover:ring-zinc-700 hover:shadow-md"
@@ -297,6 +318,9 @@ export default function ClientsPage() {
                   </CardContent>
                 </Card>
               ))}
+              </div>
+              </div>
+              ))}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -360,6 +384,22 @@ export default function ClientsPage() {
                         placeholder="Nome da empresa"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Divisão</Label>
+                    <Select
+                      value={form.category || '_none'}
+                      onValueChange={(val) => setForm({ ...form, category: val === '_none' ? '' : val })}
+                    >
+                      <SelectTrigger id="category">
+                        <SelectValue placeholder="Selecione a divisão" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">Nenhuma</SelectItem>
+                        <SelectItem value="health">Ludus Health</SelectItem>
+                        <SelectItem value="experts">Ludus Experts</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="user_id">Responsável</Label>

@@ -198,7 +198,13 @@ class InstagramController {
         return res.status(400).json({ error: 'Post already published' });
       }
 
-      // Remove delayed job if exists, publish immediately
+      // Reset retry count and status, remove delayed job, publish immediately
+      await db('scheduled_posts').where({ id: post.id }).update({
+        status: 'scheduled',
+        retry_count: 0,
+        error_message: null,
+        updated_at: new Date(),
+      });
       await cancelScheduledPost(post.id);
       await schedulePost(post.id, new Date());
 
@@ -243,15 +249,30 @@ class InstagramController {
       const { url } = req.query;
       if (!url) return res.status(400).json({ error: 'Missing url parameter' });
 
-      const upstream = await fetch(url);
-      if (!upstream.ok) return res.status(502).json({ error: 'Failed to fetch media' });
+      // Forward range headers for video streaming
+      const headers = {};
+      if (req.headers.range) {
+        headers.Range = req.headers.range;
+      }
+
+      const upstream = await fetch(url, { headers });
+      if (!upstream.ok && upstream.status !== 206) {
+        return res.status(502).json({ error: 'Failed to fetch media' });
+      }
 
       const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
       const contentLength = upstream.headers.get('content-length');
+      const contentRange = upstream.headers.get('content-range');
+      const acceptRanges = upstream.headers.get('accept-ranges');
 
       res.set('Content-Type', contentType);
       res.set('Cache-Control', 'public, max-age=3600');
+      res.set('Cross-Origin-Resource-Policy', 'cross-origin');
       if (contentLength) res.set('Content-Length', contentLength);
+      if (acceptRanges) res.set('Accept-Ranges', acceptRanges);
+      if (contentRange) res.set('Content-Range', contentRange);
+
+      res.status(upstream.status);
 
       const { Readable } = require('stream');
       Readable.fromWeb(upstream.body).pipe(res);

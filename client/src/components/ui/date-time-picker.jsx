@@ -4,14 +4,13 @@ import * as React from 'react';
 import { DayPicker } from 'react-day-picker';
 import { ptBR } from 'date-fns/locale';
 import { format, setHours, setMinutes } from 'date-fns';
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 function DateTimePicker({ value, onChange, className, disabled }) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef(null);
 
-  // Parse value: "YYYY-MM-DDTHH:mm" string or Date
   const dateValue = React.useMemo(() => {
     if (!value) return null;
     if (value instanceof Date) return value;
@@ -36,13 +35,11 @@ function DateTimePicker({ value, onChange, className, disabled }) {
 
   function emitChange(date) {
     if (onChange) {
-      // Emit as "YYYY-MM-DDTHH:mm" string for form compatibility
       const str = format(date, "yyyy-MM-dd'T'HH:mm");
       onChange(str);
     }
   }
 
-  // Close on click outside
   React.useEffect(() => {
     function handleClick(e) {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -86,28 +83,25 @@ function DateTimePicker({ value, onChange, className, disabled }) {
             onSelect={handleDaySelect}
             locale={ptBR}
             showOutsideDays
-            className="text-sm"
             classNames={{
+              root: 'text-sm',
               months: 'flex flex-col',
               month: 'flex flex-col gap-2',
-              caption: 'flex justify-between items-center px-1',
+              month_caption: 'flex justify-center items-center px-1 relative',
               caption_label: 'text-sm font-medium text-zinc-200',
-              nav: 'flex items-center gap-1',
-              nav_button: 'h-6 w-6 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 cursor-pointer transition-colors',
-              table: 'w-full border-collapse',
-              head_row: 'flex',
-              head_cell: 'w-9 text-[11px] font-medium text-zinc-500 text-center',
-              row: 'flex',
-              cell: 'w-9 h-9 text-center p-0',
-              day: 'w-9 h-9 text-sm rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 cursor-pointer transition-colors flex items-center justify-center',
-              day_selected: 'bg-[#9A48EA] text-white hover:bg-[#B06AF0]',
-              day_today: 'font-bold text-[#9A48EA]',
-              day_outside: 'text-zinc-700',
-              day_disabled: 'text-zinc-800 cursor-not-allowed',
-            }}
-            components={{
-              IconLeft: () => <ChevronLeft size={14} />,
-              IconRight: () => <ChevronRight size={14} />,
+              nav: 'flex items-center',
+              button_previous: 'absolute left-0 h-6 w-6 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 cursor-pointer transition-colors',
+              button_next: 'absolute right-0 h-6 w-6 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 cursor-pointer transition-colors',
+              weekdays: 'flex',
+              weekday: 'w-9 text-[11px] font-medium text-zinc-500 text-center',
+              week: 'flex',
+              day: 'w-9 h-9 text-center p-0',
+              day_button: 'w-9 h-9 text-sm rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 cursor-pointer transition-colors flex items-center justify-center',
+              selected: 'bg-[#9A48EA] text-white hover:bg-[#B06AF0]',
+              today: 'font-bold text-[#9A48EA]',
+              outside: 'text-zinc-700',
+              disabled: 'text-zinc-800 cursor-not-allowed',
+              chevron: 'w-3.5 h-3.5',
             }}
           />
 

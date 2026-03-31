@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { updateScheduledPost, publishNow } from '@/services/instagram';
 import { CONTENT_TYPE_LABELS } from '@/lib/constants';
+import { proxyMediaUrl } from '@/lib/utils';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
   SheetDescription, SheetBody, SheetFooter,
@@ -11,7 +12,8 @@ import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Calendar, ExternalLink, Loader2, Send, Save,
+  AlertTriangle, ArrowDown, ArrowUp, Calendar, CheckCircle, ExternalLink,
+  Image, Loader2, Send, Save, Trash2, Video, XCircle,
 } from 'lucide-react';
 
 const STATUS_CONFIG = {
@@ -22,12 +24,34 @@ const STATUS_CONFIG = {
   failed: { label: 'Erro', color: 'bg-red-500/15 text-red-400' },
 };
 
+const POST_TYPE_OPTIONS = [
+  { value: 'reel', label: 'Reel' },
+  { value: 'image', label: 'Feed' },
+  { value: 'story', label: 'Story' },
+  { value: 'carousel', label: 'Carrossel' },
+];
+
+function parseMedia(post) {
+  if (!post) return [];
+  const urls = typeof post.media_urls === 'string'
+    ? JSON.parse(post.media_urls)
+    : (post.media_urls || []);
+  return urls.map((url) => ({
+    url: typeof url === 'string' ? url : url.url || url,
+    type: (typeof url === 'object' && url.type) || 'image',
+    order: typeof url === 'object' ? url.order : undefined,
+  }));
+}
+
 export default function PostReviewSheet({ post, open, onOpenChange, onUpdated }) {
   const [caption, setCaption] = useState('');
-  const [scheduling, setScheduling] = useState(false);
   const [scheduledAt, setScheduledAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [media, setMedia] = useState([]);
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
+  const [coverConfirmed, setCoverConfirmed] = useState(false);
+  const [selectedPostType, setSelectedPostType] = useState(null);
 
   // Reset state when a new post opens
   const postId = post?.id;
@@ -35,34 +59,54 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
   if (postId && postId !== lastPostId) {
     setLastPostId(postId);
     setCaption(post.caption || '');
-    setScheduling(false);
     setScheduledAt(post.scheduled_at || '');
     setSaving(false);
     setPublishing(false);
+    setMedia(parseMedia(post));
+    setThumbnailUrl(post.thumbnail_url || '');
+    setCoverConfirmed(!post.thumbnail_url);
+    setSelectedPostType(post.post_type || null);
   }
-
-  const media = useMemo(() => {
-    if (!post) return [];
-    const urls = typeof post.media_urls === 'string'
-      ? JSON.parse(post.media_urls)
-      : (post.media_urls || []);
-    return urls.map((url) => ({
-      url: typeof url === 'string' ? url : url.url || url,
-      type: (typeof url === 'object' && url.type) || 'image',
-    }));
-  }, [post]);
 
   const readOnly = post && ['published', 'publishing'].includes(post.status);
   const format = post?.delivery_content_type || post?.post_type;
+  const effectivePostType = selectedPostType || post?.post_type;
   const formatLabel = format ? (CONTENT_TYPE_LABELS[format] || format) : null;
   const status = post ? (STATUS_CONFIG[post.status] || STATUS_CONFIG.draft) : null;
+  const isReel = effectivePostType === 'reel' || format === 'reel';
+  const hasFormat = !!effectivePostType;
   const clickupUrl = post?.clickup_task_id
     ? `https://app.clickup.com/t/${post.clickup_task_id}` : null;
 
+  const moveMedia = (index, direction) => {
+    const next = [...media];
+    const target = index + direction;
+    if (target < 0 || target >= next.length) return;
+    [next[index], next[target]] = [next[target], next[index]];
+    setMedia(next.map((m, i) => ({ ...m, order: i })));
+  };
+
+  const removeMedia = (index) => {
+    setMedia((m) => m.filter((_, i) => i !== index).map((item, i) => ({ ...item, order: i })));
+  };
+
+  function buildPayload(extra = {}) {
+    return {
+      caption,
+      media_urls: media,
+      thumbnail_url: isReel ? (thumbnailUrl || null) : null,
+      post_type: effectivePostType,
+      ...extra,
+    };
+  }
+
   async function handleSaveDraft() {
+    if (!hasFormat) {
+      return toast.error('Selecione o formato do post');
+    }
     setSaving(true);
     try {
-      await updateScheduledPost(post.id, { caption, scheduled_at: null });
+      await updateScheduledPost(post.id, buildPayload({ scheduled_at: null }));
       toast.success('Rascunho salvo');
       onUpdated?.();
       onOpenChange(false);
@@ -74,13 +118,18 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
   }
 
   async function handleSchedule() {
+    if (!hasFormat) {
+      return toast.error('Selecione o formato antes de agendar');
+    }
+    if (isReel && thumbnailUrl && !coverConfirmed) {
+      return toast.error('Confirme a capa do Reel antes de agendar');
+    }
     if (!scheduledAt) {
-      toast.error('Selecione uma data e horário');
-      return;
+      return toast.error('Selecione uma data e horário');
     }
     setSaving(true);
     try {
-      await updateScheduledPost(post.id, { caption, scheduled_at: scheduledAt });
+      await updateScheduledPost(post.id, buildPayload({ scheduled_at: scheduledAt }));
       toast.success('Post agendado');
       onUpdated?.();
       onOpenChange(false);
@@ -92,12 +141,15 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
   }
 
   async function handlePublishNow() {
+    if (!hasFormat) {
+      return toast.error('Selecione o formato antes de publicar');
+    }
+    if (isReel && thumbnailUrl && !coverConfirmed) {
+      return toast.error('Confirme a capa do Reel antes de publicar');
+    }
     setPublishing(true);
     try {
-      // Save caption first if changed
-      if (caption !== (post.caption || '')) {
-        await updateScheduledPost(post.id, { caption });
-      }
+      await updateScheduledPost(post.id, buildPayload());
       await publishNow(post.id);
       toast.success('Publicação iniciada');
       onUpdated?.();
@@ -120,9 +172,13 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
             <Badge variant="secondary" className={status.color + ' text-xs'}>
               {status.label}
             </Badge>
-            {formatLabel && (
+            {formatLabel ? (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
                 {formatLabel}
+              </span>
+            ) : (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400">
+                Não definido
               </span>
             )}
             {clickupUrl && (
@@ -136,11 +192,217 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
               </a>
             )}
           </SheetDescription>
+          {post.error_message && (
+            <div className="rounded-md bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs text-red-400 mt-2">
+              {post.error_message}
+            </div>
+          )}
         </SheetHeader>
 
         <SheetBody>
+          {/* Format selector — required when post_type is not set */}
+          {!readOnly && !hasFormat && (
+            <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+              <div className="flex items-center gap-1.5 text-amber-400 mb-2">
+                <AlertTriangle size={14} />
+                <span className="text-xs font-medium">Formato obrigatório</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground mb-2.5">
+                Selecione o formato para poder agendar ou publicar.
+              </p>
+              <div className="flex gap-1.5 flex-wrap">
+                {POST_TYPE_OPTIONS.map((opt) => (
+                  <Button
+                    key={opt.value}
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => setSelectedPostType(opt.value)}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Format badge when selected inline (not from ClickUp) */}
+          {!readOnly && hasFormat && !format && (
+            <div className="mb-4 flex items-center gap-2">
+              <span className="text-xs text-zinc-400">Formato:</span>
+              <Badge variant="secondary" className="text-[10px]">
+                {POST_TYPE_OPTIONS.find((o) => o.value === effectivePostType)?.label || effectivePostType}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 text-[10px] text-zinc-500 px-1.5"
+                onClick={() => setSelectedPostType(null)}
+              >
+                Alterar
+              </Button>
+            </div>
+          )}
+
           {/* Media Preview */}
           <CarouselPreview media={media} className="mb-4" />
+
+          {/* Reel Cover */}
+          {isReel && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+                Capa do Reel
+              </label>
+              {readOnly ? (
+                thumbnailUrl ? (
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={proxyMediaUrl(thumbnailUrl)}
+                      alt="Capa"
+                      className="w-12 h-20 rounded object-cover border border-zinc-700"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                    <span className="text-xs text-muted-foreground">Capa definida</span>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhuma capa definida</p>
+                )
+              ) : thumbnailUrl ? (
+                <div className={`rounded-lg border p-3 ${coverConfirmed ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
+                  <div className="flex gap-3">
+                    <img
+                      src={proxyMediaUrl(thumbnailUrl)}
+                      alt="Capa"
+                      className="w-16 h-28 rounded-lg object-cover border border-zinc-700 shrink-0"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      {coverConfirmed ? (
+                        <div className="flex items-center gap-1.5 text-emerald-400">
+                          <CheckCircle size={14} />
+                          <span className="text-xs font-medium">Capa confirmada</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-amber-400">
+                          <Image size={14} />
+                          <span className="text-xs font-medium">Confirme a capa do Reel</span>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-muted-foreground leading-tight">
+                        {coverConfirmed
+                          ? 'Será usada como capa na aba de Reels.'
+                          : 'Imagem detectada nos anexos. Confirme se deve ser a capa.'}
+                      </p>
+                      <div className="flex gap-1.5">
+                        {!coverConfirmed ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                              onClick={() => setCoverConfirmed(true)}
+                            >
+                              <CheckCircle size={12} className="mr-1" />
+                              Usar capa
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
+                              onClick={() => { setThumbnailUrl(''); setCoverConfirmed(true); }}
+                            >
+                              <XCircle size={12} className="mr-1" />
+                              Não usar
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs text-zinc-400"
+                            onClick={() => { setThumbnailUrl(''); setCoverConfirmed(true); }}
+                          >
+                            <Trash2 size={12} className="mr-1" />
+                            Remover
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Nenhuma capa detectada</p>
+              )}
+            </div>
+          )}
+
+          {/* Media List (Attachments) */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+              Mídia ({media.length})
+            </label>
+            {media.length > 0 ? (
+              <div className="space-y-1.5">
+                {media.map((m, i) => (
+                  <div key={i} className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2">
+                    {m.type === 'video' ? (
+                      <div className="w-9 h-9 rounded bg-zinc-800 flex items-center justify-center shrink-0">
+                        <Video size={16} className="text-blue-400" />
+                      </div>
+                    ) : m.url ? (
+                      <img
+                        src={proxyMediaUrl(m.url)}
+                        alt=""
+                        className="w-9 h-9 rounded object-cover shrink-0"
+                        onError={(e) => { e.target.outerHTML = '<div class="w-9 h-9 rounded bg-zinc-800 flex items-center justify-center shrink-0"><svg class="text-zinc-500" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>'; }}
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded bg-zinc-800 flex items-center justify-center shrink-0">
+                        <Image size={16} className="text-zinc-500" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <Badge variant="secondary" className="text-[10px]">
+                        {m.type === 'video' ? 'Vídeo' : 'Imagem'}
+                      </Badge>
+                    </div>
+                    {!readOnly && (
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => moveMedia(i, -1)}
+                          disabled={i === 0}
+                        >
+                          <ArrowUp size={12} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => moveMedia(i, 1)}
+                          disabled={i === media.length - 1}
+                        >
+                          <ArrowDown size={12} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-zinc-500 hover:text-red-400"
+                          onClick={() => removeMedia(i)}
+                        >
+                          <Trash2 size={12} />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Nenhuma mídia</p>
+            )}
+          </div>
 
           {/* Caption */}
           <label className="block text-sm font-medium text-zinc-300 mb-1.5">
@@ -158,29 +420,13 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
             />
           )}
 
-          {/* Inline DateTimePicker for scheduling */}
-          {scheduling && !readOnly && (
-            <div className="mt-4 p-3 rounded-lg border border-zinc-800 bg-zinc-900/50">
-              <p className="text-sm font-medium text-zinc-300 mb-2">Selecionar data e horário</p>
+          {/* Date/Time Picker — always visible */}
+          {!readOnly && (
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+                Data e horário
+              </label>
               <DateTimePicker value={scheduledAt} onChange={setScheduledAt} />
-              <div className="flex gap-2 mt-3">
-                <Button
-                  size="sm"
-                  onClick={handleSchedule}
-                  disabled={saving || !scheduledAt}
-                  className="bg-[#9A48EA] hover:bg-[#B06AF0] text-white"
-                >
-                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Calendar className="h-3.5 w-3.5" />}
-                  <span className="ml-1.5">Confirmar Agendamento</span>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setScheduling(false)}
-                >
-                  Cancelar
-                </Button>
-              </div>
             </div>
           )}
         </SheetBody>
@@ -191,32 +437,29 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
               variant="outline"
               size="sm"
               onClick={handleSaveDraft}
-              disabled={saving}
+              disabled={saving || !hasFormat}
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
               <span className="ml-1.5">Salvar Rascunho</span>
             </Button>
-            {!scheduling && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setScheduling(true)}
-                >
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span className="ml-1.5">Agendar</span>
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handlePublishNow}
-                  disabled={publishing}
-                  className="bg-[#9A48EA] hover:bg-[#B06AF0] text-white"
-                >
-                  {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                  <span className="ml-1.5">Publicar Agora</span>
-                </Button>
-              </>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSchedule}
+              disabled={saving || !scheduledAt || !hasFormat}
+            >
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Calendar className="h-3.5 w-3.5" />}
+              <span className="ml-1.5">Agendar</span>
+            </Button>
+            <Button
+              size="sm"
+              onClick={handlePublishNow}
+              disabled={publishing || !hasFormat}
+              className="bg-[#9A48EA] hover:bg-[#B06AF0] text-white"
+            >
+              {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+              <span className="ml-1.5">Publicar Agora</span>
+            </Button>
           </SheetFooter>
         )}
       </SheetContent>

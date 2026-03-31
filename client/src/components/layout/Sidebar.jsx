@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import useAuthStore from '@/stores/authStore';
 
 const navItems = {
-  ceo: [
+  dev: [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/users', icon: Users, label: 'Equipe' },
     { to: '/goals', icon: Target, label: 'Metas' },
@@ -21,11 +21,19 @@ const navItems = {
     { to: '/comofunciona', icon: Rocket, label: 'Como funciona' },
     { to: '/settings', icon: Sliders, label: 'Config' },
   ],
+  ceo: [
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/users', icon: Users, label: 'Equipe' },
+    { to: '/clients', icon: Package, label: 'Clientes' },
+    { to: '/deliveries', icon: BarChart3, label: 'Entregas' },
+    { to: '/schedule', icon: CalendarDays, label: 'Agenda' },
+    { to: '/ranking', icon: Trophy, label: 'Ranking' },
+    { to: '/comofunciona', icon: Rocket, label: 'Como funciona' },
+    { to: '/settings', icon: Sliders, label: 'Config' },
+  ],
   director: [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/users', icon: Users, label: 'Equipe' },
-    { to: '/goals', icon: Target, label: 'Metas' },
-    { to: '/boost', icon: Calculator, label: 'Boost' },
     { to: '/clients', icon: Package, label: 'Clientes' },
     { to: '/deliveries', icon: BarChart3, label: 'Entregas' },
     { to: '/schedule', icon: CalendarDays, label: 'Agenda' },
@@ -35,7 +43,6 @@ const navItems = {
   manager: [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/users', icon: Users, label: 'Equipe' },
-    { to: '/goals', icon: Target, label: 'Metas' },
     { to: '/clients', icon: Package, label: 'Clientes' },
     { to: '/deliveries', icon: BarChart3, label: 'Entregas' },
     { to: '/schedule', icon: CalendarDays, label: 'Agenda' },

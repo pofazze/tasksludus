@@ -40,7 +40,7 @@ function authorize(...roles) {
     if (!req.user) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
-
+    if (req.user.role === 'dev') return next();
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
@@ -51,6 +51,7 @@ function authorize(...roles) {
 
 // CEO-only actions
 function ceoOnly(req, res, next) {
+  if (req.user.role === 'dev') return next();
   if (req.user.role !== 'ceo') {
     return res.status(403).json({ error: 'CEO access only' });
   }
@@ -59,6 +60,7 @@ function ceoOnly(req, res, next) {
 
 // CEO or Director
 function adminLevel(req, res, next) {
+  if (req.user.role === 'dev') return next();
   if (!['ceo', 'director'].includes(req.user.role)) {
     return res.status(403).json({ error: 'CEO or Director access only' });
   }
@@ -67,6 +69,7 @@ function adminLevel(req, res, next) {
 
 // CEO, Director, or Manager
 function managementLevel(req, res, next) {
+  if (req.user.role === 'dev') return next();
   if (!['ceo', 'director', 'manager'].includes(req.user.role)) {
     return res.status(403).json({ error: 'Management access only' });
   }
@@ -75,6 +78,7 @@ function managementLevel(req, res, next) {
 
 // CEO, Director, Manager, or Social Media producer
 function managementOrSocialMedia(req, res, next) {
+  if (req.user.role === 'dev') return next();
   if (['ceo', 'director', 'manager'].includes(req.user.role)) {
     return next();
   }

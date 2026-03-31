@@ -13,28 +13,35 @@ const deliverySyncQueue = new Queue('delivery-sync', { connection });
 
 async function schedulePost(postId, scheduledAt) {
   const delay = new Date(scheduledAt).getTime() - Date.now();
+  // Use unique jobId per attempt to avoid BullMQ deduplication with stale failed/completed jobs
+  const jobId = `post-${postId}-${Date.now()}`;
   if (delay <= 0) {
-    // Publish immediately
-    await instagramPublishQueue.add('publish', { postId }, { jobId: `post-${postId}` });
+    await instagramPublishQueue.add('publish', { postId }, { jobId });
   } else {
-    await instagramPublishQueue.add('publish', { postId }, {
-      delay,
-      jobId: `post-${postId}`,
-    });
+    await instagramPublishQueue.add('publish', { postId }, { delay, jobId });
   }
   logger.info('Post scheduled in queue', { postId, delay: Math.round(delay / 1000) + 's' });
 }
 
 async function cancelScheduledPost(postId) {
   try {
-    const job = await instagramPublishQueue.getJob(`post-${postId}`);
-    if (job) {
-      await job.remove();
-      logger.info('Scheduled post removed from queue', { postId });
+    // Find all jobs for this post (jobId format: post-{postId}-{timestamp})
+    const states = ['delayed', 'waiting', 'active'];
+    for (const state of states) {
+      const jobs = await instagramPublishQueue.getJobs([state]);
+      for (const job of jobs) {
+        if (job.data?.postId === postId) {
+          try {
+            await job.remove();
+            logger.info('Scheduled post removed from queue', { postId, jobId: job.id, state });
+          } catch {
+            // Job may be locked by active worker
+          }
+        }
+      }
     }
   } catch (err) {
-    // Job may be locked by an active worker — safe to ignore
-    logger.warn('Could not remove scheduled job (may be processing)', { postId, error: err.message });
+    logger.warn('Could not remove scheduled job', { postId, error: err.message });
   }
 }
 

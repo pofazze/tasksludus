@@ -8,6 +8,7 @@ const createClientSchema = Joi.object({
   is_active: Joi.boolean().default(true).optional(),
   clickup_list_id: Joi.string().max(50).allow(null, '').optional(),
   automations_enabled: Joi.boolean().default(false).optional(),
+  category: Joi.string().valid('health', 'experts').allow(null, '').optional(),
 });
 
 const updateClientSchema = Joi.object({
@@ -18,6 +19,7 @@ const updateClientSchema = Joi.object({
   user_id: Joi.string().uuid().allow(null).optional(),
   clickup_list_id: Joi.string().max(50).allow(null, '').optional(),
   automations_enabled: Joi.boolean().optional(),
+  category: Joi.string().valid('health', 'experts').allow(null, '').optional(),
 }).min(1);
 
 module.exports = {
