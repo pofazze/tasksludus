@@ -81,7 +81,7 @@ export default function ClientProfilePage() {
   const [igConnection, setIgConnection] = useState(null);
   const [igConnecting, setIgConnecting] = useState(false);
 
-  // Kanban month filter
+  // Kanban month filter (empty string = all time)
   const [kanbanMonth, setKanbanMonth] = useState(getCurrentMonth());
 
   const fetchProfile = async () => {
@@ -163,6 +163,15 @@ export default function ClientProfilePage() {
   };
 
   // ─── Derived data ─────────────────────────────────────
+  const availableMonths = useMemo(() => {
+    if (!profile) return [];
+    const months = new Set();
+    for (const d of profile.deliveries) {
+      if (d.month) months.add(d.month.slice(0, 7));
+    }
+    return [...months].sort().reverse();
+  }, [profile]);
+
   const kanbanDeliveries = useMemo(() => {
     if (!profile) return {};
     const filtered = profile.deliveries.filter((d) => {
@@ -431,12 +440,35 @@ export default function ClientProfilePage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold">Pipeline</h2>
-          <input
-            type="month"
-            value={kanbanMonth}
-            onChange={(e) => setKanbanMonth(e.target.value)}
-            className="bg-transparent border border-zinc-700 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
-          />
+          <div className="flex items-center gap-1 overflow-x-auto">
+            <button
+              onClick={() => setKanbanMonth('')}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                kanbanMonth === ''
+                  ? 'bg-[#9A48EA]/20 text-[#9A48EA]'
+                  : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              Todo tempo
+            </button>
+            {availableMonths.map((m) => {
+              const [y, mo] = m.split('-');
+              const label = new Date(Number(y), Number(mo) - 1).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+              return (
+                <button
+                  key={m}
+                  onClick={() => setKanbanMonth(m)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                    kanbanMonth === m
+                      ? 'bg-[#9A48EA]/20 text-[#9A48EA]'
+                      : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="overflow-x-auto pb-2 -mx-2 px-2">
