@@ -781,7 +781,7 @@ class ClickUpWebhookService {
           updated++;
         }
 
-        // Safety net: create scheduled post for deliveries in "agendamento" that are missing one
+        // Safety net: create or refresh scheduled post for deliveries in "agendamento"
         const effectiveStatus = newStatus || delivery.status;
         if (effectiveStatus === 'agendamento') {
           const existingPost = await db('scheduled_posts')
@@ -793,6 +793,16 @@ class ClickUpWebhookService {
               : delivery;
             await this.autoCreateScheduledPost(delivery.clickup_task_id, freshDelivery, task);
             postsCreated++;
+          } else if (existingPost.status === 'draft' || existingPost.status === 'scheduled') {
+            // Refresh media if post has empty media (missed on initial creation)
+            const mediaUrls = typeof existingPost.media_urls === 'string'
+              ? JSON.parse(existingPost.media_urls) : (existingPost.media_urls || []);
+            if (mediaUrls.length === 0) {
+              const freshDelivery = updates.content_type
+                ? { ...delivery, content_type: updates.content_type }
+                : delivery;
+              await this.refreshScheduledPostMedia(delivery.clickup_task_id, freshDelivery);
+            }
           }
         }
 
