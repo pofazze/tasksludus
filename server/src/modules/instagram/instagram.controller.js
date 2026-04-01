@@ -265,14 +265,17 @@ class InstagramController {
       const contentRange = upstream.headers.get('content-range');
       const acceptRanges = upstream.headers.get('accept-ranges');
 
-      res.set('Content-Type', contentType);
-      res.set('Cache-Control', 'public, max-age=3600');
-      res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-      if (contentLength) res.set('Content-Length', contentLength);
-      if (acceptRanges) res.set('Accept-Ranges', acceptRanges);
-      if (contentRange) res.set('Content-Range', contentRange);
+      // Use writeHead to force Content-Length (prevents chunked encoding)
+      const resHeaders = {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=3600',
+        'Cross-Origin-Resource-Policy': 'cross-origin',
+      };
+      if (contentLength) resHeaders['Content-Length'] = contentLength;
+      if (acceptRanges) resHeaders['Accept-Ranges'] = acceptRanges;
+      if (contentRange) resHeaders['Content-Range'] = contentRange;
 
-      res.status(upstream.status);
+      res.writeHead(upstream.status, resHeaders);
 
       const { Readable } = require('stream');
       Readable.fromWeb(upstream.body).pipe(res);
