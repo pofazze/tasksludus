@@ -260,11 +260,16 @@ class InstagramPublishService {
   }
 
   _normalizeMediaUrlForApi(url) {
-    // For Instagram API: only convert Google Drive links
-    // ClickUp URLs stay raw — Instagram fetches server-to-server (no CORS issues)
+    // Convert Google Drive view links to direct download
     const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
     if (driveMatch) {
       return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+    }
+    // Proxy ClickUp attachments — ClickUp CDN blocks Instagram's servers
+    if (url.includes('clickup-attachments.com')) {
+      const baseUrl = env.meta.redirectUri.replace('/api/instagram/oauth/callback', '');
+      const decoded = decodeURIComponent(url);
+      return `${baseUrl}/api/instagram/media-proxy?url=${encodeURIComponent(decoded)}`;
     }
     return url;
   }
