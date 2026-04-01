@@ -315,6 +315,8 @@ class InstagramPublishService {
       url,
       igUserId,
       paramKeys: Object.keys(params),
+      videoUrl: (params.video_url || params.image_url || '').slice(0, 200),
+      coverUrl: params.cover_url?.slice(0, 200),
       tokenPrefix: accessToken?.slice(0, 8),
       tokenLength: accessToken?.length,
     });
@@ -372,16 +374,17 @@ class InstagramPublishService {
       const delay = POLL_INTERVALS[Math.min(attempt, POLL_INTERVALS.length - 1)];
       await new Promise((resolve) => setTimeout(resolve, delay));
 
-      const url = `${GRAPH_URL}/${containerId}?fields=status_code,status&access_token=${accessToken}`;
+      const url = `${GRAPH_URL}/${containerId}?fields=id,status_code,status,error_message&access_token=${accessToken}`;
       const res = await fetch(url);
       const data = await res.json();
 
-      logger.info('Polling container status', { containerId, status_code: data.status_code, status: data.status, attempt, fullResponse: JSON.stringify(data).slice(0, 500) });
+      logger.info('Polling container status', { containerId, status_code: data.status_code, status: data.status, error_message: data.error_message, attempt, fullResponse: JSON.stringify(data).slice(0, 500) });
 
       if (data.status_code === 'FINISHED') return;
       if (data.status_code === 'ERROR') {
-        logger.error('IG container processing FAILED', { containerId, status: data.status, fullData: JSON.stringify(data) });
-        throw new Error(`Media processing failed: ${data.status || 'unknown error'}`);
+        const detail = data.error_message || data.status || 'unknown error';
+        logger.error('IG container processing FAILED', { containerId, status: data.status, error_message: data.error_message, fullData: JSON.stringify(data) });
+        throw new Error(`Media processing failed: ${detail}`);
       }
 
       attempt++;
