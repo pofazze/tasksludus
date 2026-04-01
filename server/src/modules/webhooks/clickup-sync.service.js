@@ -228,6 +228,16 @@ class ClickUpSyncService {
 
       await db('deliveries').where({ id: existing.id }).update(updates);
       stats.deliveries.updated++;
+
+      // Safety net: create scheduled post for deliveries in "agendamento" missing one
+      if (status === 'agendamento') {
+        const existingPost = await db('scheduled_posts')
+          .where({ clickup_task_id: clickupTaskId })
+          .first();
+        if (!existingPost) {
+          await clickupService.autoCreateScheduledPost(clickupTaskId, { ...existing, status, content_type: contentType }, task);
+        }
+      }
     } else {
       // Create new delivery — skip if no assignee
       if (!userId) {
@@ -236,7 +246,7 @@ class ClickUpSyncService {
         return;
       }
 
-      await db('deliveries').insert({
+      const [newDelivery] = await db('deliveries').insert({
         clickup_task_id: clickupTaskId,
         title: task.name,
         user_id: userId,
@@ -246,8 +256,13 @@ class ClickUpSyncService {
         month,
         started_at: startedAt,
         completed_at: completedAt,
-      });
+      }).returning('*');
       stats.deliveries.created++;
+
+      // Create scheduled post if task is already in agendamento
+      if (status === 'agendamento') {
+        await clickupService.autoCreateScheduledPost(clickupTaskId, newDelivery, task);
+      }
     }
   }
 }

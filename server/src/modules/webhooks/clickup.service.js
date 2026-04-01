@@ -742,10 +742,11 @@ class ClickUpWebhookService {
   async syncAllDeliveries() {
     const deliveries = await db('deliveries')
       .whereNotNull('clickup_task_id')
-      .select('id', 'clickup_task_id', 'status', 'content_type', 'title');
+      .select('id', 'clickup_task_id', 'status', 'content_type', 'title', 'client_id');
 
     let updated = 0;
     let errors = 0;
+    let postsCreated = 0;
 
     for (const delivery of deliveries) {
       try {
@@ -780,6 +781,21 @@ class ClickUpWebhookService {
           updated++;
         }
 
+        // Safety net: create scheduled post for deliveries in "agendamento" that are missing one
+        const effectiveStatus = newStatus || delivery.status;
+        if (effectiveStatus === 'agendamento') {
+          const existingPost = await db('scheduled_posts')
+            .where({ clickup_task_id: delivery.clickup_task_id })
+            .first();
+          if (!existingPost) {
+            const freshDelivery = updates.content_type
+              ? { ...delivery, content_type: updates.content_type }
+              : delivery;
+            await this.autoCreateScheduledPost(delivery.clickup_task_id, freshDelivery, task);
+            postsCreated++;
+          }
+        }
+
         // Rate limit: 600ms between requests (ClickUp allows 100 req/min)
         await new Promise((r) => setTimeout(r, 600));
       } catch (err) {
@@ -788,8 +804,8 @@ class ClickUpWebhookService {
       }
     }
 
-    logger.info('syncAllDeliveries complete', { total: deliveries.length, updated, errors });
-    return { total: deliveries.length, updated, errors };
+    logger.info('syncAllDeliveries complete', { total: deliveries.length, updated, errors, postsCreated });
+    return { total: deliveries.length, updated, errors, postsCreated };
   }
 
   /**
