@@ -163,19 +163,72 @@ class InstagramPublishService {
   }
 
   async _publishVideoContainer(igUserId, accessToken, videoUrl, caption, coverUrl) {
+    // Step 1: Download video to buffer (bypasses ClickUp robots.txt / CDN blocks)
+    logger.info('Downloading video for resumable upload', { videoUrl: videoUrl.slice(0, 120) });
+    const videoBuffer = await this._downloadMedia(videoUrl);
+    const fileSize = videoBuffer.length;
+    logger.info('Video downloaded', { fileSize, sizeMB: (fileSize / 1024 / 1024).toFixed(1) });
+
+    // Step 2: Create resumable upload container
     const params = {
-      video_url: videoUrl,
-      caption,
       media_type: 'REELS',
+      upload_type: 'resumable',
+      caption,
     };
     if (coverUrl) {
       params.cover_url = coverUrl;
     }
     const containerId = await this._createContainer(igUserId, accessToken, params);
+
+    // Step 3: Get upload URI from container
+    const uploadUri = await this._getResumableUploadUri(containerId, accessToken);
+    logger.info('Got resumable upload URI', { containerId, uploadUri: uploadUri.slice(0, 120) });
+
+    // Step 4: Upload video data directly to Instagram
+    await this._uploadVideoData(uploadUri, accessToken, videoBuffer);
+    logger.info('Video uploaded to Instagram', { containerId, fileSize });
+
+    // Step 5: Poll for processing
     await this._pollContainerStatus(containerId, accessToken);
     const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
     const permalink = await this._getPermalink(mediaId, accessToken);
     return { containerId, mediaId, permalink };
+  }
+
+  async _downloadMedia(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to download media: HTTP ${res.status}`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+
+  async _getResumableUploadUri(containerId, accessToken) {
+    const url = `${GRAPH_URL}/${containerId}?fields=uri&access_token=${accessToken}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.uri) {
+      throw new Error(`No upload URI returned for container ${containerId}: ${JSON.stringify(data)}`);
+    }
+    return data.uri;
+  }
+
+  async _uploadVideoData(uploadUri, accessToken, videoBuffer) {
+    const fileSize = videoBuffer.length;
+    const res = await fetch(uploadUri, {
+      method: 'POST',
+      headers: {
+        Authorization: `OAuth ${accessToken}`,
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': String(fileSize),
+        offset: '0',
+        file_size: String(fileSize),
+      },
+      body: videoBuffer,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Video upload failed: HTTP ${res.status} — ${text.slice(0, 300)}`);
+    }
+    logger.info('Resumable upload response', { status: res.status });
   }
 
   async publishStory(igUserId, accessToken, media) {
