@@ -265,7 +265,11 @@ class InstagramPublishService {
     if (driveMatch) {
       return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
     }
-    // ClickUp URLs stay raw — Instagram fetches server-to-server (no CORS/CDN issues)
+    // Proxy ClickUp attachments — ClickUp robots.txt blocks Instagram's bot (403)
+    if (url.includes('clickup-attachments.com')) {
+      const baseUrl = env.meta.redirectUri.replace('/api/instagram/oauth/callback', '');
+      return `${baseUrl}/api/instagram/media-proxy?url=${encodeURIComponent(url)}`;
+    }
     return url;
   }
 
