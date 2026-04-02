@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 
 function DateTimePicker({ value, onChange, className, disabled }) {
   const [open, setOpen] = React.useState(false);
-  const ref = React.useRef(null);
 
   const dateValue = React.useMemo(() => {
     if (!value) return null;
@@ -41,23 +40,11 @@ function DateTimePicker({ value, onChange, className, disabled }) {
     }
   }
 
-  React.useEffect(() => {
-    function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
-      }
-    }
-    if (open) {
-      document.addEventListener('mousedown', handleClick);
-      return () => document.removeEventListener('mousedown', handleClick);
-    }
-  }, [open]);
-
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const minutes = Array.from({ length: 12 }, (_, i) => i * 5);
 
   return (
-    <div className={cn('relative', className)} ref={ref}>
+    <div className={cn('relative', className)}>
       <button
         type="button"
         onClick={() => !disabled && setOpen(!open)}
@@ -77,7 +64,11 @@ function DateTimePicker({ value, onChange, className, disabled }) {
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1 z-50 rounded-xl border border-zinc-800 bg-zinc-900 shadow-lg p-3 w-[280px]">
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setOpen(false)} />
+          {/* Calendar overlay - centered */}
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl p-4 w-[300px]">
           <DayPicker
             mode="single"
             selected={selectedDate}
@@ -134,6 +125,7 @@ function DateTimePicker({ value, onChange, className, disabled }) {
             </select>
           </div>
         </div>
+        </>
       )}
     </div>
   );
