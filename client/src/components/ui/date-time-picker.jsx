@@ -3,41 +3,68 @@
 import * as React from 'react';
 import { DayPicker } from 'react-day-picker';
 import { ptBR } from 'date-fns/locale';
-import { format, setHours, setMinutes } from 'date-fns';
 import { CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const TZ = 'America/Sao_Paulo';
+
+/** Extract year/month/day/hour/minute in BRT from any Date object */
+function getBRT(date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: TZ,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(date);
+  const g = (t) => Number(parts.find((p) => p.type === t)?.value || 0);
+  return { year: g('year'), month: g('month'), day: g('day'), hour: g('hour') % 24, minute: g('minute') };
+}
+
+/** Build ISO string with -03:00 offset from BRT components */
+function brtToISO(year, month, day, hour, minute) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${year}-${p(month)}-${p(day)}T${p(hour)}:${p(minute)}:00-03:00`;
+}
+
+/** Format a Date for display in BRT */
+function fmtBRT(date) {
+  return date.toLocaleString('pt-BR', {
+    timeZone: TZ,
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
 
 function DateTimePicker({ value, onChange, className, disabled }) {
   const [open, setOpen] = React.useState(false);
 
   const dateValue = React.useMemo(() => {
     if (!value) return null;
-    if (value instanceof Date) return value;
-    return new Date(value);
+    const d = value instanceof Date ? value : new Date(value);
+    return isNaN(d) ? null : d;
   }, [value]);
 
-  const selectedDate = dateValue && !isNaN(dateValue) ? dateValue : null;
-  const hour = selectedDate ? selectedDate.getHours() : 12;
-  const minute = selectedDate ? selectedDate.getMinutes() : 0;
+  const brt = dateValue ? getBRT(dateValue) : null;
+  const hour = brt ? brt.hour : 12;
+  const minute = brt ? brt.minute : 0;
+
+  // DayPicker works in local tz — we need to give it a Date whose local date matches the BRT date
+  const selectedDayForPicker = React.useMemo(() => {
+    if (!brt) return undefined;
+    // Create a date at noon local time for the BRT calendar date (noon avoids DST edge cases)
+    return new Date(brt.year, brt.month - 1, brt.day, 12, 0, 0);
+  }, [brt]);
 
   function handleDaySelect(day) {
     if (!day) return;
-    const next = setMinutes(setHours(day, hour), minute);
-    emitChange(next);
+    // day is a local Date from DayPicker — extract its local year/month/day
+    const iso = brtToISO(day.getFullYear(), day.getMonth() + 1, day.getDate(), hour, minute);
+    onChange?.(iso);
   }
 
   function handleTimeChange(h, m) {
-    const base = selectedDate || new Date();
-    const next = setMinutes(setHours(base, h), m);
-    emitChange(next);
-  }
-
-  function emitChange(date) {
-    if (onChange) {
-      // Emit as Brasília time (UTC-3) — the app is 100% BR
-      const str = format(date, "yyyy-MM-dd'T'HH:mm") + '-03:00';
-      onChange(str);
-    }
+    const b = brt || getBRT(new Date());
+    const iso = brtToISO(b.year, b.month, b.day, h, m);
+    onChange?.(iso);
   }
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
@@ -53,14 +80,11 @@ function DateTimePicker({ value, onChange, className, disabled }) {
           'flex items-center gap-2 h-8 w-full rounded-lg border border-zinc-700 bg-transparent px-2.5 py-1 text-sm transition-colors cursor-pointer',
           'hover:border-zinc-600 focus-visible:border-[#9A48EA] focus-visible:ring-3 focus-visible:ring-[#9A48EA]/50',
           'disabled:pointer-events-none disabled:opacity-50',
-          !selectedDate && 'text-zinc-500'
+          !dateValue && 'text-zinc-500'
         )}
       >
         <CalendarDays size={14} className="text-zinc-500 shrink-0" />
-        {selectedDate
-          ? format(selectedDate, "dd 'de' MMM yyyy 'às' HH:mm", { locale: ptBR })
-          : 'Selecionar data e hora'
-        }
+        {dateValue ? fmtBRT(dateValue) : 'Selecionar data e hora'}
       </button>
 
       {open && (
@@ -71,7 +95,7 @@ function DateTimePicker({ value, onChange, className, disabled }) {
           <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl p-4 w-[300px]">
           <DayPicker
             mode="single"
-            selected={selectedDate}
+            selected={selectedDayForPicker}
             onSelect={handleDaySelect}
             locale={ptBR}
             showOutsideDays

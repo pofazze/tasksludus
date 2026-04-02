@@ -246,8 +246,14 @@ class InstagramController {
 
   async mediaProxy(req, res, next) {
     try {
-      const { url } = req.query;
+      let { url } = req.query;
       if (!url) return res.status(400).json({ error: 'Missing url parameter' });
+
+      // Convert Google Drive page URLs to direct download URLs
+      const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+      if (driveMatch) {
+        url = `https://drive.google.com/uc?export=download&confirm=t&id=${driveMatch[1]}`;
+      }
 
       // Forward range headers for video streaming
       const headers = {};
