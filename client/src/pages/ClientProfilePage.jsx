@@ -29,7 +29,10 @@ import {
 const fmtNumber = (n) => (n != null ? n.toLocaleString('pt-BR') : '—');
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('pt-BR') : '—');
 const fmtDateTime = (d) =>
-  d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+  d ? new Date(d).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }) : '—';
 
 function formatDuration(seconds) {
   if (!seconds) return '—';

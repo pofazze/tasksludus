@@ -35,7 +35,8 @@ function DateTimePicker({ value, onChange, className, disabled }) {
 
   function emitChange(date) {
     if (onChange) {
-      const str = format(date, "yyyy-MM-dd'T'HH:mm");
+      // Emit as Brasília time (UTC-3) — the app is 100% BR
+      const str = format(date, "yyyy-MM-dd'T'HH:mm") + '-03:00';
       onChange(str);
     }
   }

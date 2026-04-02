@@ -21,7 +21,10 @@ const STATUS_CONFIG = {
 };
 
 const fmtDateTime = (d) =>
-  d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+  d ? new Date(d).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }) : '—';
 
 function mediaCount(post) {
   const urls = typeof post.media_urls === 'string' ? JSON.parse(post.media_urls) : (post.media_urls || []);

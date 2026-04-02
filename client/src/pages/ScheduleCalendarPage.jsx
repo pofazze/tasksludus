@@ -316,7 +316,7 @@ export default function ScheduleCalendarPage() {
                 {selectedDayPosts.map((p) => {
                   const TypeIcon = TYPE_ICONS[p.post_type] || Image;
                   const time = p.scheduled_at
-                    ? new Date(p.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                    ? new Date(p.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
                     : '—';
                   const mediaCount = (typeof p.media_urls === 'string' ? JSON.parse(p.media_urls) : p.media_urls || []).length;
 

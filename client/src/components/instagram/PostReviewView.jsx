@@ -26,7 +26,10 @@ function formatDateTimeLocal(isoDate) {
 }
 
 const fmtDateTime = (d) =>
-  d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+  d ? new Date(d).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }) : '—';
 
 export default function PostReviewView({ post, clientName, onBack, onSaved }) {
   const isPublished = ['published', 'publishing'].includes(post.status);
