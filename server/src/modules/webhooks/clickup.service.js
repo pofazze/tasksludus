@@ -531,9 +531,8 @@ class ClickUpWebhookService {
         }
       }
 
-      // Determine status: scheduled only if future date AND format defined, otherwise draft
-      const isFutureDate = scheduledAt && scheduledAt > new Date();
-      const postStatus = (isFutureDate && postType) ? 'scheduled' : 'draft';
+      // Always create as draft — user must review and schedule manually
+      const postStatus = 'draft';
 
       // Check if a scheduled_post already exists for this task
       const existing = await db('scheduled_posts')
@@ -541,14 +540,14 @@ class ClickUpWebhookService {
         .first();
 
       if (existing) {
-        // Reset published/failed posts back to draft/scheduled when task returns to agendamento
+        // Reset published/failed posts back to draft when task returns to agendamento
         const updates = {
           caption,
           post_type: postType,
           media_urls: JSON.stringify(mediaUrls),
           thumbnail_url: thumbnailUrl,
           status: postStatus,
-          scheduled_at: isFutureDate ? scheduledAt : null,
+          scheduled_at: scheduledAt || null,
           error_message: null,
           retry_count: 0,
           ig_container_id: existing.status === 'published' ? null : existing.ig_container_id,
@@ -558,15 +557,12 @@ class ClickUpWebhookService {
           updated_at: new Date(),
         };
         await db('scheduled_posts').where({ id: existing.id }).update(updates);
-        logger.info(`Reset scheduled post for task ${clickupTaskId} (was ${existing.status}, now ${postStatus})`);
+        logger.info(`Reset scheduled post for task ${clickupTaskId} to draft (${postType}, ${mediaUrls.length} media)`);
 
-        if (isFutureDate) {
-          const { schedulePost } = require('../../queues');
-          await schedulePost(existing.id, scheduledAt);
-          logger.info(`Updated & re-scheduled Instagram post for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media)`);
-        } else {
-          logger.info(`Updated Instagram draft for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media)`);
-        }
+        // Cancel any existing BullMQ job
+        const { cancelScheduledPost } = require('../../queues');
+        await cancelScheduledPost(existing.id);
+
         eventBus.emit('sse', { type: 'post:updated', payload: { clickup_task_id: clickupTaskId } });
         return;
       }
@@ -580,17 +576,10 @@ class ClickUpWebhookService {
         media_urls: JSON.stringify(mediaUrls),
         thumbnail_url: thumbnailUrl,
         status: postStatus,
-        scheduled_at: isFutureDate ? scheduledAt : null,
+        scheduled_at: scheduledAt || null,
       }).returning('*');
 
-      // If scheduled, enqueue in BullMQ for automatic publish at the right time
-      if (isFutureDate) {
-        const { schedulePost } = require('../../queues');
-        await schedulePost(post.id, scheduledAt);
-        logger.info(`Auto-scheduled Instagram post for task ${clickupTaskId} at ${scheduledAt.toISOString()} (${postType}, ${mediaUrls.length} media)`);
-      } else {
-        logger.info(`Auto-created Instagram draft for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media, no entrega date)`);
-      }
+      logger.info(`Auto-created Instagram draft for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media, scheduled_at: ${scheduledAt || 'none'})`);
       eventBus.emit('sse', { type: 'post:updated', payload: { clickup_task_id: clickupTaskId } });
     } catch (err) {
       logger.error(`Failed to auto-create scheduled post for ${clickupTaskId}: ${err.message}`);
