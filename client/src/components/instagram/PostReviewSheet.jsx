@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/sheet';
 import { CarouselPreview } from '@/components/instagram/CarouselPreview';
 import MediaPreviewPopover from '@/components/instagram/MediaPreviewPopover';
+import VideoFrameSelector from '@/components/instagram/VideoFrameSelector';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -67,7 +68,9 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
   const [previewMedia, setPreviewMedia] = useState(null);
   const [previewAnchor, setPreviewAnchor] = useState(null);
   const [newMediaUrl, setNewMediaUrl] = useState('');
+  const [coverMode, setCoverMode] = useState(null);
   const fileInputRef = useRef(null);
+  const coverFileRef = useRef(null);
 
   // Reset state when a new post opens
   const postId = post?.id;
@@ -81,6 +84,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
     setMedia(parseMedia(post));
     setThumbnailUrl(post.thumbnail_url || '');
     setCoverConfirmed(!post.thumbnail_url);
+    setCoverMode(null);
     setSelectedPostType(post.post_type || null);
   }
 
@@ -120,6 +124,20 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
       } catch {
         toast.error(`Erro ao enviar ${file.name}`);
       }
+    }
+    e.target.value = '';
+  }
+
+  async function handleCoverUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const { url } = await uploadMedia(file);
+      setThumbnailUrl(url);
+      setCoverConfirmed(true);
+      setCoverMode(null);
+    } catch {
+      toast.error('Erro ao enviar capa');
     }
     e.target.value = '';
   }
@@ -282,90 +300,98 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
           <CarouselPreview media={media} className="mb-4" />
 
           {/* Reel Cover */}
-          {isReel && (
+          {isReel && readOnly && (
             <div className="mb-4">
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">
-                Capa do Reel
-              </label>
-              {readOnly ? (
-                thumbnailUrl ? (
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={proxyMediaUrl(thumbnailUrl)}
-                      alt="Capa"
-                      className="w-12 h-20 rounded object-cover border border-zinc-700"
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                    <span className="text-xs text-muted-foreground">Capa definida</span>
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">Nenhuma capa definida</p>
-                )
-              ) : thumbnailUrl ? (
-                <div className={`rounded-lg border p-3 ${coverConfirmed ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
-                  <div className="flex gap-3">
-                    <img
-                      src={proxyMediaUrl(thumbnailUrl)}
-                      alt="Capa"
-                      className="w-16 h-28 rounded-lg object-cover border border-zinc-700 shrink-0"
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                    <div className="flex-1 min-w-0 space-y-2">
-                      {coverConfirmed ? (
-                        <div className="flex items-center gap-1.5 text-emerald-400">
-                          <CheckCircle size={14} />
-                          <span className="text-xs font-medium">Capa confirmada</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-amber-400">
-                          <Image size={14} />
-                          <span className="text-xs font-medium">Confirme a capa do Reel</span>
-                        </div>
-                      )}
-                      <p className="text-[10px] text-muted-foreground leading-tight">
-                        {coverConfirmed
-                          ? 'Será usada como capa na aba de Reels.'
-                          : 'Imagem detectada nos anexos. Confirme se deve ser a capa.'}
-                      </p>
-                      <div className="flex gap-1.5">
-                        {!coverConfirmed ? (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
-                              onClick={() => setCoverConfirmed(true)}
-                            >
-                              <CheckCircle size={12} className="mr-1" />
-                              Usar capa
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
-                              onClick={() => { setThumbnailUrl(''); setCoverConfirmed(true); }}
-                            >
-                              <XCircle size={12} className="mr-1" />
-                              Não usar
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs text-zinc-400"
-                            onClick={() => { setThumbnailUrl(''); setCoverConfirmed(true); }}
-                          >
-                            <Trash2 size={12} className="mr-1" />
-                            Remover
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Capa do Reel</label>
+              {thumbnailUrl ? (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={proxyMediaUrl(thumbnailUrl)}
+                    alt="Capa"
+                    className="w-12 h-20 rounded object-cover border border-zinc-700"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                  <span className="text-xs text-muted-foreground">Capa definida</span>
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground">Nenhuma capa detectada</p>
+                <p className="text-xs text-muted-foreground">Nenhuma capa definida</p>
+              )}
+            </div>
+          )}
+
+          {isReel && !readOnly && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-zinc-300 mb-2">Capa do Reel</label>
+
+              {/* Current cover preview */}
+              {thumbnailUrl && (
+                <div className="flex items-center gap-3 mb-3 p-2 rounded-lg border border-zinc-800 bg-zinc-900/50">
+                  <img src={proxyMediaUrl(thumbnailUrl)} alt="Capa" className="w-12 h-20 rounded object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
+                  <div className="flex-1">
+                    <p className="text-xs text-emerald-400 font-medium">Capa selecionada</p>
+                    <p className="text-[10px] text-zinc-500 truncate">{extractFilename(thumbnailUrl)}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-zinc-500 hover:text-red-400" onClick={() => { setThumbnailUrl(''); setCoverConfirmed(true); setCoverMode(null); }}>
+                    <Trash2 size={12} />
+                  </Button>
+                </div>
+              )}
+
+              {/* Cover options */}
+              {coverMode === null && (
+                <div className="flex gap-2 flex-wrap">
+                  {media.filter((m) => m.type === 'image').length > 0 && (
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setCoverMode('select')}>
+                      <Image size={12} className="mr-1" /> Selecionar imagem
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => coverFileRef.current?.click()}>
+                    <Upload size={12} className="mr-1" /> Upload de capa
+                  </Button>
+                  <input ref={coverFileRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+                  {media.some((m) => m.type === 'video') && (
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setCoverMode('frame')}>
+                      <Video size={12} className="mr-1" /> Frame do vídeo
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Select from post images */}
+              {coverMode === 'select' && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-4 gap-2">
+                    {media.filter((m) => m.type === 'image').map((m, i) => (
+                      <img
+                        key={i}
+                        src={proxyMediaUrl(m.url)}
+                        alt=""
+                        className="w-full aspect-[9/16] rounded-lg object-cover cursor-pointer border-2 border-transparent hover:border-[#9A48EA] transition-colors"
+                        onClick={() => { setThumbnailUrl(m.url); setCoverConfirmed(true); setCoverMode(null); }}
+                      />
+                    ))}
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-zinc-400" onClick={() => setCoverMode(null)}>Cancelar</Button>
+                </div>
+              )}
+
+              {/* Video frame selector */}
+              {coverMode === 'frame' && (
+                <VideoFrameSelector
+                  videoUrl={media.find((m) => m.type === 'video')?.url}
+                  onSelectFrame={async (blob) => {
+                    try {
+                      const file = new File([blob], 'cover-frame.jpg', { type: 'image/jpeg' });
+                      const { url } = await uploadMedia(file);
+                      setThumbnailUrl(url);
+                      setCoverConfirmed(true);
+                      setCoverMode(null);
+                    } catch {
+                      toast.error('Erro ao enviar frame');
+                    }
+                  }}
+                  onCancel={() => setCoverMode(null)}
+                />
               )}
             </div>
           )}
