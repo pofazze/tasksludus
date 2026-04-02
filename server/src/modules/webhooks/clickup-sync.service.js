@@ -179,8 +179,8 @@ class ClickUpSyncService {
       userId = user?.id || null;
     }
 
-    // Extract content_type from Formato custom field
-    let contentType = 'video';
+    // Extract content_type from Formato custom field (null when not set — user selects in app)
+    let contentType = null;
     const formatoField = task.custom_fields?.find((cf) => cf.name === 'Formato');
     if (formatoField?.value != null && formatoField.type_config?.options) {
       const option = formatoField.type_config.options[formatoField.value];

@@ -531,9 +531,9 @@ class ClickUpWebhookService {
         }
       }
 
-      // Determine status: scheduled (future date) or draft (no date / past date)
+      // Determine status: scheduled only if future date AND format defined, otherwise draft
       const isFutureDate = scheduledAt && scheduledAt > new Date();
-      const postStatus = isFutureDate ? 'scheduled' : 'draft';
+      const postStatus = (isFutureDate && postType) ? 'scheduled' : 'draft';
 
       // Check if a scheduled_post already exists for this task
       const existing = await db('scheduled_posts')
