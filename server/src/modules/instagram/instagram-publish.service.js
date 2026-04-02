@@ -3,12 +3,23 @@ const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const oauthService = require('./instagram-oauth.service');
 const clickupOAuth = require('../webhooks/clickup-oauth.service');
+const crypto = require('crypto');
 const eventBus = require('../../utils/event-bus');
 
 const GRAPH_URL = 'https://graph.instagram.com/v25.0';
 
 const POLL_INTERVALS = [5000, 10000, 20000, 40000, 60000]; // 5s, 10s, 20s, 40s, 60s
 const MAX_POLL_TIME = 5 * 60 * 1000; // 5 minutes
+
+// Temp media store — pre-downloaded files served to Instagram
+const tempMediaStore = new Map();
+const TEMP_MEDIA_TTL = 10 * 60 * 1000; // 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, entry] of tempMediaStore) {
+    if (now > entry.expiresAt) tempMediaStore.delete(token);
+  }
+}, 60 * 1000);
 
 class InstagramPublishService {
   async executeScheduledPost(postId) {
@@ -19,6 +30,7 @@ class InstagramPublishService {
 
     await db('scheduled_posts').where({ id: postId }).update({ status: 'publishing', updated_at: new Date() });
 
+    const tempTokens = [];
     try {
       const accessToken = await oauthService.getDecryptedToken(post.client_id);
       const igToken = await db('client_instagram_tokens').where({ client_id: post.client_id }).first();
@@ -30,8 +42,22 @@ class InstagramPublishService {
         mediaUrls = await this.resolveMediaUrls(post.clickup_task_id, mediaUrls);
       }
 
-      // Normalize URLs for Instagram API (Google Drive only — ClickUp URLs stay raw, Instagram fetches directly)
-      mediaUrls = mediaUrls.map((m) => ({ ...m, url: this._normalizeMediaUrlForApi(m.url) }));
+      // Pre-download all media and serve from temp URLs (bypasses ClickUp CDN bot blocking)
+      // Sequential uploads to avoid Catbox 429 rate limiting
+      const resolvedMedia = [];
+      for (const m of mediaUrls) {
+        const { url: tempUrl, token } = await this._prepareTempMediaUrl(m.url);
+        tempTokens.push(token);
+        resolvedMedia.push({ ...m, url: tempUrl });
+      }
+      mediaUrls = resolvedMedia;
+
+      let thumbnailUrl = post.thumbnail_url;
+      if (thumbnailUrl) {
+        const { url: tempUrl, token } = await this._prepareTempMediaUrl(thumbnailUrl);
+        tempTokens.push(token);
+        thumbnailUrl = tempUrl;
+      }
 
       logger.info('Publishing post — resolved media URLs', {
         postId,
@@ -63,7 +89,7 @@ class InstagramPublishService {
           break;
         case 'video':
         case 'reel':
-          result = await this.publishVideo(igUserId, accessToken, (videoMedia || mediaUrls[0])?.url, post.caption, effectivePostType === 'reel', post.thumbnail_url);
+          result = await this.publishVideo(igUserId, accessToken, (videoMedia || mediaUrls[0])?.url, post.caption, effectivePostType === 'reel', thumbnailUrl);
           break;
         case 'story':
           result = await this.publishStory(igUserId, accessToken, mediaUrls[0]);
@@ -92,6 +118,7 @@ class InstagramPublishService {
       eventBus.emit('sse', { type: 'post:updated', payload: { id: postId, status: 'published' } });
       eventBus.emit('sse', { type: 'delivery:updated', payload: { clickup_task_id: post.clickup_task_id } });
       eventBus.emit('sse', { type: 'ranking:updated' });
+      this._cleanupTempMedia(tempTokens);
 
       // Move ClickUp task to "publicação" after successful publish
       if (post.clickup_task_id) {
@@ -121,6 +148,7 @@ class InstagramPublishService {
           updated_at: new Date(),
         });
 
+      this._cleanupTempMedia(tempTokens);
       logger.error('Post publish failed', { postId, error: err.message, retryCount });
       eventBus.emit('sse', { type: 'post:updated', payload: { id: postId, status: 'failed' } });
       throw err;
@@ -145,16 +173,14 @@ class InstagramPublishService {
   }
 
   async publishVideo(igUserId, accessToken, videoUrl, caption, isReel = true, coverUrl = null) {
-    const normalizedCover = coverUrl ? this._normalizeMediaUrlForApi(coverUrl) : null;
-
     // Try with cover first, fallback without if it fails
-    if (normalizedCover) {
+    if (coverUrl) {
       try {
-        logger.info('Reel cover image set', { coverUrl: normalizedCover });
-        const result = await this._publishVideoContainer(igUserId, accessToken, videoUrl, caption, normalizedCover);
+        logger.info('Reel cover image set', { coverUrl: coverUrl.slice(0, 120) });
+        const result = await this._publishVideoContainer(igUserId, accessToken, videoUrl, caption, coverUrl);
         return result;
       } catch (err) {
-        logger.warn('Reel publish with cover failed, retrying without cover', { error: err.message, coverUrl: normalizedCover });
+        logger.warn('Reel publish with cover failed, retrying without cover', { error: err.message });
       }
     }
 
@@ -163,72 +189,20 @@ class InstagramPublishService {
   }
 
   async _publishVideoContainer(igUserId, accessToken, videoUrl, caption, coverUrl) {
-    // Step 1: Download video to buffer (bypasses ClickUp robots.txt / CDN blocks)
-    logger.info('Downloading video for resumable upload', { videoUrl: videoUrl.slice(0, 120) });
-    const videoBuffer = await this._downloadMedia(videoUrl);
-    const fileSize = videoBuffer.length;
-    logger.info('Video downloaded', { fileSize, sizeMB: (fileSize / 1024 / 1024).toFixed(1) });
-
-    // Step 2: Create resumable upload container
     const params = {
       media_type: 'REELS',
-      upload_type: 'resumable',
+      video_url: videoUrl,
       caption,
     };
     if (coverUrl) {
       params.cover_url = coverUrl;
     }
+
     const containerId = await this._createContainer(igUserId, accessToken, params);
-
-    // Step 3: Get upload URI from container
-    const uploadUri = await this._getResumableUploadUri(containerId, accessToken);
-    logger.info('Got resumable upload URI', { containerId, uploadUri: uploadUri.slice(0, 120) });
-
-    // Step 4: Upload video data directly to Instagram
-    await this._uploadVideoData(uploadUri, accessToken, videoBuffer);
-    logger.info('Video uploaded to Instagram', { containerId, fileSize });
-
-    // Step 5: Poll for processing
     await this._pollContainerStatus(containerId, accessToken);
     const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
     const permalink = await this._getPermalink(mediaId, accessToken);
     return { containerId, mediaId, permalink };
-  }
-
-  async _downloadMedia(url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed to download media: HTTP ${res.status}`);
-    return Buffer.from(await res.arrayBuffer());
-  }
-
-  async _getResumableUploadUri(containerId, accessToken) {
-    const url = `${GRAPH_URL}/${containerId}?fields=uri&access_token=${accessToken}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (!data.uri) {
-      throw new Error(`No upload URI returned for container ${containerId}: ${JSON.stringify(data)}`);
-    }
-    return data.uri;
-  }
-
-  async _uploadVideoData(uploadUri, accessToken, videoBuffer) {
-    const fileSize = videoBuffer.length;
-    const res = await fetch(uploadUri, {
-      method: 'POST',
-      headers: {
-        Authorization: `OAuth ${accessToken}`,
-        'Content-Type': 'application/octet-stream',
-        'Content-Length': String(fileSize),
-        offset: '0',
-        file_size: String(fileSize),
-      },
-      body: videoBuffer,
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Video upload failed: HTTP ${res.status} — ${text.slice(0, 300)}`);
-    }
-    logger.info('Resumable upload response', { status: res.status });
   }
 
   async publishStory(igUserId, accessToken, media) {
@@ -312,16 +286,89 @@ class InstagramPublishService {
     }
   }
 
+  async _prepareTempMediaUrl(url) {
+    // Normalize Google Drive URLs to direct download (confirm=t bypasses virus-scan HTML page)
+    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+    const fetchUrl = driveMatch
+      ? `https://drive.google.com/uc?export=download&confirm=t&id=${driveMatch[1]}`
+      : url;
+
+    logger.info('Pre-downloading media for temp upload', { fetchUrl: fetchUrl.slice(0, 120) });
+    const res = await fetch(fetchUrl);
+    if (!res.ok) throw new Error(`Failed to download media: HTTP ${res.status} from ${fetchUrl.slice(0, 120)}`);
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const contentType = res.headers.get('content-type') || 'application/octet-stream';
+
+    // Reject HTML responses — Google Drive returns HTML for scan warnings or expired links
+    if (contentType.includes('text/html')) {
+      throw new Error(`Download returned HTML instead of media (likely expired or blocked). URL: ${fetchUrl.slice(0, 120)}`);
+    }
+
+    // Upload to external temp storage (Railway Fastly blocks Instagram's bot)
+    const ext = contentType.includes('video') ? 'mp4' : contentType.includes('image/png') ? 'png' : 'jpg';
+    const publicUrl = await this._uploadToTempStorage(buffer, `media.${ext}`, contentType);
+
+    logger.info('Temp media URL created', { publicUrl: publicUrl.slice(0, 120), contentType, sizeMB: (buffer.length / 1024 / 1024).toFixed(1) });
+    return { url: publicUrl, token: null };
+  }
+
+  async _uploadToTempStorage(buffer, filename, contentType) {
+    const blob = new Blob([buffer], { type: contentType });
+
+    const MAX_RETRIES = 3;
+    const BACKOFF_MS = [2000, 4000, 8000];
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      const formData = new FormData();
+      formData.append('reqtype', 'fileupload');
+      formData.append('time', '1h');
+      formData.append('fileToUpload', blob, filename);
+
+      if (attempt > 0) {
+        logger.info('Retrying temp storage upload', { attempt, filename, delay: BACKOFF_MS[attempt - 1] });
+        await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt - 1]));
+      }
+
+      logger.info('Uploading to temp storage', { filename, contentType, sizeMB: (buffer.length / 1024 / 1024).toFixed(1), attempt });
+      const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.status === 429 && attempt < MAX_RETRIES) {
+        logger.warn('Temp storage rate limited (429), will retry', { attempt, filename });
+        continue;
+      }
+
+      if (!res.ok) {
+        const text = await res.text();
+        if (attempt < MAX_RETRIES) continue;
+        throw new Error(`Temp storage upload failed after ${MAX_RETRIES} retries: HTTP ${res.status} — ${text.slice(0, 200)}`);
+      }
+
+      const url = (await res.text()).trim();
+      if (!url.startsWith('http')) {
+        if (attempt < MAX_RETRIES) continue;
+        throw new Error(`Temp storage error: ${url.slice(0, 200)}`);
+      }
+      return url;
+    }
+  }
+
+  getTempMedia(token) {
+    return tempMediaStore.get(token) || null;
+  }
+
+  _cleanupTempMedia(tokens) {
+    for (const token of tokens) {
+      tempMediaStore.delete(token);
+    }
+  }
+
   _normalizeMediaUrlForApi(url) {
-    // Convert Google Drive view links to direct download
     const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
     if (driveMatch) {
       return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
-    }
-    // Proxy ClickUp attachments — ClickUp robots.txt blocks Instagram's bot (403)
-    if (url.includes('clickup-attachments.com')) {
-      const baseUrl = env.meta.redirectUri.replace('/api/instagram/oauth/callback', '');
-      return `${baseUrl}/api/instagram/media-proxy?url=${encodeURIComponent(url)}`;
     }
     return url;
   }
