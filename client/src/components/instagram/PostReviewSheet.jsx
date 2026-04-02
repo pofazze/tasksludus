@@ -142,6 +142,22 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
     e.target.value = '';
   }
 
+  const videoCount = media.filter((m) => m.type === 'video').length;
+  const imageCount = media.filter((m) => m.type === 'image').length;
+  const isNonCarousel = effectivePostType && effectivePostType !== 'carousel';
+
+  function validateMedia() {
+    if (isNonCarousel && videoCount > 1) {
+      toast.error('Remova os vídeos extras — apenas 1 vídeo pode ser publicado neste formato');
+      return false;
+    }
+    if (isReel && imageCount > 1 && !thumbnailUrl) {
+      toast.error('Selecione qual imagem será a capa do Reel');
+      return false;
+    }
+    return true;
+  }
+
   function buildPayload(extra = {}) {
     return {
       caption,
@@ -156,6 +172,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
     if (!hasFormat) {
       return toast.error('Selecione o formato do post');
     }
+    if (!validateMedia()) return;
     setSaving(true);
     try {
       await updateScheduledPost(post.id, buildPayload({ scheduled_at: null }));
@@ -173,6 +190,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
     if (!hasFormat) {
       return toast.error('Selecione o formato antes de agendar');
     }
+    if (!validateMedia()) return;
     if (isReel && thumbnailUrl && !coverConfirmed) {
       return toast.error('Confirme a capa do Reel antes de agendar');
     }
@@ -196,6 +214,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
     if (!hasFormat) {
       return toast.error('Selecione o formato antes de publicar');
     }
+    if (!validateMedia()) return;
     if (isReel && thumbnailUrl && !coverConfirmed) {
       return toast.error('Confirme a capa do Reel antes de publicar');
     }
