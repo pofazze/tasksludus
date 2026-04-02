@@ -31,6 +31,16 @@ export const deleteScheduledPost = (id) =>
 export const publishNow = (id) =>
   api.post(`/instagram/scheduled/${id}/publish-now`).then((r) => r.data);
 
+// --- Media Upload ---
+
+export const uploadMedia = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post('/instagram/upload-media', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then((r) => r.data);
+};
+
 // --- Calendar ---
 
 export const getCalendarPosts = (clientId, month) =>

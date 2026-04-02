@@ -283,6 +283,35 @@ class InstagramController {
       next(err);
     }
   }
+
+  async uploadMedia(req, res, next) {
+    try {
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+      const { buffer, mimetype, originalname } = req.file;
+      const token = publishService.storeTempMedia(buffer, mimetype, originalname);
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const url = `${baseUrl}/api/instagram/temp-media/${token}`;
+      const type = mimetype.startsWith('video/') ? 'video' : 'image';
+      res.json({ url, type, filename: originalname });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async serveTempMedia(req, res, next) {
+    try {
+      const entry = publishService.getTempMedia(req.params.token);
+      if (!entry) return res.status(404).json({ error: 'Media not found or expired' });
+      res.writeHead(200, {
+        'Content-Type': entry.contentType,
+        'Content-Length': entry.buffer.length,
+        'Cache-Control': 'no-store',
+      });
+      res.end(entry.buffer);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new InstagramController();

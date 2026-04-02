@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { updateScheduledPost, publishNow } from '@/services/instagram';
+import { updateScheduledPost, publishNow, uploadMedia } from '@/services/instagram';
 import { CONTENT_TYPE_LABELS } from '@/lib/constants';
 import { proxyMediaUrl } from '@/lib/utils';
 import {
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertTriangle, ArrowDown, ArrowUp, Calendar, CheckCircle, ExternalLink,
-  Image, Loader2, Send, Save, Trash2, Video, XCircle,
+  Image, Loader2, Plus, Send, Save, Trash2, Upload, Video, XCircle,
 } from 'lucide-react';
 
 const STATUS_CONFIG = {
@@ -66,6 +66,8 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
   const [selectedPostType, setSelectedPostType] = useState(null);
   const [previewMedia, setPreviewMedia] = useState(null);
   const [previewAnchor, setPreviewAnchor] = useState(null);
+  const [newMediaUrl, setNewMediaUrl] = useState('');
+  const fileInputRef = useRef(null);
 
   // Reset state when a new post opens
   const postId = post?.id;
@@ -103,6 +105,24 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
   const removeMedia = (index) => {
     setMedia((m) => m.filter((_, i) => i !== index).map((item, i) => ({ ...item, order: i })));
   };
+
+  function addMediaFromUrl(url) {
+    const isVideo = /\.(mp4|mov|avi|webm)(\?|$)/i.test(url);
+    setMedia((prev) => [...prev, { url, type: isVideo ? 'video' : 'image', order: prev.length }]);
+  }
+
+  async function handleFileUpload(e) {
+    const files = Array.from(e.target.files || []);
+    for (const file of files) {
+      try {
+        const { url, type } = await uploadMedia(file);
+        setMedia((prev) => [...prev, { url, type, order: prev.length }]);
+      } catch {
+        toast.error(`Erro ao enviar ${file.name}`);
+      }
+    }
+    e.target.value = '';
+  }
 
   function buildPayload(extra = {}) {
     return {
@@ -430,6 +450,48 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">Nenhuma mídia</p>
+            )}
+
+            {/* Add Media */}
+            {!readOnly && (
+              <div className="mt-2 flex gap-2">
+                <div className="flex-1 flex gap-1.5">
+                  <input
+                    type="text"
+                    placeholder="Colar URL de mídia..."
+                    value={newMediaUrl}
+                    onChange={(e) => setNewMediaUrl(e.target.value)}
+                    className="flex-1 h-8 rounded-lg border border-zinc-700 bg-transparent px-2.5 text-xs text-zinc-300 placeholder:text-zinc-600 focus:border-[#9A48EA] outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newMediaUrl.trim()) {
+                        addMediaFromUrl(newMediaUrl.trim());
+                        setNewMediaUrl('');
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="outline" size="sm" className="h-8 text-xs shrink-0"
+                    disabled={!newMediaUrl.trim()}
+                    onClick={() => { addMediaFromUrl(newMediaUrl.trim()); setNewMediaUrl(''); }}
+                  >
+                    <Plus size={12} className="mr-1" /> URL
+                  </Button>
+                </div>
+                <Button
+                  variant="outline" size="sm" className="h-8 text-xs shrink-0"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload size={12} className="mr-1" /> Upload
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+              </div>
             )}
           </div>
 

@@ -359,6 +359,12 @@ class InstagramPublishService {
     return tempMediaStore.get(token) || null;
   }
 
+  storeTempMedia(buffer, contentType, filename) {
+    const token = crypto.randomUUID();
+    tempMediaStore.set(token, { buffer, contentType, filename, expiresAt: Date.now() + TEMP_MEDIA_TTL });
+    return token;
+  }
+
   _cleanupTempMedia(tokens) {
     for (const token of tokens) {
       tempMediaStore.delete(token);
