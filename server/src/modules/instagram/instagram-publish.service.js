@@ -265,7 +265,7 @@ class InstagramPublishService {
 
       if (!res.ok) {
         logger.warn('Failed to re-fetch ClickUp task for media', { clickupTaskId });
-        return existingUrls; // Fall back to saved URLs
+        return existingUrls;
       }
 
       const task = await res.json();
@@ -273,13 +273,25 @@ class InstagramPublishService {
         return existingUrls;
       }
 
-      return task.attachments
-        .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
-        .map((a, i) => ({
-          url: a.url,
-          type: a.mimetype?.startsWith('video/') ? 'video' : 'image',
-          order: i,
-        }));
+      // Build lookup: filename → fresh attachment URL
+      const freshByName = {};
+      for (const a of task.attachments) {
+        if (a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/'))) {
+          const name = decodeURIComponent(a.url.split('/').pop()?.split('?')[0] || '');
+          freshByName[name] = a.url;
+        }
+      }
+
+      // Refresh expired ClickUp URLs in the user-curated list (preserves order & removals)
+      return existingUrls.map((m) => {
+        // Non-ClickUp URLs (temp-media, catbox, uploads) — keep as-is
+        if (!m.url?.includes('clickup-attachments.com')) return m;
+        const name = decodeURIComponent(m.url.split('/').pop()?.split('?')[0] || '');
+        if (freshByName[name]) {
+          return { ...m, url: freshByName[name] };
+        }
+        return m; // no match — keep original
+      });
     } catch (err) {
       logger.warn('Error resolving media URLs', { clickupTaskId, error: err.message });
       return existingUrls;
