@@ -12,13 +12,20 @@ const clickupOAuth = require('../clickup-oauth.service');
 
 const DR_WANDER_LIST_ID = '901113351972';
 
-// Phase → ClickUp user ID mapping for Dr. Wander Fran
+const LUDUS_HEALTH_FOLDER = '90117692608';
+const LUDUS_EXPERTS_FOLDER = '90117692609';
+
+// Video editor per folder
+const VIDEO_EDITOR_BY_FOLDER = {
+  [LUDUS_HEALTH_FOLDER]: '152562683',   // Victor Costa
+  [LUDUS_EXPERTS_FOLDER]: '284598399',  // Filipe Sabino
+};
+
+// Phase mapping (everything except video editing — resolved by folder)
 const PHASE_ASSIGNEE_MAP = {
   'planejamento':     '284598101',  // Aléxia Sâmella
   'captação':         '284598399',  // Filipe Sabino
   'captacao':         '284598399',  // Filipe Sabino
-  'edição de vídeo':  '152562683',  // Victor Costa
-  'edicao de video':  '152562683',  // Victor Costa
   'estruturação':     '284598101',  // Aléxia Sâmella
   'estruturacao':     '284598101',  // Aléxia Sâmella
   'design':           '284596872',  // Pedro Torres
@@ -28,6 +35,8 @@ const PHASE_ASSIGNEE_MAP = {
   'publicação':       '284598101',  // Aléxia Sâmella
   'publicacao':       '284598101',  // Aléxia Sâmella
 };
+
+const VIDEO_EDITING_STATUSES = ['edição de vídeo', 'edicao de video'];
 
 const NAMES = {
   '284598101': 'Aléxia Sâmella',
@@ -53,7 +62,17 @@ async function run(clickupTaskId, newStatusName, task) {
     return { executed: false, reason: 'no status name' };
   }
 
-  const assigneeId = PHASE_ASSIGNEE_MAP[normalized];
+  let assigneeId;
+  if (VIDEO_EDITING_STATUSES.includes(normalized)) {
+    const folderId = task.folder?.id;
+    assigneeId = VIDEO_EDITOR_BY_FOLDER[folderId];
+    if (!assigneeId) {
+      assigneeId = '152562683'; // Fallback to Victor
+      logger.warn('auto-assign: unknown folder for video editing, defaulting to Victor', { folderId, clickupTaskId });
+    }
+  } else {
+    assigneeId = PHASE_ASSIGNEE_MAP[normalized];
+  }
   if (!assigneeId) {
     return { executed: false, reason: `no mapping for status "${normalized}"` };
   }
@@ -183,4 +202,4 @@ async function assignAllContributors(clickupTaskId, task) {
   };
 }
 
-module.exports = { run, DR_WANDER_LIST_ID, PHASE_ASSIGNEE_MAP };
+module.exports = { run, DR_WANDER_LIST_ID, PHASE_ASSIGNEE_MAP, VIDEO_EDITOR_BY_FOLDER, LUDUS_HEALTH_FOLDER, LUDUS_EXPERTS_FOLDER };
