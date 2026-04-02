@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { listScheduledPosts } from '@/services/instagram';
 import { CONTENT_TYPE_LABELS } from '@/lib/constants';
+import { cn } from '@/lib/utils';
 import useServerEvent from '@/hooks/useServerEvent';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import PostReviewSheet from '@/components/instagram/PostReviewSheet';
 import {
-  Calendar, ChevronDown, ChevronRight, Clock, ExternalLink,
+  Calendar, Clock, ExternalLink,
   FileText, Image, Loader2, Send,
 } from 'lucide-react';
 
@@ -34,7 +35,7 @@ function mediaCount(post) {
 export default function AgendamentoTab({ clientId }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [publishedOpen, setPublishedOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('draft');
   const [reviewPost, setReviewPost] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -87,81 +88,65 @@ export default function AgendamentoTab({ clientId }) {
     );
   }
 
+  const tabs = [
+    { key: 'draft', label: 'Pendentes', count: drafts.length, icon: FileText },
+    { key: 'scheduled', label: 'Agendados', count: scheduled.length, icon: Clock },
+    { key: 'published', label: 'Publicados', count: published.length, icon: Send },
+  ];
+
+  const activePosts = activeTab === 'draft' ? drafts
+    : activeTab === 'scheduled' ? scheduled
+    : published;
+
   return (
-    <div className="space-y-6">
-      {/* Pendentes (Drafts) */}
-      <Section title="Pendentes" count={drafts.length} icon={<FileText size={16} />} defaultOpen>
-        {drafts.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">Nenhum rascunho pendente</p>
-        ) : (
-          <div className="space-y-2">
-            {drafts.map((post) => (
-              <PostCard key={post.id} post={post} onReview={() => openSheet(post)} />
-            ))}
-          </div>
-        )}
-      </Section>
+    <div className="space-y-4">
+      {/* Tab bar */}
+      <div className="flex gap-1 p-1 rounded-lg bg-zinc-900 border border-zinc-800">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer',
+                isActive
+                  ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              )}
+            >
+              <Icon size={14} />
+              {tab.label}
+              <Badge variant="secondary" className={cn('text-[10px] ml-1', isActive ? 'bg-zinc-700' : 'bg-zinc-800/50')}>
+                {tab.count}
+              </Badge>
+            </button>
+          );
+        })}
+      </div>
 
-      {/* Agendados (Scheduled) */}
-      <Section title="Agendados" count={scheduled.length} icon={<Clock size={16} />} defaultOpen>
-        {scheduled.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">Nenhum post agendado</p>
-        ) : (
-          <div className="space-y-2">
-            {scheduled.map((post) => (
-              <PostCard key={post.id} post={post} onReview={() => openSheet(post)} />
-            ))}
-          </div>
-        )}
-      </Section>
-
-      {/* Publicados (Published) — collapsible */}
-      {published.length > 0 && (
-        <Section
-          title="Publicados"
-          count={published.length}
-          icon={<Send size={16} />}
-          defaultOpen={false}
-          open={publishedOpen}
-          onToggle={() => setPublishedOpen((o) => !o)}
-        >
-          <div className="space-y-2">
-            {published.map((post) => (
-              <PostCard key={post.id} post={post} onReview={() => openSheet(post)} readOnly />
-            ))}
-          </div>
-        </Section>
+      {/* Tab content */}
+      {activePosts.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-8 text-center">
+          {activeTab === 'draft' ? 'Nenhum rascunho pendente'
+            : activeTab === 'scheduled' ? 'Nenhum post agendado'
+            : 'Nenhum post publicado'}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {activePosts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onReview={() => openSheet(post)}
+              readOnly={activeTab === 'published'}
+            />
+          ))}
+        </div>
       )}
 
-      {/* Review Sheet */}
-      <PostReviewSheet
-        post={reviewPost}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        onUpdated={fetchPosts}
-      />
-    </div>
-  );
-}
-
-// ─── Section ────────────────────────────────────────────────
-
-function Section({ title, count, icon, defaultOpen = true, open: controlledOpen, onToggle, children }) {
-  const [internalOpen, setInternalOpen] = useState(defaultOpen);
-  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
-  const toggle = onToggle || (() => setInternalOpen((o) => !o));
-
-  return (
-    <div>
-      <button
-        onClick={toggle}
-        className="flex items-center gap-2 mb-3 group cursor-pointer"
-      >
-        {isOpen ? <ChevronDown size={16} className="text-muted-foreground" /> : <ChevronRight size={16} className="text-muted-foreground" />}
-        <span className="flex items-center gap-1.5 text-sm font-semibold">{icon} {title}</span>
-        <Badge variant="secondary" className="text-xs">{count}</Badge>
-      </button>
-      {isOpen && children}
+      <PostReviewSheet post={reviewPost} open={sheetOpen} onOpenChange={setSheetOpen} onUpdated={fetchPosts} />
     </div>
   );
 }
