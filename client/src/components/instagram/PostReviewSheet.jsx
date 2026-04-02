@@ -83,7 +83,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
     setPublishing(false);
     setMedia(parseMedia(post));
     setThumbnailUrl(post.thumbnail_url || '');
-    setCoverConfirmed(!post.thumbnail_url);
+    setCoverConfirmed(!!post.thumbnail_url);
     setCoverMode(null);
     setSelectedPostType(post.post_type || null);
   }
