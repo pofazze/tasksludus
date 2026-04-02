@@ -31,6 +31,17 @@ const POST_TYPE_OPTIONS = [
   { value: 'carousel', label: 'Carrossel' },
 ];
 
+function extractFilename(url) {
+  if (!url) return '';
+  try {
+    const pathname = new URL(url).pathname;
+    const name = pathname.split('/').pop() || '';
+    return decodeURIComponent(name).replace(/\?.*$/, '');
+  } catch {
+    return url.split('/').pop()?.split('?')[0] || 'mídia';
+  }
+}
+
 function parseMedia(post) {
   if (!post) return [];
   const urls = typeof post.media_urls === 'string'
@@ -344,27 +355,30 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
             {media.length > 0 ? (
               <div className="space-y-1.5">
                 {media.map((m, i) => (
-                  <div key={i} className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2">
+                  <div key={i} className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2.5">
                     {m.type === 'video' ? (
-                      <div className="w-9 h-9 rounded bg-zinc-800 flex items-center justify-center shrink-0">
-                        <Video size={16} className="text-blue-400" />
+                      <div className="w-16 h-16 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0 cursor-pointer">
+                        <Video size={20} className="text-blue-400" />
                       </div>
                     ) : m.url ? (
                       <img
                         src={proxyMediaUrl(m.url)}
                         alt=""
-                        className="w-9 h-9 rounded object-cover shrink-0"
-                        onError={(e) => { e.target.outerHTML = '<div class="w-9 h-9 rounded bg-zinc-800 flex items-center justify-center shrink-0"><svg class="text-zinc-500" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>'; }}
+                        className="w-16 h-16 rounded-lg object-cover shrink-0 cursor-pointer"
+                        onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     ) : (
-                      <div className="w-9 h-9 rounded bg-zinc-800 flex items-center justify-center shrink-0">
-                        <Image size={16} className="text-zinc-500" />
+                      <div className="w-16 h-16 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
+                        <Image size={20} className="text-zinc-500" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <Badge variant="secondary" className="text-[10px]">
                         {m.type === 'video' ? 'Vídeo' : 'Imagem'}
                       </Badge>
+                      <p className="text-[10px] text-zinc-500 truncate mt-0.5">
+                        {extractFilename(m.url)}
+                      </p>
                     </div>
                     {!readOnly && (
                       <div className="flex items-center gap-0.5 shrink-0">
