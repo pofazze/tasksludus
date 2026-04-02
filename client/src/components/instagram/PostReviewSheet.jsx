@@ -8,6 +8,7 @@ import {
   SheetDescription, SheetBody, SheetFooter,
 } from '@/components/ui/sheet';
 import { CarouselPreview } from '@/components/instagram/CarouselPreview';
+import MediaPreviewPopover from '@/components/instagram/MediaPreviewPopover';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +64,8 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [coverConfirmed, setCoverConfirmed] = useState(false);
   const [selectedPostType, setSelectedPostType] = useState(null);
+  const [previewMedia, setPreviewMedia] = useState(null);
+  const [previewAnchor, setPreviewAnchor] = useState(null);
 
   // Reset state when a new post opens
   const postId = post?.id;
@@ -357,7 +360,14 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
                 {media.map((m, i) => (
                   <div key={i} className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2.5">
                     {m.type === 'video' ? (
-                      <div className="w-16 h-16 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0 cursor-pointer">
+                      <div
+                        className="w-16 h-16 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0 cursor-pointer"
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setPreviewAnchor({ top: rect.top, sheetWidth: window.innerWidth - rect.left + 20 });
+                          setPreviewMedia({ url: m.url, type: m.type, name: extractFilename(m.url) });
+                        }}
+                      >
                         <Video size={20} className="text-blue-400" />
                       </div>
                     ) : m.url ? (
@@ -365,6 +375,11 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
                         src={proxyMediaUrl(m.url)}
                         alt=""
                         className="w-16 h-16 rounded-lg object-cover shrink-0 cursor-pointer"
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setPreviewAnchor({ top: rect.top, sheetWidth: window.innerWidth - rect.left + 20 });
+                          setPreviewMedia({ url: m.url, type: m.type, name: extractFilename(m.url) });
+                        }}
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     ) : (
@@ -477,6 +492,12 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
           </SheetFooter>
         )}
       </SheetContent>
+
+      <MediaPreviewPopover
+        media={previewMedia}
+        anchorRect={previewAnchor}
+        onClose={() => { setPreviewMedia(null); setPreviewAnchor(null); }}
+      />
     </Sheet>
   );
 }
