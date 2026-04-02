@@ -481,11 +481,16 @@ class ClickUpWebhookService {
       const taskWithAttachments = task || await this.fetchTask(clickupTaskId);
       if (!taskWithAttachments) return;
 
-      // Extract "entrega" custom field (date/time) for scheduling
-      const entregaField = taskWithAttachments.custom_fields?.find(
-        (cf) => cf.name?.toLowerCase() === 'entrega'
-      );
-      const scheduledAt = entregaField?.value ? new Date(Number(entregaField.value)) : null;
+      // Extract scheduling date: prefer ClickUp due_date, fallback to "entrega" custom field
+      let scheduledAt = null;
+      if (taskWithAttachments.due_date) {
+        scheduledAt = new Date(Number(taskWithAttachments.due_date));
+      } else {
+        const entregaField = taskWithAttachments.custom_fields?.find(
+          (cf) => cf.name?.toLowerCase() === 'entrega'
+        );
+        if (entregaField?.value) scheduledAt = new Date(Number(entregaField.value));
+      }
 
       // Extract "Legenda" custom field for caption (fallback to task name)
       const legendaField = taskWithAttachments.custom_fields?.find(
