@@ -27,7 +27,7 @@ function CarouselPreview({ media, className }) {
 
   if (!media || media.length === 0) {
     return (
-      <div className={cn('aspect-square rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-600', className)}>
+      <div className={cn('aspect-square max-h-[320px] rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-600', className)}>
         Sem mídia
       </div>
     );
@@ -38,7 +38,7 @@ function CarouselPreview({ media, className }) {
     const item = media[0];
     const src = proxyMediaUrl(item.url);
     return (
-      <div className={cn('aspect-square rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden', className)}>
+      <div className={cn('aspect-square max-h-[320px] rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden', className)}>
         {item.type === 'video' ? (
           <video src={src} controls className="w-full h-full object-cover" />
         ) : (
@@ -56,7 +56,7 @@ function CarouselPreview({ media, className }) {
           {media.map((item, i) => {
             const src = proxyMediaUrl(item.url);
             return (
-              <div key={item.url} className="flex-[0_0_100%] min-w-0 aspect-square bg-zinc-900">
+              <div key={item.url} className="flex-[0_0_100%] min-w-0 aspect-square max-h-[320px] bg-zinc-900">
                 {item.type === 'video' ? (
                   <video src={src} controls className="w-full h-full object-cover" />
                 ) : (
