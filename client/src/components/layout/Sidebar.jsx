@@ -66,7 +66,7 @@ const navItems = {
   ],
 };
 
-export default function Sidebar() {
+export default function Sidebar({ onNavigate }) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
@@ -88,11 +88,12 @@ export default function Sidebar() {
 
   const handleLogout = () => {
     logout();
+    onNavigate?.();
     navigate('/login');
   };
 
   return (
-    <aside className="w-56 h-screen bg-[#0C0C0F] border-r border-[#1E1E23] flex flex-col">
+    <aside className="w-56 h-full bg-[#0C0C0F] border-r border-[#1E1E23] flex flex-col">
       {/* Brand */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-center gap-2.5">
@@ -111,6 +112,7 @@ export default function Sidebar() {
           <NavLink
             key={to}
             to={to}
+            onClick={onNavigate}
             className={({ isActive }) =>
               `flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] transition-all duration-150 ${
                 isActive
