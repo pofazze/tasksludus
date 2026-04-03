@@ -309,6 +309,11 @@ class InstagramPublishService {
   }
 
   async _prepareTempMediaUrl(url) {
+    // Reject expired in-memory temp-media URLs (from old upload flow)
+    if (url.includes('/api/instagram/temp-media/')) {
+      throw new Error('Mídia expirada — o arquivo foi armazenado temporariamente e já não existe. Faça upload novamente antes de publicar.');
+    }
+
     // Normalize Google Drive URLs to direct download (confirm=t bypasses virus-scan HTML page)
     const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
     const fetchUrl = driveMatch

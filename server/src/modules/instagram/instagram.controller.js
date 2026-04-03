@@ -294,10 +294,11 @@ class InstagramController {
     try {
       if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
       const { buffer, mimetype, originalname } = req.file;
-      const token = publishService.storeTempMedia(buffer, mimetype, originalname);
-      const baseUrl = `${req.protocol}://${req.get('host')}`;
-      const url = `${baseUrl}/api/instagram/temp-media/${token}`;
       const type = mimetype.startsWith('video/') ? 'video' : 'image';
+      const ext = mimetype.includes('video') ? 'mp4' : mimetype.includes('png') ? 'png' : 'jpg';
+
+      // Upload to permanent storage (Catbox) so URLs survive server restarts
+      const url = await publishService.uploadToPermanentStorage(buffer, originalname || `upload.${ext}`, mimetype);
       res.json({ url, type, filename: originalname });
     } catch (err) {
       next(err);
