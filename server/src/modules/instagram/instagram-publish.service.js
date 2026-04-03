@@ -289,14 +289,17 @@ class InstagramPublishService {
           return m;
         }
 
-        // Expired temp-media or dead URLs — replace with unused ClickUp attachment of same type
+        // Expired temp-media or dead URLs — replace with unused ClickUp attachment
         if (m.url?.includes('/temp-media/') || m.url?.includes('/api/instagram/temp-media/')) {
-          const candidates = freshByType[m.type] || [];
-          const replacement = candidates.find((u) => !usedClickupUrls.has(u));
+          // Try same type first, then any type as fallback
+          const sameType = (freshByType[m.type] || []).find((u) => !usedClickupUrls.has(u));
+          const allCandidates = [...freshByType.video, ...freshByType.image];
+          const replacement = sameType || allCandidates.find((u) => !usedClickupUrls.has(u));
           if (replacement) {
             usedClickupUrls.add(replacement);
-            logger.info('Replaced expired temp-media URL with ClickUp attachment', { type: m.type, newUrl: replacement.slice(0, 100) });
-            return { ...m, url: replacement };
+            const actualType = freshByType.video.includes(replacement) ? 'video' : 'image';
+            logger.info('Replaced expired temp-media URL with ClickUp attachment', { originalType: m.type, actualType, newUrl: replacement.slice(0, 100) });
+            return { ...m, url: replacement, type: actualType };
           }
         }
 
