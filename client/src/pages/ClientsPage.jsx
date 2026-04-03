@@ -183,8 +183,8 @@ export default function ClientsPage() {
           </div>
 
           {/* Search + Filter bar */}
-          <div className="flex items-center gap-3 mb-5">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-5">
+            <div className="relative flex-1 sm:max-w-sm">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
               <Input
                 value={search}
@@ -193,7 +193,7 @@ export default function ClientsPage() {
                 className="pl-9"
               />
             </div>
-            <div className="flex items-center gap-1 rounded-lg border border-zinc-800 p-0.5">
+            <div className="flex items-center gap-1 rounded-lg border border-zinc-800 p-0.5 overflow-x-auto shrink-0">
               {[
                 { key: 'all', label: 'Todos' },
                 { key: 'active', label: 'Ativos' },
@@ -258,7 +258,7 @@ export default function ClientsPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         {canManage && (
                           <button
                             onClick={(e) => openEdit(e, c)}
@@ -342,7 +342,7 @@ export default function ClientsPage() {
 
       {view === 'form' && (
         <>
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-8">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" onClick={() => setView('list')}>
                 <ArrowLeft size={18} />
@@ -357,12 +357,12 @@ export default function ClientsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Coluna principal */}
-            <div className="col-span-2 space-y-6">
+            <div className="md:col-span-2 space-y-6">
               <Card>
                 <CardContent className="pt-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nome *</Label>
                       <Input
@@ -424,7 +424,7 @@ export default function ClientsPage() {
               <Card>
                 <CardContent className="pt-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-4">Integrações</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="instagram" className="flex items-center gap-1.5">
                         <Instagram size={14} className="text-pink-400" />

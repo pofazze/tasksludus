@@ -54,6 +54,7 @@ const MONTH_NAMES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const DAY_NAMES_SHORT = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
 const STATUS_STYLES = {
   draft: 'bg-zinc-500/15 text-zinc-400',
@@ -196,7 +197,7 @@ export default function ScheduleCalendarPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold font-display">Agenda Instagram</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Calendário de publicações</p>
@@ -209,7 +210,7 @@ export default function ScheduleCalendarPage() {
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4">
         <select
           value={filterClient}
           onChange={(e) => setFilterClient(e.target.value)}
@@ -239,9 +240,10 @@ export default function ScheduleCalendarPage() {
         <CardContent className="p-0">
           {/* Day headers */}
           <div className="grid grid-cols-7 border-b border-zinc-800">
-            {DAY_NAMES.map((d) => (
+            {DAY_NAMES.map((d, i) => (
               <div key={d} className="text-center text-xs font-medium text-muted-foreground py-2">
-                {d}
+                <span className="hidden sm:inline">{d}</span>
+                <span className="sm:hidden">{DAY_NAMES_SHORT[i]}</span>
               </div>
             ))}
           </div>
@@ -259,7 +261,7 @@ export default function ScheduleCalendarPage() {
                   key={i}
                   type="button"
                   onClick={() => setSelectedDate(day.date)}
-                  className={`relative min-h-[100px] p-1.5 border-b border-r border-zinc-800/50 text-left transition-colors cursor-pointer ${
+                  className={`relative min-h-[70px] sm:min-h-[100px] p-1 sm:p-1.5 border-b border-r border-zinc-800/50 text-left transition-colors cursor-pointer ${
                     !day.isCurrentMonth ? 'opacity-30' : ''
                   } ${isSelected ? 'bg-purple-500/8 ring-1 ring-inset ring-purple-500/30' : 'hover:bg-white/[0.02]'}`}
                 >
@@ -280,7 +282,7 @@ export default function ScheduleCalendarPage() {
                           className={`flex items-center gap-1 px-1 py-0.5 rounded text-[10px] truncate cursor-pointer hover:brightness-125 ${STATUS_STYLES[p.status] || 'bg-zinc-800'}`}
                         >
                           <TypeIcon size={9} className="shrink-0" />
-                          <span className="truncate">{p.client_name || 'Post'}</span>
+                          <span className="truncate hidden sm:inline">{p.client_name || 'Post'}</span>
                         </div>
                       );
                     })}
@@ -359,7 +361,7 @@ export default function ScheduleCalendarPage() {
 
                       {/* Actions */}
                       {canManage && !['published', 'publishing'].includes(p.status) && (
-                        <div className="flex gap-1 shrink-0">
+                        <div className="flex gap-1 shrink-0 flex-wrap">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(`/schedule/${p.id}`)} title="Editar">
                             <Edit2 size={13} />
                           </Button>

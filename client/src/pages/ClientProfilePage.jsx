@@ -228,7 +228,7 @@ export default function ClientProfilePage() {
             <ArrowLeft size={18} />
           </Button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold font-display truncate">{d.title}</h1>
+            <h1 className="text-xl md:text-2xl font-bold font-display truncate">{d.title}</h1>
             <p className="text-sm text-muted-foreground">{client.name}</p>
           </div>
         </div>
@@ -381,7 +381,7 @@ export default function ClientProfilePage() {
                 {client.is_active !== false ? 'Ativo' : 'Inativo'}
               </span>
             </div>
-            <div className="flex items-center gap-3 mt-1">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
               {client.company && (
                 <span className="text-sm text-zinc-500">{client.company}</span>
               )}
@@ -401,7 +401,7 @@ export default function ClientProfilePage() {
         </div>
 
         {/* Compact metrics row */}
-        <div className="flex flex-wrap gap-x-6 gap-y-2 mt-5 px-1">
+        <div className="flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-2 mt-4 sm:mt-5 px-1">
           <div className="flex items-center gap-1.5">
             <Package size={13} className="text-zinc-500" />
             <span className="text-sm font-semibold tabular-nums">{metrics.totalDeliveries}</span>
@@ -441,7 +441,7 @@ export default function ClientProfilePage() {
 
       {/* ─── Kanban Board ──────────────────────────────── */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <h2 className="text-lg font-semibold">Pipeline</h2>
           <div className="flex items-center gap-1 overflow-x-auto">
             <button
@@ -526,7 +526,7 @@ export default function ClientProfilePage() {
       </div>
 
       {/* ─── Tabs ──────────────────────────────────────── */}
-      <div className="flex gap-0.5 mb-5 rounded-lg bg-zinc-900 p-1 border border-zinc-800 w-fit">
+      <div className="flex gap-0.5 mb-5 rounded-lg bg-zinc-900 p-1 border border-zinc-800 w-full sm:w-fit overflow-x-auto">
         <TabButton active={activeTab === 'entregas'} onClick={() => setActiveTab('entregas')}>
           <Package size={13} className="mr-1.5" /> Entregas
         </TabButton>
@@ -588,8 +588,8 @@ export default function ClientProfilePage() {
           </div>
 
           <Card>
-            <CardContent className="p-0">
-              <Table>
+            <CardContent className="p-0 overflow-x-auto">
+              <Table className="min-w-[600px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Título</TableHead>
@@ -656,7 +656,7 @@ export default function ClientProfilePage() {
           {canManage && (
             <Card className="mb-6">
               <CardContent className="py-4 px-5">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
                       igConnection?.connected ? 'bg-emerald-500/15' : 'bg-zinc-800'
@@ -743,7 +743,7 @@ export default function ClientProfilePage() {
           {igPosts.length > 0 ? (
             <>
               {/* Metrics summary bar */}
-              <div className="grid grid-cols-4 gap-3 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 {[
                   { label: 'Posts', value: igPosts.length },
                   { label: 'Impressões', value: igPosts.reduce((s, p) => s + (p.metrics?.impressions || 0), 0) },
@@ -762,7 +762,7 @@ export default function ClientProfilePage() {
               </div>
 
               {/* Visual grid */}
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                 {igPosts.map((p) => (
                   <a
                     key={p.id}

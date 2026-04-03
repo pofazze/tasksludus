@@ -101,7 +101,7 @@ export default function AgendamentoTab({ clientId }) {
   return (
     <div className="space-y-4">
       {/* Tab bar */}
-      <div className="flex gap-1 p-1 rounded-lg bg-zinc-900 border border-zinc-800">
+      <div className="flex gap-1 p-1 rounded-lg bg-zinc-900 border border-zinc-800 overflow-x-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
