@@ -499,14 +499,14 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
 
             {/* Add Media */}
             {!readOnly && (
-              <div className="mt-2 flex gap-2">
-                <div className="flex-1 flex gap-1.5">
+              <div className="mt-2 space-y-2">
+                <div className="flex gap-1.5">
                   <input
                     type="text"
                     placeholder="Colar URL de mídia..."
                     value={newMediaUrl}
                     onChange={(e) => setNewMediaUrl(e.target.value)}
-                    className="flex-1 h-8 rounded-lg border border-zinc-700 bg-transparent px-2.5 text-xs text-zinc-300 placeholder:text-zinc-600 focus:border-[#9A48EA] outline-none"
+                    className="flex-1 min-w-0 h-8 rounded-lg border border-zinc-700 bg-transparent px-2.5 text-xs text-zinc-300 placeholder:text-zinc-600 focus:border-[#9A48EA] outline-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newMediaUrl.trim()) {
                         addMediaFromUrl(newMediaUrl.trim());
@@ -521,13 +521,13 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
                   >
                     <Plus size={12} className="mr-1" /> URL
                   </Button>
+                  <Button
+                    variant="outline" size="sm" className="h-8 text-xs shrink-0"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload size={12} className="mr-1" /> Upload
+                  </Button>
                 </div>
-                <Button
-                  variant="outline" size="sm" className="h-8 text-xs shrink-0"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload size={12} className="mr-1" /> Upload
-                </Button>
                 <input
                   ref={fileInputRef}
                   type="file"

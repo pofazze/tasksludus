@@ -39,7 +39,16 @@ function SheetContent({ className, children, side = 'right', ...props }) {
     try { return Number(localStorage.getItem(STORAGE_KEY)) || DEFAULT_W; }
     catch { return DEFAULT_W; }
   });
+  const [isMobile, setIsMobile] = React.useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < 768
+  );
   const dragging = React.useRef(false);
+
+  React.useEffect(() => {
+    function onResize() { setIsMobile(window.innerWidth < 768); }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   React.useEffect(() => {
     function onMouseMove(e) {
@@ -74,7 +83,7 @@ function SheetContent({ className, children, side = 'right', ...props }) {
     <DialogPrimitive.Portal>
       <SheetOverlay />
       <DialogPrimitive.Popup
-        style={{ width: `${width}px` }}
+        style={isMobile ? { width: '100vw' } : { width: `${width}px` }}
         className={cn(
           'fixed z-50 flex flex-col bg-background ring-1 ring-foreground/10 shadow-lg transition-transform duration-200 ease-out outline-none',
           'data-open:animate-in data-closed:animate-out',
@@ -84,10 +93,12 @@ function SheetContent({ className, children, side = 'right', ...props }) {
         )}
         {...props}
       >
-        <div
-          onMouseDown={startDrag}
-          className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-[#9A48EA]/30 active:bg-[#9A48EA]/50 transition-colors z-10"
-        />
+        {!isMobile && (
+          <div
+            onMouseDown={startDrag}
+            className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-[#9A48EA]/30 active:bg-[#9A48EA]/50 transition-colors z-10"
+          />
+        )}
         {children}
         <DialogPrimitive.Close
           className="absolute top-4 right-4 rounded-md p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
@@ -102,7 +113,7 @@ function SheetContent({ className, children, side = 'right', ...props }) {
 
 function SheetHeader({ className, ...props }) {
   return (
-    <div className={cn('flex flex-col gap-1.5 px-6 pt-6 pb-4 border-b border-zinc-800', className)} {...props} />
+    <div className={cn('flex flex-col gap-1.5 px-4 pt-5 pb-3 md:px-6 md:pt-6 md:pb-4 border-b border-zinc-800', className)} {...props} />
   );
 }
 
@@ -120,13 +131,13 @@ function SheetDescription({ className, ...props }) {
 
 function SheetBody({ className, ...props }) {
   return (
-    <div className={cn('flex-1 overflow-y-auto px-6 py-4', className)} {...props} />
+    <div className={cn('flex-1 overflow-y-auto px-4 py-3 md:px-6 md:py-4', className)} {...props} />
   );
 }
 
 function SheetFooter({ className, ...props }) {
   return (
-    <div className={cn('flex items-center gap-2 justify-end px-6 py-4 border-t border-zinc-800', className)} {...props} />
+    <div className={cn('flex flex-wrap items-center gap-2 justify-end px-4 py-3 md:px-6 md:py-4 border-t border-zinc-800', className)} {...props} />
   );
 }
 
