@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import { Menu } from 'lucide-react';
+import { Outlet, NavLink } from 'react-router-dom';
+import { Menu, Package, CalendarDays, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import Sidebar from './Sidebar';
@@ -37,10 +37,48 @@ export default function AuthLayout() {
           </div>
         </div>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto p-4 pb-20 md:p-6 md:pb-6">
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile bottom navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex md:hidden items-center justify-around border-t border-zinc-800/50 bg-[#0C0C0F]/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)]">
+        <NavLink
+          to="/clients"
+          className={({ isActive }) =>
+            `flex flex-col items-center gap-0.5 py-2.5 px-3 text-[10px] font-medium transition-colors ${isActive ? 'text-[#9A48EA]' : 'text-zinc-500'}`
+          }
+        >
+          <Package size={20} />
+          Clientes
+        </NavLink>
+        <NavLink
+          to="/schedule"
+          className={({ isActive }) =>
+            `flex flex-col items-center gap-0.5 py-2.5 px-3 text-[10px] font-medium transition-colors ${isActive ? 'text-[#9A48EA]' : 'text-zinc-500'}`
+          }
+        >
+          <CalendarDays size={20} />
+          Agenda
+        </NavLink>
+        <NavLink
+          to="/deliveries"
+          className={({ isActive }) =>
+            `flex flex-col items-center gap-0.5 py-2.5 px-3 text-[10px] font-medium transition-colors ${isActive ? 'text-[#9A48EA]' : 'text-zinc-500'}`
+          }
+        >
+          <BarChart3 size={20} />
+          Entregas
+        </NavLink>
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="flex flex-col items-center gap-0.5 py-2.5 px-3 text-[10px] font-medium text-zinc-500 transition-colors"
+        >
+          <Menu size={20} />
+          Menu
+        </button>
+      </nav>
     </div>
   );
 }
