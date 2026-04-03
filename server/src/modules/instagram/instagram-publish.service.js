@@ -22,6 +22,9 @@ setInterval(() => {
 }, 60 * 1000);
 
 class InstagramPublishService {
+  // Buffer cache for re-uploading media if Instagram can't fetch from Catbox
+  _mediaBufferCache = new Map();
+
   async executeScheduledPost(postId) {
     const post = await db('scheduled_posts').where({ id: postId }).first();
     if (!post) throw Object.assign(new Error('Post not found'), { status: 404 });
@@ -119,6 +122,7 @@ class InstagramPublishService {
       eventBus.emit('sse', { type: 'delivery:updated', payload: { clickup_task_id: post.clickup_task_id } });
       eventBus.emit('sse', { type: 'ranking:updated' });
       this._cleanupTempMedia(tempTokens);
+      this._mediaBufferCache.clear();
 
       // Move ClickUp task to "publicação" after successful publish
       if (post.clickup_task_id) {
@@ -149,6 +153,7 @@ class InstagramPublishService {
         });
 
       this._cleanupTempMedia(tempTokens);
+      this._mediaBufferCache.clear();
       logger.error('Post publish failed', { postId, error: err.message, retryCount });
       eventBus.emit('sse', { type: 'post:updated', payload: { id: postId, status: 'failed' } });
       throw err;
@@ -156,19 +161,12 @@ class InstagramPublishService {
   }
 
   async publishImage(igUserId, accessToken, imageUrl, caption) {
-    // Step 1: Create media container
-    const containerId = await this._createContainer(igUserId, accessToken, {
+    const containerId = await this._createAndPollContainerWithRetry(igUserId, accessToken, {
       image_url: imageUrl,
       caption,
     });
-
-    // Step 2: Wait for processing (large images need time)
-    await this._pollContainerStatus(containerId, accessToken);
-
-    // Step 3: Publish
     const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
     const permalink = await this._getPermalink(mediaId, accessToken);
-
     return { containerId, mediaId, permalink };
   }
 
@@ -198,8 +196,7 @@ class InstagramPublishService {
       params.cover_url = coverUrl;
     }
 
-    const containerId = await this._createContainer(igUserId, accessToken, params);
-    await this._pollContainerStatus(containerId, accessToken);
+    const containerId = await this._createAndPollContainerWithRetry(igUserId, accessToken, params);
     const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
     const permalink = await this._getPermalink(mediaId, accessToken);
     return { containerId, mediaId, permalink };
@@ -212,17 +209,13 @@ class InstagramPublishService {
       ...(isVideo ? { video_url: media.url } : { image_url: media.url }),
     };
 
-    const containerId = await this._createContainer(igUserId, accessToken, params);
-
-    // Always poll — Instagram needs processing time for both images and videos
-    await this._pollContainerStatus(containerId, accessToken);
-
+    const containerId = await this._createAndPollContainerWithRetry(igUserId, accessToken, params);
     const mediaId = await this._publishContainer(igUserId, accessToken, containerId);
-    return { containerId, mediaId, permalink: null }; // Stories have no permalink
+    return { containerId, mediaId, permalink: null };
   }
 
   async publishCarousel(igUserId, accessToken, mediaItems, caption) {
-    // Step 1: Create child containers (2-10 items)
+    // Step 1: Create child containers (2-10 items) with download-failure retry
     const childIds = [];
     for (const item of mediaItems.slice(0, 10)) {
       const isVideo = item.type === 'video';
@@ -231,11 +224,7 @@ class InstagramPublishService {
         ...(isVideo ? { video_url: item.url, media_type: 'REELS' } : { image_url: item.url }),
       };
 
-      const childId = await this._createContainer(igUserId, accessToken, params);
-
-      // Always poll — Instagram needs processing time for all media types
-      await this._pollContainerStatus(childId, accessToken);
-
+      const childId = await this._createAndPollContainerWithRetry(igUserId, accessToken, params);
       childIds.push(childId);
     }
 
@@ -273,24 +262,45 @@ class InstagramPublishService {
         return existingUrls;
       }
 
-      // Build lookup: filename → fresh attachment URL
+      // Build lookups from ClickUp attachments
       const freshByName = {};
+      const freshByType = { image: [], video: [] };
       for (const a of task.attachments) {
         if (a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/'))) {
           const name = decodeURIComponent(a.url.split('/').pop()?.split('?')[0] || '');
           freshByName[name] = a.url;
+          const type = a.mimetype.startsWith('video/') ? 'video' : 'image';
+          freshByType[type].push(a.url);
         }
       }
 
+      // Track which ClickUp URLs are already used (to avoid duplicates when replacing)
+      const usedClickupUrls = new Set();
+
       // Refresh expired ClickUp URLs in the user-curated list (preserves order & removals)
       return existingUrls.map((m) => {
-        // Non-ClickUp URLs (temp-media, catbox, uploads) — keep as-is
-        if (!m.url?.includes('clickup-attachments.com')) return m;
-        const name = decodeURIComponent(m.url.split('/').pop()?.split('?')[0] || '');
-        if (freshByName[name]) {
-          return { ...m, url: freshByName[name] };
+        // ClickUp URLs — refresh by filename match
+        if (m.url?.includes('clickup-attachments.com')) {
+          const name = decodeURIComponent(m.url.split('/').pop()?.split('?')[0] || '');
+          if (freshByName[name]) {
+            usedClickupUrls.add(freshByName[name]);
+            return { ...m, url: freshByName[name] };
+          }
+          return m;
         }
-        return m; // no match — keep original
+
+        // Expired temp-media or dead URLs — replace with unused ClickUp attachment of same type
+        if (m.url?.includes('/temp-media/') || m.url?.includes('/api/instagram/temp-media/')) {
+          const candidates = freshByType[m.type] || [];
+          const replacement = candidates.find((u) => !usedClickupUrls.has(u));
+          if (replacement) {
+            usedClickupUrls.add(replacement);
+            logger.info('Replaced expired temp-media URL with ClickUp attachment', { type: m.type, newUrl: replacement.slice(0, 100) });
+            return { ...m, url: replacement };
+          }
+        }
+
+        return m; // catbox, google drive, etc — keep as-is
       });
     } catch (err) {
       logger.warn('Error resolving media URLs', { clickupTaskId, error: err.message });
@@ -320,8 +330,63 @@ class InstagramPublishService {
     const ext = contentType.includes('video') ? 'mp4' : contentType.includes('image/png') ? 'png' : 'jpg';
     const publicUrl = await this._uploadToTempStorage(buffer, `media.${ext}`, contentType);
 
+    // Cache buffer for re-upload if Instagram fails to fetch from temp storage
+    this._mediaBufferCache.set(publicUrl, { buffer, ext, contentType });
+
     logger.info('Temp media URL created', { publicUrl: publicUrl.slice(0, 120), contentType, sizeMB: (buffer.length / 1024 / 1024).toFixed(1) });
     return { url: publicUrl, token: null };
+  }
+
+  async _reuploadCachedMedia(oldUrl) {
+    const cached = this._mediaBufferCache.get(oldUrl);
+    if (!cached) return null;
+    logger.warn('Re-uploading media to fresh temp URL after download failure', { oldUrl: oldUrl.slice(0, 80) });
+    const newUrl = await this._uploadToTempStorage(cached.buffer, `media.${cached.ext}`, cached.contentType);
+    this._mediaBufferCache.set(newUrl, cached);
+    this._mediaBufferCache.delete(oldUrl);
+    return newUrl;
+  }
+
+  async uploadToPermanentStorage(buffer, filename, contentType) {
+    const blob = new Blob([buffer], { type: contentType });
+
+    const MAX_RETRIES = 3;
+    const BACKOFF_MS = [2000, 4000, 8000];
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      const formData = new FormData();
+      formData.append('reqtype', 'fileupload');
+      formData.append('fileToUpload', blob, filename);
+
+      if (attempt > 0) {
+        logger.info('Retrying permanent storage upload', { attempt, filename, delay: BACKOFF_MS[attempt - 1] });
+        await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt - 1]));
+      }
+
+      logger.info('Uploading to permanent storage', { filename, contentType, sizeMB: (buffer.length / 1024 / 1024).toFixed(1), attempt });
+      const res = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.status === 429 && attempt < MAX_RETRIES) {
+        logger.warn('Permanent storage rate limited (429), will retry', { attempt, filename });
+        continue;
+      }
+
+      if (!res.ok) {
+        const text = await res.text();
+        if (attempt < MAX_RETRIES) continue;
+        throw new Error(`Permanent storage upload failed after ${MAX_RETRIES} retries: HTTP ${res.status} — ${text.slice(0, 200)}`);
+      }
+
+      const url = (await res.text()).trim();
+      if (!url.startsWith('http')) {
+        if (attempt < MAX_RETRIES) continue;
+        throw new Error(`Permanent storage error: ${url.slice(0, 200)}`);
+      }
+      return url;
+    }
   }
 
   async _uploadToTempStorage(buffer, filename, contentType) {
@@ -429,6 +494,35 @@ class InstagramPublishService {
 
   // --- Private helpers ---
 
+  async _createAndPollContainerWithRetry(igUserId, accessToken, params) {
+    try {
+      const containerId = await this._createContainer(igUserId, accessToken, params);
+      await this._pollContainerStatus(containerId, accessToken);
+      return containerId;
+    } catch (err) {
+      if (!err.isDownloadError) throw err;
+
+      // Re-upload media to fresh temp URLs and retry once
+      const updatedParams = { ...params };
+      let reuploaded = false;
+      for (const key of ['image_url', 'video_url', 'cover_url']) {
+        if (updatedParams[key]) {
+          const freshUrl = await this._reuploadCachedMedia(updatedParams[key]);
+          if (freshUrl) {
+            updatedParams[key] = freshUrl;
+            reuploaded = true;
+          }
+        }
+      }
+      if (!reuploaded) throw err;
+
+      logger.warn('Retrying container with fresh temp URLs after download failure');
+      const containerId = await this._createContainer(igUserId, accessToken, updatedParams);
+      await this._pollContainerStatus(containerId, accessToken);
+      return containerId;
+    }
+  }
+
   async _createContainer(igUserId, accessToken, params) {
     const url = `${GRAPH_URL}/${igUserId}/media`;
     const bodyParams = { ...params, access_token: accessToken };
@@ -506,7 +600,9 @@ class InstagramPublishService {
       if (data.status_code === 'ERROR') {
         const detail = data.error_message || data.status || 'unknown error';
         logger.error('IG container processing FAILED', { containerId, status: data.status, error_message: data.error_message, fullData: JSON.stringify(data) });
-        throw new Error(`Media processing failed: ${detail}`);
+        const err = new Error(`Media processing failed: ${detail}`);
+        err.isDownloadError = /download failed|fwdproxy|failed to fetch/i.test(detail);
+        throw err;
       }
 
       attempt++;
