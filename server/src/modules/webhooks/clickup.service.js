@@ -126,6 +126,14 @@ class ClickUpWebhookService {
         eventBus.emit('sse', { type: 'ranking:updated' });
       }
       logger.info(`Delivery ${delivery.id} status → ${newStatus}`);
+
+      // Set approval_status when entering approval phase (covers first time and returning from correction)
+      if (newStatus === 'aprovacao') {
+        await db('deliveries')
+          .where({ id: delivery.id })
+          .update({ approval_status: 'sm_pending', updated_at: new Date() });
+        logger.info(`Delivery ${delivery.id} approval_status → sm_pending`);
+      }
     } else {
       logger.info(`No delivery found for ClickUp task ${clickupTaskId} — will auto-create`);
       await this.autoCreateDelivery(clickupTaskId, event, task);
@@ -698,6 +706,7 @@ class ClickUpWebhookService {
       'aprovação': 'aprovacao',
       'aprovacao': 'aprovacao',
       'agendamento': 'agendamento',
+      'agendado': 'agendado',
       'publicação': 'publicacao',
       'publicacao': 'publicacao',
     };
