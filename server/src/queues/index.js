@@ -10,6 +10,7 @@ const connection = {
 const instagramPublishQueue = new Queue('instagram-publish', { connection });
 const tokenRefreshQueue = new Queue('token-refresh', { connection });
 const deliverySyncQueue = new Queue('delivery-sync', { connection });
+const approvalReminderQueue = new Queue('approval-reminder', { connection });
 
 async function schedulePost(postId, scheduledAt) {
   const delay = new Date(scheduledAt).getTime() - Date.now();
@@ -82,6 +83,7 @@ module.exports = {
   instagramPublishQueue,
   tokenRefreshQueue,
   deliverySyncQueue,
+  approvalReminderQueue,
   schedulePost,
   cancelScheduledPost,
   reschedulePost,
