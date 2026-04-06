@@ -23,6 +23,7 @@ import ClientProfilePage from '@/pages/ClientProfilePage';
 import ScheduleCalendarPage from '@/pages/ScheduleCalendarPage';
 import React from 'react';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
+import PublicApprovalPage from '@/pages/PublicApprovalPage';
 
 const MANAGEMENT = ['dev', 'ceo', 'director', 'manager'];
 const ADMIN = ['dev', 'ceo', 'director'];
@@ -43,6 +44,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/invite/:token" element={<InviteAcceptPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/aprovacao/:token" element={<PublicApprovalPage />} />
 
         {/* Protected routes */}
         <Route
