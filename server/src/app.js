@@ -21,6 +21,7 @@ const simulatorRoutes = require('./modules/simulator/simulator.routes');
 const webhooksRoutes = require('./modules/webhooks/webhooks.routes');
 const instagramRoutes = require('./modules/instagram/instagram.routes');
 const eventsRoutes = require('./modules/events/events.routes');
+const approvalsRoutes = require('./modules/approvals/approvals.routes');
 
 const app = express();
 
@@ -63,6 +64,11 @@ app.use(express.urlencoded({ extended: true }));
 // Passport
 app.use(passport.initialize());
 
+// Allow all bots (Instagram needs to fetch media from our proxy)
+app.get('/robots.txt', (_req, res) => {
+  res.type('text/plain').send('User-agent: *\nAllow: /\n');
+});
+
 // Health check
 app.get('/api/health', async (req, res) => {
   const db = require('./config/db');
@@ -88,6 +94,7 @@ app.use('/api/simulator', simulatorRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/instagram', instagramRoutes);
 app.use('/api/events', eventsRoutes);
+app.use('/api/approvals', approvalsRoutes);
 
 // 404 handler
 app.use((_req, res) => {
