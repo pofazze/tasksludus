@@ -49,4 +49,9 @@ module.exports = {
     redirectUri: process.env.META_REDIRECT_URI || 'https://server-production-bea3.up.railway.app/api/instagram/oauth/callback',
     encryptionKey: process.env.TOKEN_ENCRYPTION_KEY,
   },
+
+  evolution: {
+    apiUrl: process.env.EVOLUTION_API_URL,
+    apiKey: process.env.EVOLUTION_API_KEY,
+  },
 };
