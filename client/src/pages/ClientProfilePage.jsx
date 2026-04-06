@@ -14,6 +14,7 @@ import {
 } from '@/lib/constants';
 import useServerEvent from '@/hooks/useServerEvent';
 import AgendamentoTab from '@/components/instagram/AgendamentoTab';
+import ApprovalTab from '@/components/approvals/ApprovalTab';
 
 import PageLoading from '@/components/common/PageLoading';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  ArrowLeft, Calendar, CheckCircle2, Clock, ExternalLink, Eye,
+  ArrowLeft, Calendar, CheckCircle2, ClipboardCheck, Clock, ExternalLink, Eye,
   Filter, Image as ImageIcon, Instagram, Loader2, Package, RefreshCw, TrendingUp, User, Users,
 } from 'lucide-react';
 
@@ -541,6 +542,9 @@ export default function ClientProfilePage() {
         <TabButton active={activeTab === 'instagram'} onClick={() => setActiveTab('instagram')}>
           <Instagram size={13} className="mr-1.5" /> Instagram
         </TabButton>
+        <TabButton active={activeTab === 'aprovacao'} onClick={() => setActiveTab('aprovacao')}>
+          <ClipboardCheck size={13} className="mr-1.5" /> Aprovacao
+        </TabButton>
       </div>
 
       {/* ─── Tab: Entregas ─────────────────────────────── */}
@@ -648,6 +652,9 @@ export default function ClientProfilePage() {
       {activeTab === 'agendamento' && (
         <AgendamentoTab clientId={id} />
       )}
+
+      {/* ─── Tab: Aprovacao ────────────────────────────── */}
+      {activeTab === 'aprovacao' && <ApprovalTab clientId={id} />}
 
       {/* ─── Tab: Instagram ────────────────────────────── */}
       {activeTab === 'instagram' && (
