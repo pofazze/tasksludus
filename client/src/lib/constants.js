@@ -23,6 +23,7 @@ export const PIPELINE_STATUSES = {
   design: 'Design',
   aprovacao: 'Aprovação',
   agendamento: 'Agendamento',
+  agendado: 'Agendado',
   publicacao: 'Publicação',
 };
 
@@ -36,13 +37,14 @@ export const PIPELINE_STATUS_COLORS = {
   design: 'bg-blue-500/15 text-blue-400',
   aprovacao: 'bg-pink-500/15 text-pink-400',
   agendamento: 'bg-amber-500/15 text-amber-400',
+  agendado: 'bg-teal-500/15 text-teal-400',
   publicacao: 'bg-emerald-500/15 text-emerald-400',
 };
 
 // Pipeline order for sorting and display
 export const PIPELINE_ORDER = [
   'triagem', 'planejamento', 'captacao', 'edicao_de_video',
-  'estruturacao', 'design', 'aprovacao', 'agendamento', 'publicacao',
+  'estruturacao', 'design', 'aprovacao', 'agendamento', 'agendado', 'publicacao',
 ];
 
 export const DIFFICULTY_LABELS = {
@@ -81,4 +83,20 @@ export const CLICKUP_ROLE_LABELS = {
   2: 'Admin',
   3: 'Member',
   4: 'Guest',
+};
+
+export const APPROVAL_STATUS_LABELS = {
+  sm_pending: 'Aguardando Social Media',
+  sm_approved: 'Aprovado (SM)',
+  client_pending: 'Aguardando Cliente',
+  client_approved: 'Aprovado',
+  client_rejected: 'Reprovado',
+};
+
+export const APPROVAL_STATUS_COLORS = {
+  sm_pending: 'bg-amber-500/15 text-amber-400',
+  sm_approved: 'bg-blue-500/15 text-blue-400',
+  client_pending: 'bg-purple-500/15 text-purple-400',
+  client_approved: 'bg-emerald-500/15 text-emerald-400',
+  client_rejected: 'bg-red-500/15 text-red-400',
 };
