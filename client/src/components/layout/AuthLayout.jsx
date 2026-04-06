@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
-import { Menu, Package, CalendarDays, BarChart3 } from 'lucide-react';
+import { Menu, Package, CalendarDays, BarChart3, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import Sidebar from './Sidebar';
@@ -70,6 +70,15 @@ export default function AuthLayout() {
         >
           <BarChart3 size={20} />
           Entregas
+        </NavLink>
+        <NavLink
+          to="/aprovacoes"
+          className={({ isActive }) =>
+            `flex flex-col items-center gap-0.5 py-2.5 px-3 text-[10px] font-medium transition-colors ${isActive ? 'text-[#9A48EA]' : 'text-zinc-500'}`
+          }
+        >
+          <ClipboardCheck size={20} />
+          Aprovacoes
         </NavLink>
         <button
           onClick={() => setMobileOpen(true)}

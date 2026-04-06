@@ -11,6 +11,7 @@ import DashboardPage from '@/pages/DashboardPage';
 import UsersPage from '@/pages/UsersPage';
 import ClientsPage from '@/pages/ClientsPage';
 import DeliveriesPage from '@/pages/DeliveriesPage';
+import ApprovalsPage from '@/pages/ApprovalsPage';
 import GoalsPage from '@/pages/GoalsPage';
 import CalculationsPage from '@/pages/CalculationsPage';
 import RankingPage from '@/pages/RankingPage';
@@ -61,6 +62,7 @@ function App() {
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/clients/:id" element={<ClientProfilePage />} />
           <Route path="/deliveries" element={<DeliveriesPage />} />
+          <Route path="/aprovacoes" element={<ApprovalsPage />} />
           <Route path="/schedule" element={
             <ProtectedRoute roles={ALL_INTERNAL}><ScheduleCalendarPage /></ProtectedRoute>
           } />

@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Target, Calculator, Package,
-  BarChart3, TrendingUp, Sliders, LogOut, Trophy, Wallet, Rocket, CalendarDays,
+  BarChart3, TrendingUp, Sliders, LogOut, Trophy, Wallet, Rocket, CalendarDays, ClipboardCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -78,6 +78,7 @@ export default function Sidebar({ onNavigate }) {
       { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
       { to: '/clients', icon: Package, label: 'Clientes' },
       { to: '/deliveries', icon: BarChart3, label: 'Entregas' },
+      { to: '/aprovacoes', icon: ClipboardCheck, label: 'Aprovacoes' },
       { to: '/schedule', icon: CalendarDays, label: 'Agenda' },
       { to: '/simulator', icon: TrendingUp, label: 'Simulador' },
       { to: '/comofunciona', icon: Rocket, label: 'Como funciona' },
