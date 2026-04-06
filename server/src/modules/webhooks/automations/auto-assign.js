@@ -29,9 +29,10 @@ const PHASE_ASSIGNEE_MAP = {
   'estruturação':     '284598101',  // Aléxia Sâmella
   'estruturacao':     '284598101',  // Aléxia Sâmella
   'design':           '284596872',  // Pedro Torres
-  'aprovação':        '61001382',   // Wander Fran
-  'aprovacao':        '61001382',   // Wander Fran
+  'aprovação':        null,  // Dynamic — resolved from client.social_media_id
+  'aprovacao':        null,  // Dynamic — resolved from client.social_media_id
   'agendamento':      '284598101',  // Aléxia Sâmella
+  'agendado':         '284598101',  // Aléxia Sâmella
   'publicação':       '284598101',  // Aléxia Sâmella
   'publicacao':       '284598101',  // Aléxia Sâmella
 };
@@ -73,6 +74,22 @@ async function run(clickupTaskId, newStatusName, task) {
   } else {
     assigneeId = PHASE_ASSIGNEE_MAP[normalized];
   }
+
+  // Dynamic lookup for approval phase — find social media from client
+  if (['aprovação', 'aprovacao'].includes(normalized) && !assigneeId) {
+    const listId = task?.list?.id;
+    if (listId) {
+      const client = await db('clients').where({ clickup_list_id: listId }).first();
+      if (client?.social_media_id) {
+        const smUser = await db('users').where({ id: client.social_media_id }).first();
+        if (smUser?.clickup_id) {
+          assigneeId = smUser.clickup_id;
+          logger.info(`auto-assign: approval phase → dynamic SM lookup → ${smUser.name} (${assigneeId})`);
+        }
+      }
+    }
+  }
+
   if (!assigneeId) {
     return { executed: false, reason: `no mapping for status "${normalized}"` };
   }
