@@ -66,7 +66,7 @@ class ApprovalsService {
       .returning('*');
 
     logger.info('SM approved delivery', { deliveryId, userId });
-    eventBus.emit('sse', { type: 'approval:sm_approved', payload: { deliveryId, clientId: updated.client_id } });
+    eventBus.emit('sse', { type: 'approval:updated', payload: { deliveryId, clientId: updated.client_id } });
 
     return updated;
   }
@@ -185,7 +185,7 @@ class ApprovalsService {
     }
 
     eventBus.emit('sse', {
-      type: 'approval:sent_to_client',
+      type: 'approval:updated',
       payload: { batchId: batch.id, clientId, itemCount: createdItems.length },
     });
 
@@ -216,7 +216,8 @@ class ApprovalsService {
       .join('deliveries', 'approval_items.delivery_id', 'deliveries.id')
       .select(
         'approval_items.*',
-        'deliveries.title as delivery_title'
+        'deliveries.title as delivery_title',
+        'deliveries.content_type as delivery_content_type'
       )
       .where('approval_items.batch_id', batch.id)
       .orderBy('approval_items.created_at', 'asc');
@@ -319,7 +320,7 @@ class ApprovalsService {
     }
 
     eventBus.emit('sse', {
-      type: 'approval:client_responded',
+      type: 'approval:updated',
       payload: { batchId: batch.id, itemId, status, allResponded },
     });
 
@@ -371,7 +372,7 @@ class ApprovalsService {
     }
 
     logger.info('Approval batch revoked', { batchId, userId, revertedCount: pendingItems.length });
-    eventBus.emit('sse', { type: 'approval:revoked', payload: { batchId, clientId: batch.client_id } });
+    eventBus.emit('sse', { type: 'approval:updated', payload: { batchId, clientId: batch.client_id } });
 
     return { success: true, revertedCount: pendingItems.length };
   }
