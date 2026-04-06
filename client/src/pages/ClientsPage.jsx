@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import {
-  ArrowLeft, ArrowRight, Bot, Building2, ExternalLink, Instagram, Pencil, Plus, Search, Users,
+  ArrowLeft, ArrowRight, Bot, Building2, ExternalLink, Instagram, Loader2, Pencil, Plus, Search, Users,
 } from 'lucide-react';
 
 const EMPTY_FORM = {
@@ -26,6 +26,9 @@ const EMPTY_FORM = {
   clickup_list_id: '',
   automations_enabled: false,
   category: '',
+  whatsapp: '',
+  whatsapp_group: '',
+  social_media_id: '',
 };
 
 export default function ClientsPage() {
@@ -41,6 +44,8 @@ export default function ClientsPage() {
   const [touched, setTouched] = useState({});
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [whatsappGroups, setWhatsappGroups] = useState([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
 
   const fetchClients = async () => {
     try {
@@ -59,6 +64,18 @@ export default function ClientsPage() {
       setUsers(data);
     } catch {
       // silently fail — select will just be empty
+    }
+  };
+
+  const fetchWhatsAppGroups = async () => {
+    setLoadingGroups(true);
+    try {
+      const { data } = await api.get('/approvals/whatsapp-groups');
+      setWhatsappGroups(data);
+    } catch {
+      toast.error('Erro ao carregar grupos do WhatsApp');
+    } finally {
+      setLoadingGroups(false);
     }
   };
 
@@ -115,6 +132,9 @@ export default function ClientsPage() {
       clickup_list_id: c.clickup_list_id || '',
       automations_enabled: c.automations_enabled ?? false,
       category: c.category || '',
+      whatsapp: c.whatsapp || '',
+      whatsapp_group: c.whatsapp_group || '',
+      social_media_id: c.social_media_id || '',
     });
     setTouched({});
     fetchUsers();
@@ -131,6 +151,9 @@ export default function ClientsPage() {
       user_id: form.user_id || null,
       clickup_list_id: form.clickup_list_id || null,
       category: form.category || null,
+      whatsapp: form.whatsapp || null,
+      whatsapp_group: form.whatsapp_group || null,
+      social_media_id: form.social_media_id || null,
     };
     try {
       if (editId) {
@@ -445,6 +468,63 @@ export default function ClientsPage() {
                         onChange={(e) => setForm({ ...form, clickup_list_id: e.target.value })}
                         placeholder="Ex: 901100123456"
                       />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6 space-y-4">
+                  <Separator className="my-4" />
+                  <h3 className="text-sm font-medium text-zinc-300">WhatsApp</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsapp">WhatsApp do Cliente</Label>
+                      <Input
+                        id="whatsapp"
+                        value={form.whatsapp}
+                        onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+                        placeholder="5511999999999"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="social_media_id">Social Media Responsavel</Label>
+                      <Select
+                        value={form.social_media_id || '_none'}
+                        onValueChange={(val) => setForm({ ...form, social_media_id: val === '_none' ? '' : val })}
+                      >
+                        <SelectTrigger id="social_media_id">
+                          <SelectValue placeholder="Selecione o social media" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none">Nenhum</SelectItem>
+                          {users.filter((u) => u.producer_type === 'social_media').map((u) => (
+                            <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="whatsapp_group">Grupo de Producao (WhatsApp)</Label>
+                    <div className="flex gap-2">
+                      <Select
+                        value={form.whatsapp_group || '_none'}
+                        onValueChange={(val) => setForm({ ...form, whatsapp_group: val === '_none' ? '' : val })}
+                      >
+                        <SelectTrigger id="whatsapp_group" className="flex-1">
+                          <SelectValue placeholder="Selecione o grupo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none">Nenhum</SelectItem>
+                          {whatsappGroups.map((g) => (
+                            <SelectItem key={g.id} value={g.id}>{g.subject}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button variant="outline" size="sm" onClick={fetchWhatsAppGroups} disabled={loadingGroups}>
+                        {loadingGroups ? <Loader2 size={14} className="animate-spin" /> : 'Carregar'}
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
