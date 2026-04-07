@@ -83,12 +83,12 @@ export default function RankingPage() {
                     <p className="font-semibold mt-2 text-lg">{displayName(entry.name)}</p>
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-sm text-muted-foreground">{entry.total_deliveries} entregas</span>
-                      <Badge variant="secondary" className="bg-purple-500/15 text-purple-400">
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400">
                         {entry.multiplier}x
                       </Badge>
                     </div>
                     {entry.bonus != null && entry.bonus > 0 && (
-                      <p className="text-sm font-medium text-green-400 mt-1">
+                      <p className="text-sm font-medium text-green-600 dark:text-green-400 mt-1">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(entry.bonus)}
                       </p>
                     )}
@@ -135,7 +135,7 @@ export default function RankingPage() {
                     </TableCell>
                     <TableCell className="text-right">{entry.total_deliveries}</TableCell>
                     <TableCell className="text-right">
-                      <Badge variant="secondary" className="bg-purple-500/15 text-purple-400">
+                      <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400">
                         {entry.multiplier}x
                       </Badge>
                     </TableCell>
