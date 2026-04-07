@@ -11,11 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useSearchParams } from 'react-router-dom';
 import { Send, CheckCircle2, XCircle, Loader2, Plug, Webhook, RefreshCw, Unplug, Smartphone, QrCode } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState([]);
   const [integrations, setIntegrations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { theme, setTheme } = useTheme();
 
   // ClickUp test
   const [clickupResult, setClickupResult] = useState(null);
@@ -345,12 +347,45 @@ export default function SettingsPage() {
     <div>
       <h1 className="text-2xl font-bold font-display mb-6">Configurações</h1>
 
-      <Tabs defaultValue="general">
+      <Tabs defaultValue="appearance">
         <TabsList>
+          <TabsTrigger value="appearance">Aparência</TabsTrigger>
           <TabsTrigger value="general">Geral</TabsTrigger>
           <TabsTrigger value="integrations">Integrações</TabsTrigger>
           <TabsTrigger value="invites">Convites</TabsTrigger>
         </TabsList>
+
+        {/* Appearance Settings */}
+        <TabsContent value="appearance">
+          <div className="space-y-4 max-w-lg">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Tema</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-3">
+                  {[
+                    { value: 'light', label: 'Claro' },
+                    { value: 'dark', label: 'Escuro' },
+                    { value: 'system', label: 'Sistema' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setTheme(opt.value)}
+                      className={`flex-1 px-4 py-3 rounded-lg border text-sm font-medium transition-colors cursor-pointer ${
+                        theme === opt.value
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         {/* General Settings */}
         <TabsContent value="general">
