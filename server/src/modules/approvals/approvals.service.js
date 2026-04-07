@@ -15,10 +15,15 @@ class ApprovalsService {
   async listSmPending(userId) {
     return db('deliveries')
       .join('clients', 'deliveries.client_id', 'clients.id')
+      .leftJoin('scheduled_posts', 'scheduled_posts.delivery_id', 'deliveries.id')
       .select(
         'deliveries.*',
         'clients.name as client_name',
-        'clients.instagram_account'
+        'clients.instagram_account',
+        'scheduled_posts.media_urls',
+        'scheduled_posts.caption',
+        'scheduled_posts.thumbnail_url',
+        'scheduled_posts.post_type'
       )
       .where('deliveries.approval_status', 'sm_pending')
       .where('clients.social_media_id', userId)
@@ -33,10 +38,15 @@ class ApprovalsService {
   async listByClient(clientId) {
     return db('deliveries')
       .join('clients', 'deliveries.client_id', 'clients.id')
+      .leftJoin('scheduled_posts', 'scheduled_posts.delivery_id', 'deliveries.id')
       .select(
         'deliveries.*',
         'clients.name as client_name',
-        'clients.instagram_account'
+        'clients.instagram_account',
+        'scheduled_posts.media_urls',
+        'scheduled_posts.caption',
+        'scheduled_posts.thumbnail_url',
+        'scheduled_posts.post_type'
       )
       .where('deliveries.client_id', clientId)
       .whereNotNull('deliveries.approval_status')
