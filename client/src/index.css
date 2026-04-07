@@ -4,52 +4,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ── Obsidian Studio Dark Theme ──────────────────────────────── */
+/* ── Light Theme (default) ─────────────────────────────────── */
 
 :root {
-    --background: #09090B;
-    --foreground: #FAFAFA;
-    --card: #18181B;
-    --card-foreground: #FAFAFA;
-    --popover: #151518;
-    --popover-foreground: #FAFAFA;
-    --primary: #9A48EA;
-    --primary-foreground: #FFFFFF;
-    --secondary: #1C1C22;
-    --secondary-foreground: #FAFAFA;
-    --muted: #1C1C22;
-    --muted-foreground: #71717A;
-    --accent: #1C1C22;
-    --accent-foreground: #FAFAFA;
-    --destructive: #EF4444;
-    --border: #27272A;
-    --input: #27272A;
-    --ring: #9A48EA;
-    --chart-1: #9A48EA;
-    --chart-2: #6366F1;
-    --chart-3: #3B82F6;
-    --chart-4: #22C55E;
-    --chart-5: #F59E0B;
-    --radius: 0.5rem;
-    --sidebar: #0C0C0F;
-    --sidebar-foreground: #A1A1AA;
-    --sidebar-primary: #9A48EA;
-    --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #9A48EA;
-    --sidebar-accent-foreground: #FFFFFF;
-    --sidebar-border: #1E1E23;
-    --sidebar-ring: #9A48EA;
-
-    /* Extended palette */
-    --ludus-purple: #9A48EA;
-    --ludus-purple-dim: rgba(154, 72, 234, 0.12);
-    --surface-1: #111114;
-    --surface-2: #1A1A1F;
-    --surface-3: #222228;
-}
-
-/* Legacy light mode support (unused — dark-first) */
-.light {
     --background: #FAFAFA;
     --foreground: #09090B;
     --card: #FFFFFF;
@@ -68,6 +25,65 @@
     --border: #E4E4E7;
     --input: #E4E4E7;
     --ring: #9A48EA;
+    --chart-1: #9A48EA;
+    --chart-2: #6366F1;
+    --chart-3: #3B82F6;
+    --chart-4: #22C55E;
+    --chart-5: #F59E0B;
+    --radius: 0.5rem;
+    --sidebar: #FFFFFF;
+    --sidebar-foreground: #64748B;
+    --sidebar-primary: #9A48EA;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #F4F4F5;
+    --sidebar-accent-foreground: #09090B;
+    --sidebar-border: #E4E4E7;
+    --sidebar-ring: #9A48EA;
+
+    /* Extended palette */
+    --ludus-purple: #9A48EA;
+    --ludus-purple-dim: rgba(154, 72, 234, 0.08);
+    --surface-1: #F4F4F5;
+    --surface-2: #E4E4E7;
+    --surface-3: #D4D4D8;
+}
+
+/* ── Dark Theme ────────────────────────────────────────────── */
+
+.dark {
+    --background: #09090B;
+    --foreground: #FAFAFA;
+    --card: #18181B;
+    --card-foreground: #FAFAFA;
+    --popover: #151518;
+    --popover-foreground: #FAFAFA;
+    --primary: #9A48EA;
+    --primary-foreground: #FFFFFF;
+    --secondary: #1C1C22;
+    --secondary-foreground: #FAFAFA;
+    --muted: #1C1C22;
+    --muted-foreground: #71717A;
+    --accent: #1C1C22;
+    --accent-foreground: #FAFAFA;
+    --destructive: #EF4444;
+    --border: #27272A;
+    --input: #27272A;
+    --ring: #9A48EA;
+    --sidebar: #0C0C0F;
+    --sidebar-foreground: #A1A1AA;
+    --sidebar-primary: #9A48EA;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #9A48EA;
+    --sidebar-accent-foreground: #FFFFFF;
+    --sidebar-border: #1E1E23;
+    --sidebar-ring: #9A48EA;
+
+    /* Extended palette */
+    --ludus-purple: #9A48EA;
+    --ludus-purple-dim: rgba(154, 72, 234, 0.12);
+    --surface-1: #111114;
+    --surface-2: #1A1A1F;
+    --surface-3: #222228;
 }
 
 @theme inline {
@@ -150,16 +166,29 @@
     background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-    background: #27272A;
+    background: #D4D4D8;
     border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
+    background: #A1A1AA;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #27272A;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
     background: #3F3F46;
 }
 
-/* ── Sonner Toast Dark Override ───────────────────────────────── */
+/* ── Sonner Toast Override ──────────────────────────────────── */
 
 [data-sonner-toaster] [data-sonner-toast] {
+    --normal-bg: #FFFFFF;
+    --normal-border: #E4E4E7;
+    --normal-text: #09090B;
+}
+
+.dark [data-sonner-toaster] [data-sonner-toast] {
     --normal-bg: #1C1C22;
     --normal-border: #27272A;
     --normal-text: #FAFAFA;
@@ -175,6 +204,11 @@
 /* ── Selection ───────────────────────────────────────────────── */
 
 ::selection {
+    background: rgba(154, 72, 234, 0.2);
+    color: #09090B;
+}
+
+.dark ::selection {
     background: rgba(154, 72, 234, 0.3);
     color: #FAFAFA;
 }
@@ -186,20 +220,40 @@ input[type="range"]::-webkit-slider-thumb {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #FAFAFA;
+    background: #FFFFFF;
     cursor: pointer;
-    box-shadow: 0 0 0 3px #09090B, 0 0 0 5px #9A48EA;
+    box-shadow: 0 0 0 3px #FAFAFA, 0 0 0 5px #9A48EA;
     transition: box-shadow 0.15s;
 }
 input[type="range"]::-webkit-slider-thumb:hover {
-    box-shadow: 0 0 0 3px #09090B, 0 0 0 5px #C084FC, 0 0 12px rgba(154, 72, 234, 0.4);
+    box-shadow: 0 0 0 3px #FAFAFA, 0 0 0 5px #C084FC, 0 0 12px rgba(154, 72, 234, 0.4);
 }
 input[type="range"]::-moz-range-thumb {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #FAFAFA;
+    background: #FFFFFF;
     cursor: pointer;
     border: none;
+    box-shadow: 0 0 0 3px #FAFAFA, 0 0 0 5px #9A48EA;
+}
+
+.dark input[type="range"]::-webkit-slider-thumb {
+    background: #FAFAFA;
     box-shadow: 0 0 0 3px #09090B, 0 0 0 5px #9A48EA;
+}
+.dark input[type="range"]::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 0 3px #09090B, 0 0 0 5px #C084FC, 0 0 12px rgba(154, 72, 234, 0.4);
+}
+.dark input[type="range"]::-moz-range-thumb {
+    background: #FAFAFA;
+    box-shadow: 0 0 0 3px #09090B, 0 0 0 5px #9A48EA;
+}
+
+/* ── Native select styling ──────────────────────────────────── */
+
+.native-select {
+    @apply flex h-8 w-full items-center rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none;
+    @apply focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50;
+    @apply dark:bg-input/30 dark:hover:bg-input/50;
 }
