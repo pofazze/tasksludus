@@ -224,7 +224,7 @@ export default function ClientsPage() {
                 className="pl-9"
               />
             </div>
-            <div className="flex items-center gap-1 rounded-lg border border-zinc-800 p-0.5 overflow-x-auto shrink-0">
+            <div className="flex items-center gap-1 rounded-lg border border-border p-0.5 overflow-x-auto shrink-0">
               {[
                 { key: 'all', label: 'Todos' },
                 { key: 'active', label: 'Ativos' },
@@ -235,8 +235,8 @@ export default function ClientsPage() {
                   onClick={() => setStatusFilter(key)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                     statusFilter === key
-                      ? 'bg-zinc-800 text-zinc-100'
-                      : 'text-zinc-500 hover:text-zinc-300'
+                      ? 'bg-slate-200 text-slate-900 dark:bg-zinc-800 dark:text-zinc-100'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'
                   }`}
                 >
                   {label}
@@ -251,20 +251,20 @@ export default function ClientsPage() {
               {groupedClients.map(({ label: groupLabel, clients: groupClients }) => (
               <div key={groupLabel}>
                 <div className="flex items-center gap-2 mb-3">
-                  <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">{groupLabel}</h2>
-                  <span className="text-xs text-zinc-600">({groupClients.length})</span>
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{groupLabel}</h2>
+                  <span className="text-xs text-muted-foreground/70">({groupClients.length})</span>
                 </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {groupClients.map((c) => (
                 <Card
                   key={c.id}
-                  className="group cursor-pointer transition-all duration-150 hover:ring-zinc-700 hover:shadow-md"
+                  className="group cursor-pointer transition-all duration-150 hover:ring-border hover:shadow-md"
                   onClick={() => navigate(`/clients/${c.id}`)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
                       {/* Avatar */}
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#9A48EA]/15 text-[#9A48EA] text-sm font-bold shrink-0">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100 text-purple-700 dark:bg-[#9A48EA]/15 dark:text-[#9A48EA] text-sm font-bold shrink-0">
                         {initials(c.name)}
                       </div>
 
@@ -275,7 +275,7 @@ export default function ClientsPage() {
                             {c.name}
                           </h3>
                           {!c.is_active && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-500/15 text-zinc-400 shrink-0">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 text-zinc-500 dark:bg-zinc-500/15 dark:text-zinc-400 shrink-0">
                               Inativo
                             </span>
                           )}
@@ -304,7 +304,7 @@ export default function ClientsPage() {
                     </div>
 
                     {/* Bottom row: Instagram + Automations */}
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-zinc-800/50">
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                       {c.instagram_account ? (
                         <a
                           href={`https://instagram.com/${c.instagram_account.replace('@', '')}`}
@@ -317,7 +317,7 @@ export default function ClientsPage() {
                           {c.instagram_account.startsWith('@') ? c.instagram_account : `@${c.instagram_account}`}
                         </a>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs text-zinc-600">
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                           <Instagram size={12} />
                           Sem conta
                         </span>
@@ -330,8 +330,8 @@ export default function ClientsPage() {
                           onClick={(e) => toggleAutomation(e, c)}
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors cursor-pointer ${
                             c.automations_enabled
-                              ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-                              : 'bg-zinc-800/50 text-zinc-600 hover:bg-zinc-700/50'
+                              ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25'
+                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-zinc-800/50 dark:text-zinc-600 dark:hover:bg-zinc-700/50'
                           }`}
                         >
                           <Bot size={10} />
@@ -355,8 +355,8 @@ export default function ClientsPage() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Users size={40} className="text-zinc-700 mb-3" />
-              <p className="text-sm text-zinc-500">
+              <Users size={40} className="text-muted-foreground mb-3" />
+              <p className="text-sm text-muted-foreground">
                 {search || statusFilter !== 'all'
                   ? 'Nenhum cliente encontrado com esses filtros'
                   : 'Nenhum cliente cadastrado'}
@@ -510,7 +510,7 @@ export default function ClientsPage() {
                         id="social_media_id"
                         value={form.social_media_id || ''}
                         onChange={(e) => setForm({ ...form, social_media_id: e.target.value })}
-                        className="flex h-8 w-full items-center rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50"
+                        className="native-select"
                       >
                         <option value="">Nenhum</option>
                         {users.filter((u) => u.producer_type === 'social_media').map((u) => (
@@ -526,7 +526,7 @@ export default function ClientsPage() {
                       value={form.whatsapp_group || ''}
                       onChange={(e) => setForm({ ...form, whatsapp_group: e.target.value })}
                       onFocus={() => { if (whatsappGroups.length === 0 && !loadingGroups) fetchWhatsAppGroups(); }}
-                      className="flex h-8 w-full items-center rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50"
+                      className="native-select"
                     >
                       <option value="">{loadingGroups ? 'Carregando grupos...' : 'Selecione o grupo'}</option>
                       {whatsappGroups.map((g) => (
