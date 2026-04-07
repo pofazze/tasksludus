@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { listByClient, listBatches, smApprove, sendToClient, revokeBatch } from '@/services/approvals';
+import { listByClient, listBatches, smApprove, sendToClient, revokeBatch, getBatchItems, updateBatchItem, removeBatchItem } from '@/services/approvals';
 import { APPROVAL_STATUS_LABELS, APPROVAL_STATUS_COLORS } from '@/lib/constants';
 import useServerEvent from '@/hooks/useServerEvent';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import ApprovalReviewSheet from '@/components/approvals/ApprovalReviewSheet';
-import { CheckCircle2, Send, XCircle, Loader2 } from 'lucide-react';
+import BatchEditSheet from '@/components/approvals/BatchEditSheet';
+import { CheckCircle2, Send, XCircle, Loader2, Pencil } from 'lucide-react';
 
 const SSE_EVENTS = ['approval:updated', 'delivery:updated'];
 
@@ -31,6 +32,10 @@ export default function ApprovalTab({ clientId }) {
 
   // Prepared content (caption, media_urls, etc.) stored after SM approval
   const [preparedContent, setPreparedContent] = useState({});
+
+  // Batch edit state
+  const [editBatch, setEditBatch] = useState(null);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   // Loading states
   const [sending, setSending] = useState(false);
@@ -283,28 +288,41 @@ export default function ApprovalTab({ clientId }) {
                 <CardContent className="p-4 flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-zinc-200 truncate">
-                      Lote #{batch.id}
+                      Lote de {fmtDate(batch.created_at)}
                     </p>
                     <p className="text-xs text-zinc-500 mt-0.5">
-                      {batch.item_count ?? batch.items?.length ?? 0} entrega(s)
-                      {batch.created_at && ` · Criado em ${fmtDate(batch.created_at)}`}
+                      {batch.total_items || 0} post(s)
+                      {batch.pending_count > 0 && ` · ${batch.pending_count} pendente(s)`}
+                      {batch.approved_count > 0 && ` · ${batch.approved_count} aprovado(s)`}
+                      {batch.rejected_count > 0 && ` · ${batch.rejected_count} rejeitado(s)`}
                     </p>
                   </div>
                   <Badge className="bg-purple-500/15 text-purple-400">
                     Ativo
                   </Badge>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-red-800 text-red-400 hover:bg-red-950 shrink-0 gap-1"
-                    disabled={revokingId === batch.id}
-                    onClick={() => handleRevoke(batch.id)}
-                  >
-                    {revokingId === batch.id
-                      ? <Loader2 size={13} className="animate-spin" />
-                      : <XCircle size={13} />}
-                    Revogar
-                  </Button>
+                  <div className="flex gap-1.5 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-zinc-700 hover:bg-zinc-800 gap-1"
+                      onClick={() => { setEditBatch(batch); setEditSheetOpen(true); }}
+                    >
+                      <Pencil size={13} />
+                      Editar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-red-800 text-red-400 hover:bg-red-950 gap-1"
+                      disabled={revokingId === batch.id}
+                      onClick={() => handleRevoke(batch.id)}
+                    >
+                      {revokingId === batch.id
+                        ? <Loader2 size={13} className="animate-spin" />
+                        : <XCircle size={13} />}
+                      Revogar
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -318,6 +336,14 @@ export default function ApprovalTab({ clientId }) {
         onOpenChange={setSheetOpen}
         delivery={reviewDelivery}
         onApprove={handleSmApprove}
+      />
+
+      {/* ─── Batch Edit Sheet ──────────────────────────── */}
+      <BatchEditSheet
+        open={editSheetOpen}
+        onOpenChange={setEditSheetOpen}
+        batch={editBatch}
+        onUpdate={fetchData}
       />
     </div>
   );

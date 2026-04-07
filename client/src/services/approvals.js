@@ -21,6 +21,15 @@ export const listBatches = (clientId) =>
 export const revokeBatch = (batchId) =>
   api.post(`/approvals/batches/${batchId}/revoke`).then((r) => r.data);
 
+export const getBatchItems = (batchId) =>
+  api.get(`/approvals/batches/${batchId}/items`).then((r) => r.data);
+
+export const updateBatchItem = (batchId, itemId, data) =>
+  api.put(`/approvals/batches/${batchId}/items/${itemId}`, data).then((r) => r.data);
+
+export const removeBatchItem = (batchId, itemId) =>
+  api.delete(`/approvals/batches/${batchId}/items/${itemId}`).then((r) => r.data);
+
 export const listWhatsAppGroups = () =>
   api.get('/approvals/whatsapp-groups').then((r) => r.data);
 

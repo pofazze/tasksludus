@@ -19,6 +19,9 @@ router.post('/sm-approve', controller.smApprove.bind(controller));
 router.post('/send-to-client', controller.sendToClient.bind(controller));
 router.get('/batches/:clientId', controller.listBatches.bind(controller));
 router.post('/batches/:batchId/revoke', controller.revokeBatch.bind(controller));
+router.get('/batches/:batchId/items', controller.getBatchItems.bind(controller));
+router.put('/batches/:batchId/items/:itemId', controller.updateBatchItem.bind(controller));
+router.delete('/batches/:batchId/items/:itemId', controller.removeBatchItem.bind(controller));
 router.get('/whatsapp-groups', controller.listWhatsAppGroups.bind(controller));
 
 module.exports = router;

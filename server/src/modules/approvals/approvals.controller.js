@@ -72,6 +72,33 @@ class ApprovalsController {
     }
   }
 
+  async getBatchItems(req, res, next) {
+    try {
+      const data = await service.getBatchItems(req.params.batchId);
+      res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateBatchItem(req, res, next) {
+    try {
+      const result = await service.updateBatchItem(req.params.batchId, req.params.itemId, req.body);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async removeBatchItem(req, res, next) {
+    try {
+      const result = await service.removeBatchItem(req.params.batchId, req.params.itemId);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async listWhatsAppGroups(req, res, next) {
     try {
       const groups = await service.listWhatsAppGroups();

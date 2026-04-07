@@ -364,17 +364,17 @@ class ApprovalsService {
     if (!batch) {
       throw Object.assign(new Error('Approval batch not found'), { status: 404 });
     }
-    if (batch.status !== 'pending') {
-      throw Object.assign(new Error('Only pending batches can be revoked'), { status: 400 });
+    if (batch.status === 'revoked') {
+      throw Object.assign(new Error('Batch already revoked'), { status: 400 });
     }
 
-    // Get pending items to revert their deliveries
-    const pendingItems = await db('approval_items')
-      .where({ batch_id: batchId, status: 'pending' })
+    // Get all items to revert their deliveries (pending or already responded)
+    const items = await db('approval_items')
+      .where({ batch_id: batchId })
       .select('*');
 
-    // Revert pending items' deliveries back to sm_approved
-    for (const item of pendingItems) {
+    // Revert deliveries back to sm_approved
+    for (const item of items) {
       await db('deliveries')
         .where({ id: item.delivery_id })
         .update({ approval_status: 'sm_approved', updated_at: new Date() });
@@ -398,10 +398,10 @@ class ApprovalsService {
       logger.warn('Could not cancel approval reminder job on revoke', { batchId, error: err.message });
     }
 
-    logger.info('Approval batch revoked', { batchId, userId, revertedCount: pendingItems.length });
+    logger.info('Approval batch revoked', { batchId, userId, revertedCount: items.length });
     eventBus.emit('sse', { type: 'approval:updated', payload: { batchId, clientId: batch.client_id } });
 
-    return { success: true, revertedCount: pendingItems.length };
+    return { success: true, revertedCount: items.length };
   }
 
   // ─── List Batches ─────────────────────────────────────────────
@@ -422,6 +422,90 @@ class ApprovalsService {
       .where('approval_batches.client_id', clientId)
       .groupBy('approval_batches.id')
       .orderBy('approval_batches.created_at', 'desc');
+  }
+
+  // ─── Get Batch Items ───────────────────────────────────────────
+
+  async getBatchItems(batchId) {
+    const batch = await db('approval_batches').where({ id: batchId }).first();
+    if (!batch) {
+      throw Object.assign(new Error('Approval batch not found'), { status: 404 });
+    }
+
+    const items = await db('approval_items')
+      .join('deliveries', 'approval_items.delivery_id', 'deliveries.id')
+      .select(
+        'approval_items.*',
+        'deliveries.title as delivery_title',
+        'deliveries.content_type as delivery_content_type'
+      )
+      .where('approval_items.batch_id', batchId)
+      .orderBy('approval_items.created_at', 'asc');
+
+    return { batch, items };
+  }
+
+  // ─── Update Batch Item ────────────────────────────────────────
+
+  async updateBatchItem(batchId, itemId, data) {
+    const batch = await db('approval_batches').where({ id: batchId }).first();
+    if (!batch) {
+      throw Object.assign(new Error('Approval batch not found'), { status: 404 });
+    }
+
+    const item = await db('approval_items').where({ id: itemId, batch_id: batchId }).first();
+    if (!item) {
+      throw Object.assign(new Error('Approval item not found'), { status: 404 });
+    }
+
+    const updateData = {};
+    if (data.caption !== undefined) updateData.caption = data.caption;
+    if (data.media_urls !== undefined) updateData.media_urls = JSON.stringify(data.media_urls);
+    if (data.thumbnail_url !== undefined) updateData.thumbnail_url = data.thumbnail_url;
+    if (data.post_type !== undefined) updateData.post_type = data.post_type;
+    updateData.updated_at = new Date();
+
+    const [updated] = await db('approval_items')
+      .where({ id: itemId })
+      .update(updateData)
+      .returning('*');
+
+    logger.info('Approval item updated', { batchId, itemId });
+    return updated;
+  }
+
+  // ─── Remove Batch Item ────────────────────────────────────────
+
+  async removeBatchItem(batchId, itemId) {
+    const batch = await db('approval_batches').where({ id: batchId }).first();
+    if (!batch) {
+      throw Object.assign(new Error('Approval batch not found'), { status: 404 });
+    }
+
+    const item = await db('approval_items').where({ id: itemId, batch_id: batchId }).first();
+    if (!item) {
+      throw Object.assign(new Error('Approval item not found'), { status: 404 });
+    }
+
+    // Revert delivery back to sm_approved
+    await db('deliveries')
+      .where({ id: item.delivery_id })
+      .update({ approval_status: 'sm_approved', updated_at: new Date() });
+
+    await db('approval_items').where({ id: itemId }).del();
+
+    // If batch has no more items, auto-revoke it
+    const remaining = await db('approval_items').where({ batch_id: batchId }).count('id as count').first();
+    if (parseInt(remaining.count, 10) === 0) {
+      await db('approval_batches')
+        .where({ id: batchId })
+        .update({ status: 'revoked', revoked_at: new Date(), updated_at: new Date() });
+      logger.info('Batch auto-revoked (no items left)', { batchId });
+    }
+
+    logger.info('Approval item removed from batch', { batchId, itemId });
+    eventBus.emit('sse', { type: 'approval:updated', payload: { batchId, clientId: batch.client_id } });
+    return { success: true };
   }
 
   // ─── List WhatsApp Groups ─────────────────────────────────────
