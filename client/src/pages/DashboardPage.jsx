@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import ReactECharts from 'echarts-for-react';
+import '@/lib/echarts-theme';
+import { useEChartsTheme } from '@/lib/echarts-theme';
 import api from '@/services/api';
 import useAuthStore from '@/stores/authStore';
 import { isManagement } from '@/lib/roles';
@@ -22,6 +25,13 @@ import {
   BarChart3, Layers, User,
 } from 'lucide-react';
 
+const STATUS_CHART_COLORS = {
+  triagem: '#F97316', planejamento: '#71717A', captacao: '#0EA5E9',
+  edicao_de_video: '#8B5CF6', estruturacao: '#EAB308', design: '#3B82F6',
+  aprovacao: '#EC4899', correcao: '#EF4444', agendamento: '#F59E0B',
+  agendado: '#14B8A6', publicacao: '#22C55E',
+};
+
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
@@ -31,6 +41,7 @@ export default function DashboardPage() {
   const [goals, setGoals] = useState([]);
 
   const isMgmt = isManagement(user?.role);
+  const echartsTheme = useEChartsTheme();
 
   const currentMonth = () => {
     const now = new Date();
@@ -280,25 +291,37 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Section 3: Compact Pipeline */}
+          {/* Section 3: Pipeline horizontal bar chart */}
           <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Pipeline de Produção</h2>
-          <div className="flex gap-1 overflow-x-auto mb-8">
-            {PIPELINE_ORDER.map((status) => {
-              const count = deliveries.filter((d) => d.status === status).length;
-              return (
-                <div
-                  key={status}
-                  onClick={() => navigate(`/deliveries?status=${status}`)}
-                  className={`flex flex-col items-center px-3 py-2 rounded-lg text-xs whitespace-nowrap cursor-pointer transition-opacity duration-150 hover:opacity-80 ${
-                    count > 0 ? PIPELINE_STATUS_COLORS[status] : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  <span className="font-bold text-lg tabular-nums">{count}</span>
-                  <span>{PIPELINE_STATUSES[status]}</span>
-                </div>
-              );
-            })}
-          </div>
+          <Card className="mb-8">
+            <CardContent className="pt-4 pb-2">
+              <ReactECharts
+                theme={echartsTheme}
+                style={{ height: Math.max(PIPELINE_ORDER.length * 28, 180) }}
+                option={{
+                  tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                  grid: { left: 100, right: 30, top: 10, bottom: 10, containLabel: false },
+                  xAxis: { type: 'value', show: false },
+                  yAxis: {
+                    type: 'category',
+                    data: PIPELINE_ORDER.map((s) => PIPELINE_STATUSES[s]).reverse(),
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                  },
+                  series: [{
+                    type: 'bar',
+                    data: PIPELINE_ORDER.map((s) => ({
+                      value: deliveries.filter((d) => d.status === s).length,
+                      itemStyle: { color: STATUS_CHART_COLORS[s] || '#71717A' },
+                    })).reverse(),
+                    barWidth: 16,
+                    itemStyle: { borderRadius: [0, 4, 4, 0] },
+                    label: { show: true, position: 'right', fontSize: 11 },
+                  }],
+                }}
+              />
+            </CardContent>
+          </Card>
 
           {/* Section 4: Workload + Deliveries by Format (side-by-side) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -308,41 +331,47 @@ export default function DashboardPage() {
                 Carga de Trabalho
               </h2>
               <Card>
-                <CardContent className="p-0">
-                  <div className="divide-y divide-border">
-                    {(() => {
-                      const workload = {};
-                      activeDeliveries.forEach((d) => {
-                        if (!d.user_id || d.status === 'publicacao' || d.status === 'completed') return;
-                        if (!workload[d.user_id]) workload[d.user_id] = { name: d.user_name || 'Sem responsável', count: 0 };
-                        workload[d.user_id].count++;
-                      });
-                      const sorted = Object.values(workload).sort((a, b) => b.count - a.count);
-                      const maxCount = sorted[0]?.count || 1;
+                <CardContent className="pt-4 pb-2">
+                  {(() => {
+                    const workload = {};
+                    activeDeliveries.forEach((d) => {
+                      if (!d.user_id || d.status === 'publicacao' || d.status === 'completed') return;
+                      if (!workload[d.user_id]) workload[d.user_id] = { name: d.user_name || 'Sem responsável', count: 0 };
+                      workload[d.user_id].count++;
+                    });
+                    const sorted = Object.values(workload).sort((a, b) => b.count - a.count);
+                    const workloadNames = sorted.map((w) => w.name);
+                    const workloadCounts = sorted.map((w) => w.count);
 
-                      if (sorted.length === 0) {
-                        return <p className="text-center text-muted-foreground py-6 text-sm">Sem entregas em produção</p>;
-                      }
+                    if (sorted.length === 0) {
+                      return <p className="text-center text-muted-foreground py-6 text-sm">Sem entregas em produção</p>;
+                    }
 
-                      return sorted.map((w) => (
-                        <div key={w.name} className="flex items-center gap-3 px-4 py-2.5">
-                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-muted shrink-0">
-                            <User size={14} className="text-zinc-500" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{w.name}</p>
-                            <div className="h-1.5 bg-muted dark:bg-zinc-800 rounded-full overflow-hidden mt-1">
-                              <div
-                                className="h-full rounded-full bg-primary transition-all duration-500"
-                                style={{ width: `${(w.count / maxCount) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                          <span className="text-sm font-bold tabular-nums text-foreground shrink-0">{w.count}</span>
-                        </div>
-                      ));
-                    })()}
-                  </div>
+                    return (
+                      <ReactECharts
+                        theme={echartsTheme}
+                        style={{ height: Math.max(sorted.length * 32, 120) }}
+                        option={{
+                          tooltip: { trigger: 'axis' },
+                          grid: { left: 100, right: 30, top: 10, bottom: 10 },
+                          xAxis: { type: 'value', show: false },
+                          yAxis: {
+                            type: 'category',
+                            data: workloadNames.slice().reverse(),
+                            axisLine: { show: false },
+                            axisTick: { show: false },
+                          },
+                          series: [{
+                            type: 'bar',
+                            data: workloadCounts.slice().reverse(),
+                            barWidth: 14,
+                            itemStyle: { color: '#9A48EA', borderRadius: [0, 4, 4, 0] },
+                            label: { show: true, position: 'right', fontSize: 11 },
+                          }],
+                        }}
+                      />
+                    );
+                  })()}
                 </CardContent>
               </Card>
             </div>
@@ -353,53 +382,44 @@ export default function DashboardPage() {
                 Entregas por Formato
               </h2>
               <Card>
-                <CardContent className="p-0">
-                  <div className="divide-y divide-border">
-                    {(() => {
-                      const byFormat = {};
-                      activeDeliveries.forEach((d) => {
-                        const key = d.content_type || 'outros';
-                        byFormat[key] = (byFormat[key] || 0) + 1;
-                      });
-                      const sorted = Object.entries(byFormat).sort(([, a], [, b]) => b - a);
-                      const maxCount = sorted[0]?.[1] || 1;
+                <CardContent className="pt-4 pb-2">
+                  {(() => {
+                    const byFormat = {};
+                    activeDeliveries.forEach((d) => {
+                      const key = d.content_type || 'outros';
+                      byFormat[key] = (byFormat[key] || 0) + 1;
+                    });
+                    const sorted = Object.entries(byFormat).sort(([, a], [, b]) => b - a);
 
-                      if (sorted.length === 0) {
-                        return <p className="text-center text-muted-foreground py-6 text-sm">Nenhuma entrega este mês</p>;
-                      }
+                    if (sorted.length === 0) {
+                      return <p className="text-center text-muted-foreground py-6 text-sm">Nenhuma entrega este mês</p>;
+                    }
 
-                      const formatColors = {
-                        reel: 'bg-blue-500',
-                        feed: 'bg-emerald-500',
-                        story: 'bg-amber-500',
-                        carrossel: 'bg-purple-500',
-                        banner: 'bg-pink-500',
-                        caixinha: 'bg-orange-500',
-                        analise: 'bg-cyan-500',
-                        pdf: 'bg-red-500',
-                        video: 'bg-indigo-500',
-                        mockup: 'bg-teal-500',
-                      };
+                    const formatData = sorted.map(([type, count]) => ({
+                      name: CONTENT_TYPE_LABELS[type] || type,
+                      value: count,
+                    }));
 
-                      return sorted.map(([type, count]) => (
-                        <div key={type} className="flex items-center gap-3 px-4 py-2.5">
-                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-muted shrink-0">
-                            <Layers size={14} className="text-zinc-500" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">{CONTENT_TYPE_LABELS[type] || type}</p>
-                            <div className="h-1.5 bg-muted dark:bg-zinc-800 rounded-full overflow-hidden mt-1">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${formatColors[type] || 'bg-zinc-500'}`}
-                                style={{ width: `${(count / maxCount) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                          <span className="text-sm font-bold tabular-nums text-foreground shrink-0">{count}</span>
-                        </div>
-                      ));
-                    })()}
-                  </div>
+                    return (
+                      <ReactECharts
+                        theme={echartsTheme}
+                        style={{ height: 260 }}
+                        option={{
+                          tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+                          legend: { bottom: 0, type: 'scroll', textStyle: { fontSize: 11 } },
+                          series: [{
+                            type: 'pie',
+                            radius: ['55%', '80%'],
+                            center: ['50%', '45%'],
+                            data: formatData,
+                            label: { show: false },
+                            emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+                            itemStyle: { borderRadius: 4 },
+                          }],
+                        }}
+                      />
+                    );
+                  })()}
                 </CardContent>
               </Card>
             </div>
@@ -496,24 +516,37 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Personal pipeline */}
+          {/* Personal pipeline horizontal bar chart */}
           <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Meu Pipeline</h2>
-          <div className="flex gap-1 mb-6 overflow-x-auto">
-            {PIPELINE_ORDER.map((status) => {
-              const count = myDeliveries.filter((d) => d.status === status).length;
-              return (
-                <div
-                  key={status}
-                  className={`flex flex-col items-center px-3 py-2 rounded-lg text-xs whitespace-nowrap ${
-                    count > 0 ? PIPELINE_STATUS_COLORS[status] : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  <span className="font-bold text-lg tabular-nums">{count}</span>
-                  <span>{PIPELINE_STATUSES[status]}</span>
-                </div>
-              );
-            })}
-          </div>
+          <Card className="mb-6">
+            <CardContent className="pt-4 pb-2">
+              <ReactECharts
+                theme={echartsTheme}
+                style={{ height: Math.max(PIPELINE_ORDER.length * 28, 180) }}
+                option={{
+                  tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                  grid: { left: 100, right: 30, top: 10, bottom: 10, containLabel: false },
+                  xAxis: { type: 'value', show: false },
+                  yAxis: {
+                    type: 'category',
+                    data: PIPELINE_ORDER.map((s) => PIPELINE_STATUSES[s]).reverse(),
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                  },
+                  series: [{
+                    type: 'bar',
+                    data: PIPELINE_ORDER.map((s) => ({
+                      value: myDeliveries.filter((d) => d.status === s).length,
+                      itemStyle: { color: STATUS_CHART_COLORS[s] || '#71717A' },
+                    })).reverse(),
+                    barWidth: 16,
+                    itemStyle: { borderRadius: [0, 4, 4, 0] },
+                    label: { show: true, position: 'right', fontSize: 11 },
+                  }],
+                }}
+              />
+            </CardContent>
+          </Card>
 
           {/* Recent deliveries */}
           <Card>
