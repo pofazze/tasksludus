@@ -160,7 +160,7 @@ export default function DashboardPage() {
             >
               <CardContent className="flex items-center gap-4 pt-6">
                 <div className="rounded-lg p-2.5 bg-purple-500/15">
-                  <Package size={22} className="text-[#9A48EA]" />
+                  <Package size={22} className="text-primary" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Entregas do Mês</p>
@@ -207,7 +207,7 @@ export default function DashboardPage() {
             </h2>
             <button
               onClick={() => navigate('/ranking')}
-              className="cursor-pointer text-sm text-[#9A48EA] hover:underline flex items-center gap-1 transition-colors duration-150"
+              className="cursor-pointer text-sm text-primary hover:underline flex items-center gap-1 transition-colors duration-150"
             >
               Ver ranking <ArrowRight size={12} />
             </button>
@@ -215,7 +215,7 @@ export default function DashboardPage() {
 
           <Card className="mb-8">
             <CardContent className="p-0">
-              <div className="divide-y">
+              <div className="divide-y divide-border">
                 {leaderboard.length > 0 ? (
                   leaderboard.map((row) => (
                     <div
@@ -246,7 +246,7 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Progress bar */}
-                        <div className="h-2 bg-zinc-800 rounded-full overflow-hidden mb-1">
+                        <div className="h-2 bg-muted dark:bg-zinc-800 rounded-full overflow-hidden mb-1">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${progressBarColor(row.pct)}`}
                             style={{ width: row.pct !== null ? `${Math.min(row.pct, 100)}%` : `${row.total > 0 ? Math.min(row.total * 5, 100) : 0}%` }}
@@ -267,7 +267,7 @@ export default function DashboardPage() {
 
                       {/* Multiplier badge */}
                       {row.multiplier != null && (
-                        <Badge variant="secondary" className="bg-purple-500/15 text-purple-400 shrink-0">
+                        <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400 shrink-0">
                           {row.multiplier}x
                         </Badge>
                       )}
@@ -290,7 +290,7 @@ export default function DashboardPage() {
                   key={status}
                   onClick={() => navigate(`/deliveries?status=${status}`)}
                   className={`flex flex-col items-center px-3 py-2 rounded-lg text-xs whitespace-nowrap cursor-pointer transition-opacity duration-150 hover:opacity-80 ${
-                    count > 0 ? PIPELINE_STATUS_COLORS[status] : 'bg-zinc-800/30 text-zinc-600'
+                    count > 0 ? PIPELINE_STATUS_COLORS[status] : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   <span className="font-bold text-lg tabular-nums">{count}</span>
@@ -309,7 +309,7 @@ export default function DashboardPage() {
               </h2>
               <Card>
                 <CardContent className="p-0">
-                  <div className="divide-y divide-zinc-800/50">
+                  <div className="divide-y divide-border">
                     {(() => {
                       const workload = {};
                       activeDeliveries.forEach((d) => {
@@ -326,19 +326,19 @@ export default function DashboardPage() {
 
                       return sorted.map((w) => (
                         <div key={w.name} className="flex items-center gap-3 px-4 py-2.5">
-                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-zinc-800 shrink-0">
+                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-muted shrink-0">
                             <User size={14} className="text-zinc-500" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{w.name}</p>
-                            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-1">
+                            <div className="h-1.5 bg-muted dark:bg-zinc-800 rounded-full overflow-hidden mt-1">
                               <div
-                                className="h-full rounded-full bg-[#9A48EA] transition-all duration-500"
+                                className="h-full rounded-full bg-primary transition-all duration-500"
                                 style={{ width: `${(w.count / maxCount) * 100}%` }}
                               />
                             </div>
                           </div>
-                          <span className="text-sm font-bold tabular-nums text-zinc-300 shrink-0">{w.count}</span>
+                          <span className="text-sm font-bold tabular-nums text-foreground shrink-0">{w.count}</span>
                         </div>
                       ));
                     })()}
@@ -354,7 +354,7 @@ export default function DashboardPage() {
               </h2>
               <Card>
                 <CardContent className="p-0">
-                  <div className="divide-y divide-zinc-800/50">
+                  <div className="divide-y divide-border">
                     {(() => {
                       const byFormat = {};
                       activeDeliveries.forEach((d) => {
@@ -383,19 +383,19 @@ export default function DashboardPage() {
 
                       return sorted.map(([type, count]) => (
                         <div key={type} className="flex items-center gap-3 px-4 py-2.5">
-                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-zinc-800 shrink-0">
+                          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-muted shrink-0">
                             <Layers size={14} className="text-zinc-500" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium">{CONTENT_TYPE_LABELS[type] || type}</p>
-                            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-1">
+                            <div className="h-1.5 bg-muted dark:bg-zinc-800 rounded-full overflow-hidden mt-1">
                               <div
                                 className={`h-full rounded-full transition-all duration-500 ${formatColors[type] || 'bg-zinc-500'}`}
                                 style={{ width: `${(count / maxCount) * 100}%` }}
                               />
                             </div>
                           </div>
-                          <span className="text-sm font-bold tabular-nums text-zinc-300 shrink-0">{count}</span>
+                          <span className="text-sm font-bold tabular-nums text-foreground shrink-0">{count}</span>
                         </div>
                       ));
                     })()}
@@ -409,7 +409,7 @@ export default function DashboardPage() {
           <Card>
             <div className="flex items-center justify-between px-6 pt-6 pb-2">
               <h3 className="text-base font-semibold">Entregas Recentes</h3>
-              <button onClick={() => navigate('/deliveries')} className="cursor-pointer text-sm text-[#9A48EA] hover:underline flex items-center gap-1">
+              <button onClick={() => navigate('/deliveries')} className="cursor-pointer text-sm text-primary hover:underline flex items-center gap-1">
                 Ver todas <ArrowRight size={12} />
               </button>
             </div>
@@ -426,7 +426,7 @@ export default function DashboardPage() {
                   </div>
                   <Badge
                     variant="secondary"
-                    className={PIPELINE_STATUS_COLORS[d.status] || 'bg-zinc-800/50 text-zinc-300'}
+                    className={PIPELINE_STATUS_COLORS[d.status] || 'bg-muted text-foreground'}
                   >
                     {PIPELINE_STATUSES[d.status] || d.status}
                   </Badge>
@@ -505,7 +505,7 @@ export default function DashboardPage() {
                 <div
                   key={status}
                   className={`flex flex-col items-center px-3 py-2 rounded-lg text-xs whitespace-nowrap ${
-                    count > 0 ? PIPELINE_STATUS_COLORS[status] : 'bg-zinc-800/30 text-zinc-600'
+                    count > 0 ? PIPELINE_STATUS_COLORS[status] : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   <span className="font-bold text-lg tabular-nums">{count}</span>
@@ -519,7 +519,7 @@ export default function DashboardPage() {
           <Card>
             <div className="flex items-center justify-between px-6 pt-6 pb-2">
               <h3 className="text-base font-semibold">Minhas Entregas Recentes</h3>
-              <button onClick={() => navigate('/deliveries')} className="cursor-pointer text-sm text-[#9A48EA] hover:underline flex items-center gap-1">
+              <button onClick={() => navigate('/deliveries')} className="cursor-pointer text-sm text-primary hover:underline flex items-center gap-1">
                 Ver todas <ArrowRight size={12} />
               </button>
             </div>
@@ -534,7 +534,7 @@ export default function DashboardPage() {
                   </div>
                   <Badge
                     variant="secondary"
-                    className={PIPELINE_STATUS_COLORS[d.status] || 'bg-zinc-800/50 text-zinc-300'}
+                    className={PIPELINE_STATUS_COLORS[d.status] || 'bg-muted text-foreground'}
                   >
                     {PIPELINE_STATUSES[d.status] || d.status}
                   </Badge>
