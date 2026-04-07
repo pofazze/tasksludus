@@ -10,3 +10,14 @@ coverage/
 .vscode/
 !.vscode/settings.json
 .claude/
+
+# Claude Code Docker infrastructure
+Dockerfile.*
+docker-compose*.yml
+setup-claude.sh
+context-claudinho.md
+.agents/
+.railwayignore
+skills-lock.json
+tmp_task.json
+frontend.md
