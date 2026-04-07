@@ -22,6 +22,7 @@ export const PIPELINE_STATUSES = {
   estruturacao: 'Estruturação',
   design: 'Design',
   aprovacao: 'Aprovação',
+  correcao: 'Correção',
   agendamento: 'Agendamento',
   agendado: 'Agendado',
   publicacao: 'Publicação',
@@ -36,6 +37,7 @@ export const PIPELINE_STATUS_COLORS = {
   estruturacao: 'bg-yellow-500/15 text-yellow-400',
   design: 'bg-blue-500/15 text-blue-400',
   aprovacao: 'bg-pink-500/15 text-pink-400',
+  correcao: 'bg-red-500/15 text-red-400',
   agendamento: 'bg-amber-500/15 text-amber-400',
   agendado: 'bg-teal-500/15 text-teal-400',
   publicacao: 'bg-emerald-500/15 text-emerald-400',
@@ -44,7 +46,7 @@ export const PIPELINE_STATUS_COLORS = {
 // Pipeline order for sorting and display
 export const PIPELINE_ORDER = [
   'triagem', 'planejamento', 'captacao', 'edicao_de_video',
-  'estruturacao', 'design', 'aprovacao', 'agendamento', 'agendado', 'publicacao',
+  'estruturacao', 'design', 'aprovacao', 'correcao', 'agendamento', 'agendado', 'publicacao',
 ];
 
 export const DIFFICULTY_LABELS = {

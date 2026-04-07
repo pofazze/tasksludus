@@ -11,16 +11,20 @@ export default defineConfig({
     },
   },
   server: {
-    port: 4401,
+    port: 5175,
     host: true,
     allowedHosts: ['tasksludus.local'],
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
     proxy: {
       '/api': {
-        target: 'http://localhost:4400',
+        target: 'http://localhost:4567',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:4400',
+        target: 'http://localhost:4567',
         ws: true,
       },
     },

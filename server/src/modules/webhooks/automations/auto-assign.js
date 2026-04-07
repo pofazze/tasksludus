@@ -75,7 +75,7 @@ async function run(clickupTaskId, newStatusName, task) {
     assigneeId = PHASE_ASSIGNEE_MAP[normalized];
   }
 
-  // Dynamic lookup for approval phase — find social media from client
+  // Dynamic lookup for approval phase — find social media from client, fallback to Samella
   if (['aprovação', 'aprovacao'].includes(normalized) && !assigneeId) {
     const listId = task?.list?.id;
     if (listId) {
@@ -87,6 +87,11 @@ async function run(clickupTaskId, newStatusName, task) {
           logger.info(`auto-assign: approval phase → dynamic SM lookup → ${smUser.name} (${assigneeId})`);
         }
       }
+    }
+    // Fallback: Samella
+    if (!assigneeId) {
+      assigneeId = '284598101'; // Aléxia Sâmella
+      logger.info(`auto-assign: approval phase → fallback to Samella (${assigneeId})`);
     }
   }
 

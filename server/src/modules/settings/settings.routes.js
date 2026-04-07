@@ -14,4 +14,9 @@ router.put('/integrations/:id', ceoOnly, settingsController.updateIntegration.bi
 router.post('/integrations/test/clickup', ceoOnly, settingsController.testClickUp.bind(settingsController));
 router.post('/integrations/test/instagram', ceoOnly, settingsController.testInstagram.bind(settingsController));
 
+// Evolution API / WhatsApp
+router.post('/evolution/create-instance', ceoOnly, settingsController.evolutionCreateInstance.bind(settingsController));
+router.get('/evolution/connect/:instanceName', ceoOnly, settingsController.evolutionConnect.bind(settingsController));
+router.get('/evolution/connection-state/:instanceName', ceoOnly, settingsController.evolutionConnectionState.bind(settingsController));
+
 module.exports = router;

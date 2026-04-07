@@ -50,6 +50,14 @@ export default function AgendamentoTab({ clientId }) {
     }
   };
 
+  // Re-fetch and optionally switch tab after post update
+  const handlePostUpdated = (newStatus) => {
+    fetchPosts();
+    if (newStatus === 'scheduled') setActiveTab('scheduled');
+    else if (['published', 'publishing', 'failed'].includes(newStatus)) setActiveTab('published');
+    else if (newStatus === 'draft') setActiveTab('draft');
+  };
+
   useEffect(() => { fetchPosts(); }, [clientId]);
 
   // Re-fetch when server pushes post events
@@ -146,7 +154,7 @@ export default function AgendamentoTab({ clientId }) {
         </div>
       )}
 
-      <PostReviewSheet post={reviewPost} open={sheetOpen} onOpenChange={setSheetOpen} onUpdated={fetchPosts} />
+      <PostReviewSheet post={reviewPost} open={sheetOpen} onOpenChange={setSheetOpen} onUpdated={handlePostUpdated} />
     </div>
   );
 }

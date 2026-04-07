@@ -177,7 +177,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
     try {
       await updateScheduledPost(post.id, buildPayload({ scheduled_at: null }));
       toast.success('Rascunho salvo');
-      onUpdated?.();
+      onUpdated?.('draft');
       onOpenChange(false);
     } catch {
       toast.error('Erro ao salvar rascunho');
@@ -201,7 +201,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
     try {
       await updateScheduledPost(post.id, buildPayload({ scheduled_at: scheduledAt }));
       toast.success('Post agendado');
-      onUpdated?.();
+      onUpdated?.('scheduled');
       onOpenChange(false);
     } catch {
       toast.error('Erro ao agendar');
@@ -223,7 +223,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
       await updateScheduledPost(post.id, buildPayload());
       await publishNow(post.id);
       toast.success('Publicação iniciada');
-      onUpdated?.();
+      onUpdated?.('published');
       onOpenChange(false);
     } catch {
       toast.error('Erro ao publicar');

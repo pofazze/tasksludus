@@ -9,6 +9,9 @@ const createClientSchema = Joi.object({
   clickup_list_id: Joi.string().max(50).allow(null, '').optional(),
   automations_enabled: Joi.boolean().default(false).optional(),
   category: Joi.string().valid('health', 'experts').allow(null, '').optional(),
+  social_media_id: Joi.string().uuid().allow(null).optional(),
+  whatsapp: Joi.string().max(20).allow(null, '').optional(),
+  whatsapp_group: Joi.string().max(50).allow(null, '').optional(),
 });
 
 const updateClientSchema = Joi.object({
@@ -20,6 +23,9 @@ const updateClientSchema = Joi.object({
   clickup_list_id: Joi.string().max(50).allow(null, '').optional(),
   automations_enabled: Joi.boolean().optional(),
   category: Joi.string().valid('health', 'experts').allow(null, '').optional(),
+  social_media_id: Joi.string().uuid().allow(null).optional(),
+  whatsapp: Joi.string().max(20).allow(null, '').optional(),
+  whatsapp_group: Joi.string().max(50).allow(null, '').optional(),
 }).min(1);
 
 module.exports = {

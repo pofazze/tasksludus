@@ -4,6 +4,8 @@ const oauthService = require('./instagram-oauth.service');
 const publishService = require('./instagram-publish.service');
 const { schedulePost, cancelScheduledPost, reschedulePost } = require('../../queues');
 const { createScheduledPostSchema, updateScheduledPostSchema } = require('./instagram.validation');
+const clickupOAuth = require('../webhooks/clickup-oauth.service');
+const logger = require('../../utils/logger');
 
 class InstagramController {
   // --- OAuth ---
@@ -121,9 +123,10 @@ class InstagramController {
 
       const [post] = await db('scheduled_posts').insert(postData).returning('*');
 
-      // If scheduled, add to BullMQ queue
+      // If scheduled, add to BullMQ queue and move ClickUp task to "agendado"
       if (post.status === 'scheduled' && post.scheduled_at) {
         await schedulePost(post.id, post.scheduled_at);
+        this._moveToAgendado(post);
       }
 
       res.status(201).json(post);
@@ -159,9 +162,10 @@ class InstagramController {
         .update(updateData)
         .returning('*');
 
-      // Update queue job
+      // Update queue job and move ClickUp task to "agendado"
       if (updated.status === 'scheduled' && updated.scheduled_at) {
         await reschedulePost(updated.id, updated.scheduled_at);
+        this._moveToAgendado(updated);
       } else if (updated.status === 'draft') {
         await cancelScheduledPost(updated.id);
       }
@@ -302,6 +306,27 @@ class InstagramController {
       res.json({ url, type, filename: originalname });
     } catch (err) {
       next(err);
+    }
+  }
+
+  async _moveToAgendado(postRecord) {
+    try {
+      const clickupTaskId = postRecord.clickup_task_id;
+      if (!clickupTaskId) return;
+      const token = await clickupOAuth.getDecryptedToken();
+      const res = await fetch(`https://api.clickup.com/api/v2/task/${clickupTaskId}`, {
+        method: 'PUT',
+        headers: { Authorization: token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'agendado' }),
+      });
+      if (res.ok) {
+        await db('deliveries').where({ clickup_task_id: clickupTaskId }).update({ status: 'agendado' });
+        logger.info('Moved task to agendado', { clickupTaskId });
+      } else {
+        logger.warn('Failed to move task to agendado', { clickupTaskId, status: res.status });
+      }
+    } catch (err) {
+      logger.warn('Error moving task to agendado', { error: err.message });
     }
   }
 

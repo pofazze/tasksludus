@@ -82,8 +82,8 @@ class ApprovalsService {
     if (!client) {
       throw Object.assign(new Error('Client not found'), { status: 404 });
     }
-    if (!client.whatsapp_group) {
-      throw Object.assign(new Error('Client does not have a WhatsApp group configured'), { status: 400 });
+    if (!client.whatsapp_group && !client.whatsapp) {
+      throw Object.assign(new Error('Client does not have WhatsApp configured (group or personal)'), { status: 400 });
     }
 
     // Verify all deliveries are sm_approved for this client
@@ -164,7 +164,11 @@ class ApprovalsService {
         `Acesse o link para revisar:\n${approvalLink}`;
     }
 
-    await evolutionService.sendText(client.whatsapp_group, whatsappMessage);
+    // Send to group if available, otherwise to client's personal WhatsApp
+    const whatsappDest = client.whatsapp_group || evolutionService.buildPersonalJid(client.whatsapp);
+    if (whatsappDest) {
+      await evolutionService.sendText(whatsappDest, whatsappMessage);
+    }
 
     // Schedule BullMQ reminder job only for new batches (every 24h)
     if (isNewBatch) {

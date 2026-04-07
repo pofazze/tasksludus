@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import CarouselPreview from '@/components/instagram/CarouselPreview';
+import { CarouselPreview } from '@/components/instagram/CarouselPreview';
 import { proxyMediaUrl } from '@/lib/utils';
 import { Heart, MessageCircle, Send, Bookmark } from 'lucide-react';
 

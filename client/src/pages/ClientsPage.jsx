@@ -132,7 +132,15 @@ export default function ClientsPage() {
       clickup_list_id: c.clickup_list_id || '',
       automations_enabled: c.automations_enabled ?? false,
       category: c.category || '',
-      whatsapp: c.whatsapp || '',
+      whatsapp: (() => {
+        const raw = c.whatsapp || '';
+        const digits = raw.replace(/\D/g, '');
+        const local = digits.startsWith('55') ? digits.slice(2) : digits;
+        if (!local) return '';
+        if (local.length <= 2) return `(${local}`;
+        if (local.length <= 7) return `(${local.slice(0, 2)}) ${local.slice(2)}`;
+        return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+      })(),
       whatsapp_group: c.whatsapp_group || '',
       social_media_id: c.social_media_id || '',
     });
@@ -151,7 +159,7 @@ export default function ClientsPage() {
       user_id: form.user_id || null,
       clickup_list_id: form.clickup_list_id || null,
       category: form.category || null,
-      whatsapp: form.whatsapp || null,
+      whatsapp: form.whatsapp ? `55${form.whatsapp.replace(/\D/g, '')}` : null,
       whatsapp_group: form.whatsapp_group || null,
       social_media_id: form.social_media_id || null,
     };
@@ -483,49 +491,48 @@ export default function ClientsPage() {
                       <Input
                         id="whatsapp"
                         value={form.whatsapp}
-                        onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-                        placeholder="5511999999999"
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+                          let masked = '';
+                          if (digits.length <= 2) masked = digits.length ? `(${digits}` : '';
+                          else if (digits.length <= 7) masked = `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+                          else masked = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+                          setForm({ ...form, whatsapp: masked });
+                        }}
+                        placeholder="(11) 99999-8888"
+                        maxLength={15}
                       />
+                      <p className="text-[11px] text-zinc-500">O 55 e adicionado automaticamente</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="social_media_id">Social Media Responsavel</Label>
-                      <Select
-                        value={form.social_media_id || '_none'}
-                        onValueChange={(val) => setForm({ ...form, social_media_id: val === '_none' ? '' : val })}
+                      <select
+                        id="social_media_id"
+                        value={form.social_media_id || ''}
+                        onChange={(e) => setForm({ ...form, social_media_id: e.target.value })}
+                        className="flex h-8 w-full items-center rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50"
                       >
-                        <SelectTrigger id="social_media_id">
-                          <SelectValue placeholder="Selecione o social media" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">Nenhum</SelectItem>
-                          {users.filter((u) => u.producer_type === 'social_media').map((u) => (
-                            <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        <option value="">Nenhum</option>
+                        {users.filter((u) => u.producer_type === 'social_media').map((u) => (
+                          <option key={u.id} value={u.id}>{u.name}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="whatsapp_group">Grupo de Producao (WhatsApp)</Label>
-                    <div className="flex gap-2">
-                      <Select
-                        value={form.whatsapp_group || '_none'}
-                        onValueChange={(val) => setForm({ ...form, whatsapp_group: val === '_none' ? '' : val })}
-                      >
-                        <SelectTrigger id="whatsapp_group" className="flex-1">
-                          <SelectValue placeholder="Selecione o grupo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">Nenhum</SelectItem>
-                          {whatsappGroups.map((g) => (
-                            <SelectItem key={g.id} value={g.id}>{g.subject}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button variant="outline" size="sm" onClick={fetchWhatsAppGroups} disabled={loadingGroups}>
-                        {loadingGroups ? <Loader2 size={14} className="animate-spin" /> : 'Carregar'}
-                      </Button>
-                    </div>
+                    <select
+                      id="whatsapp_group"
+                      value={form.whatsapp_group || ''}
+                      onChange={(e) => setForm({ ...form, whatsapp_group: e.target.value })}
+                      onFocus={() => { if (whatsappGroups.length === 0 && !loadingGroups) fetchWhatsAppGroups(); }}
+                      className="flex h-8 w-full items-center rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50"
+                    >
+                      <option value="">{loadingGroups ? 'Carregando grupos...' : 'Selecione o grupo'}</option>
+                      {whatsappGroups.map((g) => (
+                        <option key={g.id} value={g.id}>{g.subject}</option>
+                      ))}
+                    </select>
                   </div>
                 </CardContent>
               </Card>

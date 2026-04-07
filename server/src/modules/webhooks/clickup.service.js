@@ -705,6 +705,8 @@ class ClickUpWebhookService {
       'design': 'design',
       'aprovação': 'aprovacao',
       'aprovacao': 'aprovacao',
+      'correção': 'correcao',
+      'correcao': 'correcao',
       'agendamento': 'agendamento',
       'agendado': 'agendado',
       'publicação': 'publicacao',

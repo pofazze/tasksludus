@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useSearchParams } from 'react-router-dom';
-import { Send, CheckCircle2, XCircle, Loader2, Plug, Webhook, RefreshCw, Unplug } from 'lucide-react';
+import { Send, CheckCircle2, XCircle, Loader2, Plug, Webhook, RefreshCw, Unplug, Smartphone, QrCode } from 'lucide-react';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState([]);
@@ -36,6 +36,14 @@ export default function SettingsPage() {
   // ClickUp Sync
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
+
+  // WhatsApp / Evolution API
+  const [waNumber, setWaNumber] = useState('');
+  const waInstanceName = 'tasksludus';
+  const [waConnecting, setWaConnecting] = useState(false);
+  const [waQrCode, setWaQrCode] = useState(null); // base64 QR image
+  const [waState, setWaState] = useState(null); // 'open', 'close', 'connecting'
+  const [waPolling, setWaPolling] = useState(false);
 
   // Invite form
   const [inviteForm, setInviteForm] = useState({
@@ -66,9 +74,101 @@ export default function SettingsPage() {
     } catch { /* ignore */ }
   };
 
+  // WhatsApp phone mask: (11) 99999-8888 or (11) 9999-8888
+  const formatWaNumber = (value) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return digits.length ? `(${digits}` : '';
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  };
+
+  const handleWaNumberChange = (e) => {
+    setWaNumber(formatWaNumber(e.target.value));
+  };
+
+  const handleWaConnect = async () => {
+    const cleanNumber = waNumber.replace(/\D/g, '');
+    if (cleanNumber.length < 10 || cleanNumber.length > 11) {
+      toast.error('Numero invalido. Use formato: (11) 99999-8888');
+      return;
+    }
+    const fullNumber = `55${cleanNumber}`;
+
+    setWaConnecting(true);
+    setWaQrCode(null);
+    setWaState(null);
+
+    try {
+      // Step 1: Create instance
+      await api.post('/settings/evolution/create-instance', {
+        instanceName: waInstanceName,
+        number: fullNumber,
+      });
+
+      // Step 2: Get QR code
+      const { data } = await api.get(`/settings/evolution/connect/${waInstanceName}`);
+      if (data.base64) {
+        setWaQrCode(data.base64);
+        startWaPolling();
+      } else if (data.pairingCode) {
+        // Instance might already be connecting
+        toast.info(`Codigo de pareamento: ${data.pairingCode}`);
+        startWaPolling();
+      }
+    } catch (err) {
+      // If instance already exists, try to just connect
+      try {
+        const { data } = await api.get(`/settings/evolution/connect/${waInstanceName}`);
+        if (data.base64) {
+          setWaQrCode(data.base64);
+          startWaPolling();
+        }
+      } catch {
+        toast.error(err.response?.data?.error || 'Erro ao conectar WhatsApp');
+      }
+    } finally {
+      setWaConnecting(false);
+    }
+  };
+
+  const startWaPolling = () => {
+    setWaPolling(true);
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await api.get(`/settings/evolution/connection-state/${waInstanceName}`);
+        const state = data.state || data.instance?.state;
+        setWaState(state);
+        if (state === 'open') {
+          clearInterval(interval);
+          setWaPolling(false);
+          setWaQrCode(null);
+          toast.success('WhatsApp conectado com sucesso!');
+        }
+      } catch {
+        // Ignore polling errors
+      }
+    }, 3000);
+
+    // Stop polling after 2 minutes
+    setTimeout(() => {
+      clearInterval(interval);
+      setWaPolling(false);
+    }, 120000);
+  };
+
+  const checkWaState = async () => {
+    try {
+      const { data } = await api.get(`/settings/evolution/connection-state/${waInstanceName}`);
+      setWaState(data.state || data.instance?.state || null);
+    } catch {
+      setWaState(null);
+    }
+  };
+
   useEffect(() => {
     fetchSettings();
     fetchClickUpOAuth();
+    checkWaState();
   }, []);
 
   // Handle ClickUp OAuth callback redirect
@@ -508,6 +608,84 @@ export default function SettingsPage() {
                   </CardHeader>
                 </Card>
               ))}
+
+            {/* WhatsApp / Evolution API */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg p-2 bg-emerald-500/15">
+                      <Smartphone size={18} className="text-emerald-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">WhatsApp</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        Conexao via Evolution API (Baileys)
+                      </p>
+                    </div>
+                  </div>
+                  {waState === 'open' ? (
+                    <Badge className="bg-emerald-500/15 text-emerald-400">Conectado</Badge>
+                  ) : waState === 'connecting' ? (
+                    <Badge className="bg-amber-500/15 text-amber-400">Conectando...</Badge>
+                  ) : (
+                    <Badge className="bg-zinc-500/15 text-zinc-400">Desconectado</Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {waState === 'open' ? (
+                  <div className="flex items-center gap-2 text-sm text-emerald-400">
+                    <CheckCircle2 size={16} />
+                    <span>WhatsApp conectado e funcionando</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-1.5 max-w-xs">
+                      <Label htmlFor="wa-number">Numero do WhatsApp</Label>
+                      <Input
+                        id="wa-number"
+                        value={waNumber}
+                        onChange={handleWaNumberChange}
+                        placeholder="(11) 99999-8888"
+                        maxLength={15}
+                      />
+                      <p className="text-[11px] text-zinc-500">DDD + numero (o 55 e adicionado automaticamente)</p>
+                    </div>
+                    <Button
+                      onClick={handleWaConnect}
+                      disabled={waConnecting || !waNumber}
+                      className="bg-emerald-600 hover:bg-emerald-500"
+                    >
+                      {waConnecting ? (
+                        <Loader2 size={14} className="animate-spin mr-2" />
+                      ) : (
+                        <QrCode size={14} className="mr-2" />
+                      )}
+                      Conectar WhatsApp
+                    </Button>
+                  </>
+                )}
+
+                {/* QR Code Modal */}
+                {waQrCode && (
+                  <div className="mt-4 p-6 rounded-xl bg-white flex flex-col items-center gap-4 max-w-xs mx-auto">
+                    <p className="text-sm font-medium text-zinc-800">Escaneie o QR Code no WhatsApp</p>
+                    <img
+                      src={waQrCode.startsWith('data:') ? waQrCode : `data:image/png;base64,${waQrCode}`}
+                      alt="QR Code WhatsApp"
+                      className="w-64 h-64"
+                    />
+                    {waPolling && (
+                      <div className="flex items-center gap-2 text-zinc-600 text-xs">
+                        <Loader2 size={12} className="animate-spin" />
+                        <span>Aguardando leitura do QR Code...</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {integrations.length === 0 && (
               <p className="text-muted-foreground">Nenhuma integração configurada</p>
