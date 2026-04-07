@@ -147,21 +147,11 @@ class ApprovalsService {
       );
     }
 
-    // Check for existing pending batch for this client
-    let batch = await db('approval_batches')
-      .where({ client_id: clientId, status: 'pending' })
-      .first();
-
-    const isNewBatch = !batch;
-
-    if (isNewBatch) {
-      [batch] = await db('approval_batches')
-        .insert({ client_id: clientId, created_by: userId })
-        .returning('*');
-      logger.info('Created new approval batch', { batchId: batch.id, clientId });
-    } else {
-      logger.info('Reusing existing pending approval batch', { batchId: batch.id, clientId });
-    }
+    // Always create a new batch (each send generates a unique link)
+    const [batch] = await db('approval_batches')
+      .insert({ client_id: clientId, created_by: userId })
+      .returning('*');
+    logger.info('Created new approval batch', { batchId: batch.id, clientId });
 
     // Create approval_items and update deliveries
     const createdItems = [];
@@ -191,17 +181,10 @@ class ApprovalsService {
     const baseUrl = (env.clientUrl || 'http://localhost:4401').split(',')[0].trim();
     const approvalLink = `${baseUrl}/aprovacao/${batch.token}`;
 
-    // Send WhatsApp message to group
-    let whatsappMessage;
-    if (isNewBatch) {
-      whatsappMessage =
-        `Olá! Temos ${createdItems.length} post(s) aguardando sua aprovação.\n\n` +
-        `Acesse o link abaixo para aprovar ou solicitar correções:\n${approvalLink}`;
-    } else {
-      whatsappMessage =
-        `Adicionamos ${createdItems.length} novo(s) post(s) ao seu lote de aprovação.\n\n` +
-        `Acesse o link para revisar:\n${approvalLink}`;
-    }
+    // Send WhatsApp message
+    const whatsappMessage =
+      `Olá! Temos ${createdItems.length} post(s) aguardando sua aprovação.\n\n` +
+      `Acesse o link abaixo para aprovar ou solicitar correções:\n${approvalLink}`;
 
     // Send to group if available, otherwise to client's personal WhatsApp
     const whatsappDest = client.whatsapp_group || evolutionService.buildPersonalJid(client.whatsapp);
@@ -209,22 +192,20 @@ class ApprovalsService {
       await evolutionService.sendText(whatsappDest, whatsappMessage);
     }
 
-    // Schedule BullMQ reminder job only for new batches (every 24h)
-    if (isNewBatch) {
-      try {
-        const { approvalReminderQueue } = require('../../queues');
-        await approvalReminderQueue.add(
-          'send-reminder',
-          { batchId: batch.id, clientId, approvalLink },
-          {
-            repeat: { every: 24 * 60 * 60 * 1000 },
-            jobId: `approval-reminder-${batch.id}`,
-          }
-        );
-        logger.info('Scheduled approval reminder job', { batchId: batch.id });
-      } catch (err) {
-        logger.warn('Could not schedule approval reminder job', { batchId: batch.id, error: err.message });
-      }
+    // Schedule BullMQ reminder job (every 24h)
+    try {
+      const { approvalReminderQueue } = require('../../queues');
+      await approvalReminderQueue.add(
+        'send-reminder',
+        { batchId: batch.id, clientId, approvalLink },
+        {
+          repeat: { every: 24 * 60 * 60 * 1000 },
+          jobId: `approval-reminder-${batch.id}`,
+        }
+      );
+      logger.info('Scheduled approval reminder job', { batchId: batch.id });
+    } catch (err) {
+      logger.warn('Could not schedule approval reminder job', { batchId: batch.id, error: err.message });
     }
 
     eventBus.emit('sse', {
@@ -253,6 +234,9 @@ class ApprovalsService {
 
     if (!batch) {
       throw Object.assign(new Error('Approval batch not found'), { status: 404 });
+    }
+    if (batch.status !== 'pending') {
+      throw Object.assign(new Error('Este link de aprovação não está mais ativo'), { status: 410 });
     }
 
     const batchItems = await db('approval_items')
