@@ -127,7 +127,7 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
               <select
                 value={form.client_id}
                 onChange={(e) => setForm((f) => ({ ...f, client_id: e.target.value }))}
-                className="h-8 w-full rounded-lg border border-zinc-700 bg-transparent px-2.5 text-sm text-zinc-200 cursor-pointer focus:border-[#9A48EA] outline-none"
+                className="h-8 w-full rounded-lg border border-border bg-transparent px-2.5 text-sm text-foreground cursor-pointer focus:border-primary outline-none"
               >
                 <option value="">Selecionar...</option>
                 {clients?.map((c) => (
@@ -191,7 +191,7 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
                 value={form.caption}
                 onChange={(e) => setForm((f) => ({ ...f, caption: e.target.value.slice(0, 2200) }))}
                 rows={4}
-                className="w-full rounded-lg border border-zinc-700 bg-transparent px-2.5 py-2 text-sm text-zinc-200 resize-none focus:border-[#9A48EA] focus:ring-3 focus:ring-[#9A48EA]/50 outline-none"
+                className="w-full rounded-lg border border-border bg-transparent px-2.5 py-2 text-sm text-foreground resize-none focus:border-primary focus:ring-3 focus:ring-primary/50 outline-none"
                 placeholder="Escreva a legenda do post..."
               />
             </div>

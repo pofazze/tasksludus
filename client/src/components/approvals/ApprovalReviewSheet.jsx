@@ -152,7 +152,7 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
                       <button
                         key={m.url}
                         onClick={() => setThumbnailUrl(m.url)}
-                        className="aspect-square rounded overflow-hidden border-2 border-transparent hover:border-[#9A48EA] transition-colors"
+                        className="aspect-square rounded overflow-hidden border-2 border-transparent hover:border-primary transition-colors"
                       >
                         <img src={proxyMediaUrl(m.url)} alt="" className="w-full h-full object-cover" />
                       </button>

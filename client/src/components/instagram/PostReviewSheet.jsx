@@ -321,7 +321,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
           {/* Reel Cover */}
           {isReel && readOnly && (
             <div className="mb-4">
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Capa do Reel</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Capa do Reel</label>
               {thumbnailUrl ? (
                 <div className="flex items-center gap-3">
                   <img
@@ -340,7 +340,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
 
           {isReel && !readOnly && (
             <div className="mb-4">
-              <label className="block text-sm font-medium text-zinc-300 mb-2">Capa do Reel</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Capa do Reel</label>
 
               {/* Current cover preview */}
               {thumbnailUrl && (
@@ -385,7 +385,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
                         key={i}
                         src={proxyMediaUrl(m.url)}
                         alt=""
-                        className="w-full aspect-[9/16] rounded-lg object-cover cursor-pointer border-2 border-transparent hover:border-[#9A48EA] transition-colors"
+                        className="w-full aspect-[9/16] rounded-lg object-cover cursor-pointer border-2 border-transparent hover:border-primary transition-colors"
                         onClick={() => { setThumbnailUrl(m.url); setCoverConfirmed(true); setCoverMode(null); }}
                       />
                     ))}
@@ -417,7 +417,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
 
           {/* Media List (Attachments) */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+            <label className="block text-sm font-medium text-foreground mb-1.5">
               Mídia ({media.length})
             </label>
             {media.length > 0 ? (
@@ -506,7 +506,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
                     placeholder="Colar URL de mídia..."
                     value={newMediaUrl}
                     onChange={(e) => setNewMediaUrl(e.target.value)}
-                    className="flex-1 min-w-0 h-8 rounded-lg border border-zinc-700 bg-transparent px-2.5 text-xs text-zinc-300 placeholder:text-zinc-600 focus:border-[#9A48EA] outline-none"
+                    className="flex-1 min-w-0 h-8 rounded-lg border border-border bg-transparent px-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary outline-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newMediaUrl.trim()) {
                         addMediaFromUrl(newMediaUrl.trim());
@@ -541,7 +541,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
           </div>
 
           {/* Caption */}
-          <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+          <label className="block text-sm font-medium text-foreground mb-1.5">
             Legenda
           </label>
           {readOnly ? (
@@ -552,14 +552,14 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
               onChange={(e) => setCaption(e.target.value)}
               rows={5}
               placeholder="Escreva a legenda do post..."
-              className="w-full rounded-lg border border-zinc-700 bg-transparent px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-[#9A48EA] focus:ring-1 focus:ring-[#9A48EA]/50 outline-none resize-none"
+              className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none resize-none"
             />
           )}
 
           {/* Date/Time Picker — always visible */}
           {!readOnly && (
             <div className="mt-4">
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Data e horário
               </label>
               <DateTimePicker value={scheduledAt} onChange={setScheduledAt} />

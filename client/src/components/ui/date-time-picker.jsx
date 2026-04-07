@@ -78,7 +78,7 @@ function DateTimePicker({ value, onChange, className, disabled }) {
         disabled={disabled}
         className={cn(
           'flex items-center gap-2 h-8 w-full rounded-lg border border-zinc-700 bg-transparent px-2.5 py-1 text-sm transition-colors cursor-pointer',
-          'hover:border-zinc-600 focus-visible:border-[#9A48EA] focus-visible:ring-3 focus-visible:ring-[#9A48EA]/50',
+          'hover:border-slate-400 dark:hover:border-zinc-600 focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/50',
           'disabled:pointer-events-none disabled:opacity-50',
           !dateValue && 'text-zinc-500'
         )}
@@ -104,7 +104,7 @@ function DateTimePicker({ value, onChange, className, disabled }) {
               months: 'flex flex-col',
               month: 'flex flex-col gap-2',
               month_caption: 'flex justify-center items-center px-1 relative',
-              caption_label: 'text-sm font-medium text-zinc-200',
+              caption_label: 'text-sm font-medium text-foreground',
               nav: 'flex items-center',
               button_previous: 'absolute left-0 h-6 w-6 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 cursor-pointer transition-colors',
               button_next: 'absolute right-0 h-6 w-6 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 cursor-pointer transition-colors',
@@ -127,7 +127,7 @@ function DateTimePicker({ value, onChange, className, disabled }) {
             <select
               value={hour}
               onChange={(e) => handleTimeChange(Number(e.target.value), minute)}
-              className="h-7 rounded-md border border-zinc-700 bg-zinc-800 px-2 text-sm text-zinc-200 cursor-pointer focus:border-[#9A48EA] outline-none"
+              className="h-7 rounded-md border border-border bg-muted px-2 text-sm text-foreground cursor-pointer focus:border-primary outline-none"
             >
               {hours.map((h) => (
                 <option key={h} value={h}>
@@ -139,7 +139,7 @@ function DateTimePicker({ value, onChange, className, disabled }) {
             <select
               value={minute}
               onChange={(e) => handleTimeChange(hour, Number(e.target.value))}
-              className="h-7 rounded-md border border-zinc-700 bg-zinc-800 px-2 text-sm text-zinc-200 cursor-pointer focus:border-[#9A48EA] outline-none"
+              className="h-7 rounded-md border border-border bg-muted px-2 text-sm text-foreground cursor-pointer focus:border-primary outline-none"
             >
               {minutes.map((m) => (
                 <option key={m} value={m}>
