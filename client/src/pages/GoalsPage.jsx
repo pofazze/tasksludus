@@ -300,12 +300,12 @@ export default function GoalsPage() {
                     type="month"
                     value={goalMonth}
                     onChange={(e) => setGoalMonth(e.target.value)}
-                    className="border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                    className="native-select"
                   />
                   <select
                     value={goalUser}
                     onChange={(e) => setGoalUser(e.target.value)}
-                    className="border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                    className="native-select"
                   >
                     <option value="">Todos os usuários</option>
                     {users.map((u) => (
@@ -457,7 +457,7 @@ export default function GoalsPage() {
                     <select
                       value={tplForm.role}
                       onChange={(e) => setTplForm({ ...tplForm, role: e.target.value })}
-                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                      className="native-select"
                     >
                       <option value="producer">Producer</option>
                     </select>
@@ -467,7 +467,7 @@ export default function GoalsPage() {
                     <select
                       value={tplForm.producer_type}
                       onChange={(e) => setTplForm({ ...tplForm, producer_type: e.target.value })}
-                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                      className="native-select"
                     >
                       <option value="video_editor">Video Editor</option>
                       <option value="designer">Designer</option>
@@ -563,7 +563,7 @@ export default function GoalsPage() {
                     <select
                       value={goalForm.user_id}
                       onChange={(e) => setGoalForm({ ...goalForm, user_id: e.target.value })}
-                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                      className="native-select"
                     >
                       <option value="">Selecione...</option>
                       {users.map((u) => (
@@ -576,7 +576,7 @@ export default function GoalsPage() {
                     <select
                       value={goalForm.goal_template_id}
                       onChange={(e) => setGoalForm({ ...goalForm, goal_template_id: e.target.value })}
-                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                      className="native-select"
                     >
                       <option value="">Nenhum</option>
                       {templates.map((t) => (
@@ -590,7 +590,7 @@ export default function GoalsPage() {
                       type="month"
                       value={goalForm.month}
                       onChange={(e) => setGoalForm({ ...goalForm, month: e.target.value })}
-                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                      className="native-select"
                     />
                   </div>
                 </>

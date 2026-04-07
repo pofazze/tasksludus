@@ -124,7 +124,7 @@ export default function CalculationsPage() {
                 type="month"
                 value={filterMonth}
                 onChange={(e) => setFilterMonth(e.target.value)}
-                className="border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                className="native-select"
               />
               {isAdmin(user?.role) && (
                 <Button onClick={handleSuggest} disabled={calculating}>

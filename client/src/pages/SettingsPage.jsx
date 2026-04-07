@@ -553,7 +553,7 @@ export default function SettingsPage() {
                   </div>
 
                   {syncResult && (
-                    <div className="p-3 bg-zinc-800/50 rounded-lg text-sm space-y-1">
+                    <div className="p-3 bg-muted rounded-lg text-sm space-y-1">
                       <p><strong>Membros:</strong> {syncResult.members.created} criados, {syncResult.members.updated} atualizados</p>
                       <p><strong>Clientes:</strong> {syncResult.clients.created} criados, {syncResult.clients.updated} atualizados</p>
                       <p><strong>Entregas:</strong> {syncResult.deliveries.created} criadas, {syncResult.deliveries.updated} atualizadas, {syncResult.deliveries.skipped} ignoradas ({syncResult.deliveries.total} total no ClickUp)</p>
@@ -748,7 +748,7 @@ export default function SettingsPage() {
                     <select
                       value={inviteForm.role}
                       onChange={(e) => setField('role', e.target.value)}
-                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                      className="native-select"
                     >
                       <option value="director">Diretor</option>
                       <option value="manager">Gerente</option>
@@ -763,7 +763,7 @@ export default function SettingsPage() {
                       <select
                         value={inviteForm.producer_type}
                         onChange={(e) => setField('producer_type', e.target.value)}
-                        className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                        className="native-select"
                       >
                         <option value="video_editor">Editor de Vídeo</option>
                         <option value="designer">Designer</option>
