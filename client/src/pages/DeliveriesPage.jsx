@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import useAuthStore from '@/stores/authStore';
@@ -6,17 +6,28 @@ import { isManagement } from '@/lib/roles';
 import {
   CONTENT_TYPE_LABELS,
   PIPELINE_STATUSES,
-  PIPELINE_STATUS_COLORS,
   PIPELINE_ORDER,
 } from '@/lib/constants';
+import useServerEvent from '@/hooks/useServerEvent';
 import PageLoading from '@/components/common/PageLoading';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, ExternalLink, Pencil, Plus } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import KanbanBoard from '@/components/deliveries/KanbanBoard';
+import DeliveryListTable from '@/components/deliveries/DeliveryListTable';
+import DeliveryDetailModal from '@/components/deliveries/DeliveryDetailModal';
+import DeliveryCard from '@/components/deliveries/DeliveryCard';
+import ApprovalTab from '@/components/approvals/ApprovalTab';
+import CorrectionTab from '@/components/approvals/CorrectionTab';
+import AgendamentoTab from '@/components/instagram/AgendamentoTab';
+import {
+  ArrowLeft, LayoutGrid, List, Plus,
+  Calendar, CheckCircle, AlertTriangle, Instagram,
+} from 'lucide-react';
+
+const SSE_EVENTS = ['delivery:updated', 'delivery:created', 'delivery:deleted'];
 
 const EMPTY_FORM = {
   title: '', user_id: '', client_id: '', content_type: '',
@@ -27,24 +38,40 @@ const EMPTY_FORM = {
 export default function DeliveriesPage() {
   const user = useAuthStore((s) => s.user);
   const canManage = isManagement(user?.role);
+
+  // Data
   const [deliveries, setDeliveries] = useState([]);
   const [users, setUsers] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('list');
+
+  // Views
+  const [view, setView] = useState('list'); // 'list' | 'form'
+  const [pipelineView, setPipelineView] = useState('kanban'); // 'kanban' | 'list'
+
+  // Form
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
+  // Detail modal
+  const [selectedDelivery, setSelectedDelivery] = useState(null);
+
   // Filters
   const [filterMonth, setFilterMonth] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
 
-  const fetchDeliveries = async () => {
+  // Agendamento tab filter
+  const [agendamentoFilter, setAgendamentoFilter] = useState('todos');
+
+  // Client selector for tabs that need clientId
+  const [selectedClientId, setSelectedClientId] = useState('');
+
+  // ─── Data fetching ────────────────────────────────────────
+
+  const fetchDeliveries = useCallback(async () => {
     try {
       const params = {};
       if (filterMonth) params.month = filterMonth + '-01';
-      if (filterStatus) params.status = filterStatus;
       if (filterType) params.content_type = filterType;
       const { data } = await api.get('/deliveries', { params });
       setDeliveries(data);
@@ -53,7 +80,7 @@ export default function DeliveriesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterMonth, filterType]);
 
   const fetchRelated = async () => {
     try {
@@ -67,15 +94,26 @@ export default function DeliveriesPage() {
   };
 
   useEffect(() => { fetchRelated(); }, []);
-  useEffect(() => { fetchDeliveries(); }, [filterMonth, filterStatus, filterType]);
+  useEffect(() => { fetchDeliveries(); }, [fetchDeliveries]);
 
-  const getUserName = (id) => users.find((u) => u.id === id)?.name || '—';
-  const getClientName = (id) => clients.find((c) => c.id === id)?.name || '—';
+  // SSE: re-fetch on delivery changes
+  useServerEvent(SSE_EVENTS, () => { fetchDeliveries(); });
 
-  const getStatusLabel = (status) =>
-    PIPELINE_STATUSES[status] || (status === 'in_progress' ? 'Em progresso' : status === 'completed' ? 'Publicação' : status);
-  const getStatusColor = (status) =>
-    PIPELINE_STATUS_COLORS[status] || (status === 'completed' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-500/15 text-zinc-300');
+  // ─── Handlers ─────────────────────────────────────────────
+
+  const handleStatusChange = async (deliveryId, newStatus) => {
+    try {
+      await api.put(`/deliveries/${deliveryId}`, { status: newStatus });
+      toast.success('Status atualizado');
+      fetchDeliveries();
+    } catch {
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
+  const handleCardClick = (delivery) => {
+    setSelectedDelivery(delivery);
+  };
 
   const openNew = () => {
     setEditId(null);
@@ -116,262 +154,347 @@ export default function DeliveriesPage() {
     }
   };
 
+  // ─── Derived data ─────────────────────────────────────────
+
+  const agendamentoDeliveries = useMemo(() => {
+    const base = deliveries.filter(
+      (d) => d.status === 'agendamento' || d.status === 'agendado'
+    );
+    if (agendamentoFilter === 'agendados') return base.filter((d) => d.status === 'agendado');
+    if (agendamentoFilter === 'aprovados') return base.filter((d) => d.approval_status === 'client_approved');
+    return base;
+  }, [deliveries, agendamentoFilter]);
+
+  // ─── Client selector helper ───────────────────────────────
+
+  const ClientSelector = ({ value, onChange }) => (
+    <div className="mb-4">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="native-select"
+      >
+        <option value="">Selecione um cliente...</option>
+        {clients.map((c) => (
+          <option key={c.id} value={c.id}>{c.name}</option>
+        ))}
+      </select>
+    </div>
+  );
+
+  const NoClientMessage = () => (
+    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+      <Calendar size={32} />
+      <span className="text-sm">Selecione um cliente</span>
+    </div>
+  );
+
+  // ─── Loading ──────────────────────────────────────────────
+
   if (loading) return <PageLoading />;
 
-  // Pipeline summary counts
-  const pipelineCounts = {};
-  PIPELINE_ORDER.forEach((s) => { pipelineCounts[s] = 0; });
-  deliveries.forEach((d) => {
-    if (pipelineCounts[d.status] !== undefined) pipelineCounts[d.status]++;
-  });
+  // ─── Form view ────────────────────────────────────────────
 
-  return (
-    <div>
-      {view === 'list' && (
-        <>
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold font-display">Entregas</h1>
-            {canManage && (
-              <Button onClick={openNew}>
-                <Plus size={16} className="mr-2" /> Nova Entrega
-              </Button>
-            )}
-          </div>
-
-          {/* Pipeline Overview */}
-          {deliveries.length > 0 && (
-            <div className="flex gap-1 mb-4 overflow-x-auto">
-              {PIPELINE_ORDER.map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setFilterStatus(filterStatus === status ? '' : status)}
-                  className={`flex flex-col items-center px-3 py-2 rounded-lg text-xs whitespace-nowrap transition-all ${
-                    filterStatus === status
-                      ? 'ring-2 ring-primary ' + PIPELINE_STATUS_COLORS[status]
-                      : pipelineCounts[status] > 0
-                        ? PIPELINE_STATUS_COLORS[status]
-                        : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  <span className="font-bold text-lg">{pipelineCounts[status]}</span>
-                  <span>{PIPELINE_STATUSES[status]}</span>
-                </button>
-              ))}
+  if (view === 'form') {
+    return (
+      <div>
+        <div className="flex items-center gap-3 mb-6">
+          <Button variant="ghost" size="icon" onClick={() => setView('list')}>
+            <ArrowLeft size={18} />
+          </Button>
+          <h1 className="text-2xl font-bold font-display">
+            {editId ? 'Editar Entrega' : 'Nova Entrega'}
+          </h1>
+        </div>
+        <Card className="max-w-2xl">
+          <CardContent className="pt-6 space-y-4">
+            <div>
+              <Label>Titulo</Label>
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
             </div>
-          )}
-
-          {/* Filters */}
-          <div className="flex gap-3 mb-4">
-            <input
-              type="month"
-              value={filterMonth}
-              onChange={(e) => setFilterMonth(e.target.value)}
-              className="native-select"
-            />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="native-select"
-            >
-              <option value="">Todos os status</option>
-              {PIPELINE_ORDER.map((s) => (
-                <option key={s} value={s}>{PIPELINE_STATUSES[s]}</option>
-              ))}
-            </select>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="native-select"
-            >
-              <option value="">Todos os formatos</option>
-              {Object.entries(CONTENT_TYPE_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
-          </div>
-
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Responsável</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Formato</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>ClickUp</TableHead>
-                    {canManage && <TableHead className="text-right">Ações</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {deliveries.map((d) => (
-                    <TableRow key={d.id}>
-                      <TableCell className="font-medium">{d.title}</TableCell>
-                      <TableCell>{getUserName(d.user_id)}</TableCell>
-                      <TableCell>{getClientName(d.client_id)}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {CONTENT_TYPE_LABELS[d.content_type] || d.content_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={getStatusColor(d.status)}>
-                          {getStatusLabel(d.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {d.clickup_task_id ? (
-                          <a
-                            href={`https://app.clickup.com/t/${d.clickup_task_id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-purple-400 hover:underline"
-                          >
-                            {d.clickup_task_id}
-                            <ExternalLink size={12} />
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      {canManage && (
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(d)}>
-                            <Pencil size={16} />
-                          </Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                  {deliveries.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={canManage ? 7 : 6} className="text-center text-muted-foreground py-8">
-                        Nenhuma entrega encontrada
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </>
-      )}
-
-      {view === 'form' && (
-        <>
-          <div className="flex items-center gap-3 mb-6">
-            <Button variant="ghost" size="icon" onClick={() => setView('list')}>
-              <ArrowLeft size={18} />
-            </Button>
-            <h1 className="text-2xl font-bold font-display">
-              {editId ? 'Editar Entrega' : 'Nova Entrega'}
-            </h1>
-          </div>
-          <Card className="max-w-2xl">
-            <CardContent className="pt-6 space-y-4">
-              <div>
-                <Label>Título</Label>
-                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-              </div>
-              {!editId && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Responsável</Label>
-                    <select
-                      value={form.user_id}
-                      onChange={(e) => setForm({ ...form, user_id: e.target.value })}
-                      className="native-select"
-                    >
-                      <option value="">Selecione...</option>
-                      {users.map((u) => (
-                        <option key={u.id} value={u.id}>{u.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label>Cliente</Label>
-                    <select
-                      value={form.client_id}
-                      onChange={(e) => setForm({ ...form, client_id: e.target.value })}
-                      className="native-select"
-                    >
-                      <option value="">Selecione...</option>
-                      {clients.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
+            {!editId && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Formato</Label>
+                  <Label>Responsavel</Label>
                   <select
-                    value={form.content_type}
-                    onChange={(e) => setForm({ ...form, content_type: e.target.value })}
+                    value={form.user_id}
+                    onChange={(e) => setForm({ ...form, user_id: e.target.value })}
                     className="native-select"
                   >
                     <option value="">Selecione...</option>
-                    {Object.entries(CONTENT_TYPE_LABELS).map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <Label>Dificuldade</Label>
+                  <Label>Cliente</Label>
                   <select
-                    value={form.difficulty}
-                    onChange={(e) => setForm({ ...form, difficulty: e.target.value })}
+                    value={form.client_id}
+                    onChange={(e) => setForm({ ...form, client_id: e.target.value })}
                     className="native-select"
                   >
-                    <option value="easy">Fácil</option>
-                    <option value="medium">Média</option>
-                    <option value="hard">Difícil</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Status</Label>
-                  <select
-                    value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    className="native-select"
-                  >
-                    {PIPELINE_ORDER.map((s) => (
-                      <option key={s} value={s}>{PIPELINE_STATUSES[s]}</option>
+                    <option value="">Selecione...</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
                 </div>
-                <div>
-                  <Label>Mês</Label>
-                  <input
-                    type="month"
-                    value={form.month}
-                    onChange={(e) => setForm({ ...form, month: e.target.value })}
-                    className="native-select"
-                    disabled={!!editId}
-                  />
-                </div>
               </div>
-              {!editId && (
-                <div>
-                  <Label>ClickUp Task ID <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-                  <Input
-                    value={form.clickup_task_id}
-                    onChange={(e) => setForm({ ...form, clickup_task_id: e.target.value })}
-                    placeholder="Ex: 86abc123"
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          <div className="flex gap-2 mt-4 max-w-2xl">
-            <Button variant="outline" onClick={() => setView('list')}>Cancelar</Button>
-            <Button onClick={handleSave}>Salvar</Button>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Formato</Label>
+                <select
+                  value={form.content_type}
+                  onChange={(e) => setForm({ ...form, content_type: e.target.value })}
+                  className="native-select"
+                >
+                  <option value="">Selecione...</option>
+                  {Object.entries(CONTENT_TYPE_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label>Dificuldade</Label>
+                <select
+                  value={form.difficulty}
+                  onChange={(e) => setForm({ ...form, difficulty: e.target.value })}
+                  className="native-select"
+                >
+                  <option value="easy">Facil</option>
+                  <option value="medium">Media</option>
+                  <option value="hard">Dificil</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Status</Label>
+                <select
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value })}
+                  className="native-select"
+                >
+                  {PIPELINE_ORDER.map((s) => (
+                    <option key={s} value={s}>{PIPELINE_STATUSES[s]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label>Mes</Label>
+                <input
+                  type="month"
+                  value={form.month}
+                  onChange={(e) => setForm({ ...form, month: e.target.value })}
+                  className="native-select"
+                  disabled={!!editId}
+                />
+              </div>
+            </div>
+            {!editId && (
+              <div>
+                <Label>ClickUp Task ID <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                <Input
+                  value={form.clickup_task_id}
+                  onChange={(e) => setForm({ ...form, clickup_task_id: e.target.value })}
+                  placeholder="Ex: 86abc123"
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <div className="flex gap-2 mt-4 max-w-2xl">
+          <Button variant="outline" onClick={() => setView('list')}>Cancelar</Button>
+          <Button onClick={handleSave}>Salvar</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Main tabbed view ─────────────────────────────────────
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold font-display">Entregas</h1>
+        <div className="flex items-center gap-3">
+          <input
+            type="month"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+            className="native-select"
+          />
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="native-select"
+          >
+            <option value="">Todos os formatos</option>
+            {Object.entries(CONTENT_TYPE_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+          {canManage && (
+            <Button onClick={openNew}>
+              <Plus size={16} className="mr-2" /> Nova Entrega
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="pipeline">
+        <TabsList>
+          <TabsTrigger value="pipeline">
+            <LayoutGrid size={14} />
+            Pipeline
+          </TabsTrigger>
+          <TabsTrigger value="agendamento">
+            <Calendar size={14} />
+            Agendamento
+          </TabsTrigger>
+          <TabsTrigger value="instagram">
+            <Instagram size={14} />
+            Instagram
+          </TabsTrigger>
+          <TabsTrigger value="aprovacao">
+            <CheckCircle size={14} />
+            Aprovacao
+          </TabsTrigger>
+          <TabsTrigger value="correcao">
+            <AlertTriangle size={14} />
+            Correcao
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── Tab 1: Pipeline ──────────────────────────────── */}
+        <TabsContent value="pipeline">
+          {/* View toggle */}
+          <div className="flex items-center gap-1 mb-4">
+            <Button
+              variant={pipelineView === 'kanban' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setPipelineView('kanban')}
+              className="h-8 w-8"
+            >
+              <LayoutGrid size={16} />
+            </Button>
+            <Button
+              variant={pipelineView === 'list' ? 'default' : 'ghost'}
+              size="icon"
+              onClick={() => setPipelineView('list')}
+              className="h-8 w-8"
+            >
+              <List size={16} />
+            </Button>
           </div>
-        </>
+
+          {pipelineView === 'kanban' ? (
+            <KanbanBoard
+              deliveries={deliveries}
+              onStatusChange={handleStatusChange}
+              onCardClick={handleCardClick}
+            />
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <DeliveryListTable
+                  deliveries={deliveries}
+                  onRowClick={handleCardClick}
+                  onEdit={openEdit}
+                  canManage={canManage}
+                />
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* ── Tab 2: Agendamento ───────────────────────────── */}
+        <TabsContent value="agendamento">
+          {/* Filter toggle */}
+          <div className="flex items-center gap-1 mb-4 p-1 rounded-lg bg-muted w-fit">
+            {[
+              { key: 'todos', label: 'Todos' },
+              { key: 'agendados', label: 'Agendados' },
+              { key: 'aprovados', label: 'Aprovados' },
+            ].map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setAgendamentoFilter(opt.key)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  agendamentoFilter === opt.key
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {agendamentoDeliveries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+              <Calendar size={32} />
+              <span className="text-sm">Nenhuma entrega para agendamento</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {agendamentoDeliveries.map((d) => (
+                <DeliveryCard
+                  key={d.id}
+                  delivery={d}
+                  showClient
+                  onClick={handleCardClick}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ── Tab 3: Instagram ─────────────────────────────── */}
+        <TabsContent value="instagram">
+          <ClientSelector value={selectedClientId} onChange={setSelectedClientId} />
+          {selectedClientId ? (
+            <AgendamentoTab clientId={selectedClientId} />
+          ) : (
+            <NoClientMessage />
+          )}
+        </TabsContent>
+
+        {/* ── Tab 4: Aprovacao ─────────────────────────────── */}
+        <TabsContent value="aprovacao">
+          <ClientSelector value={selectedClientId} onChange={setSelectedClientId} />
+          {selectedClientId ? (
+            <ApprovalTab clientId={selectedClientId} />
+          ) : (
+            <NoClientMessage />
+          )}
+        </TabsContent>
+
+        {/* ── Tab 5: Correcao ──────────────────────────────── */}
+        <TabsContent value="correcao">
+          <ClientSelector value={selectedClientId} onChange={setSelectedClientId} />
+          {selectedClientId ? (
+            <CorrectionTab clientId={selectedClientId} />
+          ) : (
+            <NoClientMessage />
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Detail modal */}
+      {selectedDelivery && (
+        <DeliveryDetailModal
+          delivery={selectedDelivery}
+          onClose={() => setSelectedDelivery(null)}
+          onEdit={(d) => {
+            setSelectedDelivery(null);
+            openEdit(d);
+          }}
+        />
       )}
     </div>
   );

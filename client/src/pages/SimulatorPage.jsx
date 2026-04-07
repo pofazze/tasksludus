@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TrendingUp } from 'lucide-react';
+import ReactECharts from 'echarts-for-react';
+import '@/lib/echarts-theme'; // registers themes
+import { useEChartsTheme } from '@/lib/echarts-theme';
 
 export default function SimulatorPage() {
   const [status, setStatus] = useState(null);
@@ -15,6 +18,7 @@ export default function SimulatorPage() {
   const [extraDeliveries, setExtraDeliveries] = useState('');
   const [result, setResult] = useState(null);
   const [simulating, setSimulating] = useState(false);
+  const echartsTheme = useEChartsTheme();
 
   const fetchStatus = async () => {
     try {
@@ -69,7 +73,7 @@ export default function SimulatorPage() {
             <CardTitle className="text-sm text-muted-foreground">Entregas no Mês</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-[#9A48EA]">
+            <p className="text-2xl font-bold text-primary">
               {status?.deliveries_count ?? 0}
             </p>
           </CardContent>
@@ -117,16 +121,58 @@ export default function SimulatorPage() {
           <CardContent className="space-y-3">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Multiplicador</span>
-              <span className="font-semibold text-[#9A48EA]">{result.multiplier}x</span>
+              <span className="font-semibold text-primary">{result.multiplier}x</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Bônus Estimado</span>
-              <span className="font-semibold text-green-400">{formatCurrency(result.bonus)}</span>
+              <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(result.bonus)}</span>
             </div>
-            <div className="flex justify-between border-t pt-3">
+            <div className="flex justify-between border-t border-border pt-3">
               <span className="text-muted-foreground">Total (Salário + Bônus)</span>
               <span className="font-bold text-lg">{formatCurrency(result.total_with_base)}</span>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {result && (
+        <Card className="max-w-md mt-6">
+          <CardHeader>
+            <CardTitle className="text-base">Curva de Bônus</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReactECharts
+              theme={echartsTheme}
+              style={{ height: 250 }}
+              option={{
+                tooltip: { trigger: 'axis', formatter: '{b} entregas<br/>Multiplicador: {c}x' },
+                xAxis: {
+                  type: 'category',
+                  name: 'Entregas',
+                  data: Array.from({ length: 30 }, (_, i) => (status?.goal_target || 10) + i),
+                },
+                yAxis: { type: 'value', name: 'Multiplicador' },
+                series: [{
+                  type: 'line',
+                  smooth: true,
+                  data: Array.from({ length: 30 }, (_, i) => {
+                    const deliveries = (status?.goal_target || 10) + i;
+                    const base = status?.goal_target || 10;
+                    const excess = Math.max(0, deliveries - base);
+                    // Simple J-curve approximation
+                    const mult = excess >= 10 ? 1 + (excess * 0.05) + (excess * excess * 0.002) : 1 + (excess * 0.03);
+                    return parseFloat(mult.toFixed(2));
+                  }),
+                  areaStyle: { opacity: 0.15 },
+                  lineStyle: { width: 2 },
+                  itemStyle: { color: '#9A48EA' },
+                  markPoint: result ? {
+                    data: [{ coord: [(status?.deliveries_count || 0) + Number(0) - (status?.goal_target || 10), result.multiplier], name: 'Atual', symbolSize: 40 }],
+                  } : undefined,
+                }],
+                grid: { left: 50, right: 20, top: 30, bottom: 40 },
+              }}
+            />
           </CardContent>
         </Card>
       )}

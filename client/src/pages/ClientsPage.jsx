@@ -5,6 +5,7 @@ import api from '@/services/api';
 import useAuthStore from '@/stores/authStore';
 import { isManagement } from '@/lib/roles';
 import PageLoading from '@/components/common/PageLoading';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -258,15 +259,35 @@ export default function ClientsPage() {
               {groupClients.map((c) => (
                 <Card
                   key={c.id}
-                  className="group cursor-pointer transition-all duration-150 hover:ring-border hover:shadow-md"
+                  className="group cursor-pointer transition-all duration-150 hover:ring-border hover:shadow-md relative"
                   onClick={() => navigate(`/clients/${c.id}`)}
                 >
                   <CardContent className="p-4">
+                    {/* Missing info dot */}
+                    {(() => {
+                      const missing = [];
+                      if (!c.whatsapp) missing.push('WhatsApp');
+                      if (!c.whatsapp_group) missing.push('Grupo de Produção');
+                      if (!c.social_media_id) missing.push('Social Media');
+                      if (missing.length === 0) return null;
+                      return (
+                        <div className="absolute -top-1 -right-1 group/dot z-10">
+                          <div className="w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background" />
+                          <div className="hidden group-hover/dot:block absolute right-0 top-4 z-50 bg-popover text-popover-foreground text-xs rounded-lg px-3 py-2 shadow-lg border border-border whitespace-nowrap">
+                            <p className="font-medium mb-1">Informação faltando:</p>
+                            {missing.map((f) => <p key={f}>• {f}</p>)}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <div className="flex items-start gap-3">
                       {/* Avatar */}
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100 text-purple-700 dark:bg-[#9A48EA]/15 dark:text-[#9A48EA] text-sm font-bold shrink-0">
-                        {initials(c.name)}
-                      </div>
+                      <Avatar className="w-10 h-10 rounded-lg shrink-0">
+                        <AvatarImage src={c.avatar_url} className="rounded-lg object-cover" />
+                        <AvatarFallback className="rounded-lg bg-purple-100 text-purple-700 dark:bg-primary/15 dark:text-primary text-sm font-bold">
+                          {initials(c.name)}
+                        </AvatarFallback>
+                      </Avatar>
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
