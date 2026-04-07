@@ -94,14 +94,14 @@ export default function Sidebar({ onNavigate }) {
   };
 
   return (
-    <aside className="w-56 h-full bg-[#0C0C0F] border-r border-[#1E1E23] flex flex-col">
+    <aside className="w-56 h-full bg-white dark:bg-[#0C0C0F] border-r border-border flex flex-col">
       {/* Brand */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[#9A48EA] flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
             <span className="text-white font-display text-xs font-bold">T</span>
           </div>
-          <span className="font-display font-semibold text-sm text-white tracking-tight">
+          <span className="font-display font-semibold text-sm text-foreground tracking-tight">
             TasksLudus
           </span>
         </div>
@@ -117,8 +117,8 @@ export default function Sidebar({ onNavigate }) {
             className={({ isActive }) =>
               `flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] transition-all duration-150 ${
                 isActive
-                  ? 'bg-[#9A48EA]/12 text-[#C084FC] font-medium'
-                  : 'text-[#71717A] hover:text-[#A1A1AA] hover:bg-white/[0.04]'
+                  ? 'bg-purple-50 text-purple-700 font-medium dark:bg-[#9A48EA]/12 dark:text-[#C084FC]'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-[#71717A] dark:hover:text-[#A1A1AA] dark:hover:bg-white/[0.04]'
               }`
             }
           >
@@ -129,24 +129,24 @@ export default function Sidebar({ onNavigate }) {
       </nav>
 
       {/* User section */}
-      <div className="border-t border-[#1E1E23] px-3 py-3">
+      <div className="border-t border-border px-3 py-3">
         <div className="flex items-center gap-2.5">
-          <Avatar className="h-7 w-7 ring-1 ring-white/10">
+          <Avatar className="h-7 w-7 ring-1 ring-black/5 dark:ring-white/10">
             <AvatarImage src={user?.avatar_url} />
-            <AvatarFallback className="text-[10px] bg-[#1C1C22] text-[#A1A1AA]">
+            <AvatarFallback className="text-[10px] bg-slate-100 text-slate-500 dark:bg-[#1C1C22] dark:text-[#A1A1AA]">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-[#E4E4E7] truncate">{user?.name}</p>
-            <p className="text-[10px] text-[#52525B] truncate capitalize">{user?.role}</p>
+            <p className="text-xs font-medium text-foreground truncate">{user?.name}</p>
+            <p className="text-[10px] text-muted-foreground truncate capitalize">{user?.role}</p>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleLogout}
             title="Sair"
-            className="h-7 w-7 text-[#52525B] hover:text-[#EF4444] hover:bg-[#EF4444]/10"
+            className="h-7 w-7 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:text-[#EF4444] dark:hover:bg-[#EF4444]/10"
           >
             <LogOut size={14} />
           </Button>
