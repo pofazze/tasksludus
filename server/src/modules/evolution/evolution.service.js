@@ -206,6 +206,39 @@ class EvolutionService {
     return data?.instance || data;
   }
 
+  /**
+   * Fetch the profile picture URL for a WhatsApp group
+   * @param {string} groupJid - Group JID (e.g. 120363...@g.us)
+   * @returns {string|null} Profile picture URL or null
+   */
+  async fetchGroupPhoto(groupJid) {
+    this._init();
+    if (!this.baseUrl || !this.apiKey) return null;
+
+    const instanceName = this._getInstanceName();
+    const url = `${this.baseUrl}/chat/fetchProfilePictureUrl/${instanceName}`;
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this._headers(),
+        body: JSON.stringify({ number: groupJid }),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        logger.warn(`Failed to fetch group photo for ${groupJid}: ${res.status} ${err}`);
+        return null;
+      }
+
+      const data = await res.json();
+      return data?.profilePictureUrl || data?.url || null;
+    } catch (err) {
+      logger.warn(`Failed to fetch group photo for ${groupJid}: ${err.message}`);
+      return null;
+    }
+  }
+
   _getInstanceName() {
     return process.env.EVOLUTION_INSTANCE_NAME || 'tasksludus';
   }

@@ -29,6 +29,25 @@ class ClientsService {
     if (!updated) {
       throw Object.assign(new Error('Client not found'), { status: 404 });
     }
+
+    // If whatsapp_group was set/changed, fetch group photo
+    if (data.whatsapp_group) {
+      try {
+        const evolution = require('../evolution/evolution.service');
+        const groupJid = data.whatsapp_group.includes('@')
+          ? data.whatsapp_group
+          : `${data.whatsapp_group}@g.us`;
+        const photoUrl = await evolution.fetchGroupPhoto(groupJid);
+        if (photoUrl) {
+          await db('clients').where({ id }).update({ avatar_url: photoUrl });
+          updated.avatar_url = photoUrl;
+        }
+      } catch (err) {
+        // Non-critical — don't fail the update
+        console.warn('Failed to fetch group photo:', err.message);
+      }
+    }
+
     return updated;
   }
 
