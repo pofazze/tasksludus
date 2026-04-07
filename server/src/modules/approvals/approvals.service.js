@@ -82,6 +82,33 @@ class ApprovalsService {
       .orderBy('approval_items.responded_at', 'desc');
   }
 
+  // ─── SM Rejected (Correção) ────────────────────────────────────
+
+  /**
+   * Get rejected deliveries for clients where social_media_id = userId
+   */
+  async listSmRejected(userId) {
+    return db('deliveries')
+      .join('clients', 'deliveries.client_id', 'clients.id')
+      .join('approval_items', 'approval_items.delivery_id', 'deliveries.id')
+      .leftJoin('scheduled_posts', 'scheduled_posts.delivery_id', 'deliveries.id')
+      .select(
+        'deliveries.*',
+        'clients.name as client_name',
+        'clients.instagram_account',
+        'approval_items.rejection_reason',
+        'approval_items.responded_at',
+        db.raw('COALESCE(scheduled_posts.media_urls, approval_items.media_urls) as media_urls'),
+        db.raw('COALESCE(scheduled_posts.caption, approval_items.caption) as caption'),
+        db.raw('COALESCE(scheduled_posts.thumbnail_url, approval_items.thumbnail_url) as thumbnail_url'),
+        db.raw('COALESCE(scheduled_posts.post_type, approval_items.post_type) as post_type')
+      )
+      .where('deliveries.approval_status', 'client_rejected')
+      .where('approval_items.status', 'rejected')
+      .where('clients.social_media_id', userId)
+      .orderBy('approval_items.responded_at', 'desc');
+  }
+
   // ─── SM Approve ───────────────────────────────────────────────
 
   /**

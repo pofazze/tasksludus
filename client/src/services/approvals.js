@@ -3,6 +3,9 @@ import api from './api';
 export const listSmPending = () =>
   api.get('/approvals/pending').then((r) => r.data);
 
+export const listSmRejected = () =>
+  api.get('/approvals/corrections').then((r) => r.data);
+
 export const listByClient = (clientId) =>
   api.get(`/approvals/client/${clientId}`).then((r) => r.data);
 

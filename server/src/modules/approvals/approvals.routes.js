@@ -13,6 +13,7 @@ router.use(authenticate);
 
 // Social media endpoints
 router.get('/pending', controller.listSmPending.bind(controller));
+router.get('/corrections', controller.listSmRejected.bind(controller));
 router.get('/client/:clientId', controller.listByClient.bind(controller));
 router.get('/rejected/:clientId', controller.listRejected.bind(controller));
 router.post('/sm-approve', controller.smApprove.bind(controller));

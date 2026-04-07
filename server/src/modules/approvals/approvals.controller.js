@@ -21,6 +21,15 @@ class ApprovalsController {
     }
   }
 
+  async listSmRejected(req, res, next) {
+    try {
+      const deliveries = await service.listSmRejected(req.user.id);
+      res.json(deliveries);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async listRejected(req, res, next) {
     try {
       const deliveries = await service.listRejected(req.params.clientId);
