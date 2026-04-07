@@ -96,9 +96,17 @@ app.use('/api/instagram', instagramRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/approvals', approvalsRoutes);
 
-// 404 handler
-app.use((_req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+// Serve frontend static files in production
+const path = require('path');
+const clientDist = path.join(__dirname, '../../client/dist');
+app.use(express.static(clientDist));
+
+// SPA fallback — non-API routes serve index.html
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/webhooks/')) {
+    return res.status(404).json({ error: 'Route not found' });
+  }
+  res.sendFile(path.join(clientDist, 'index.html'));
 });
 
 // Error handler

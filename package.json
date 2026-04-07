@@ -7,15 +7,17 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
+    "build": "cd server && npm ci --omit=dev && cd ../client && npm ci && npm run build",
+    "start": "cd server && npx knex migrate:latest && node src/app.js",
+    "start:backend": "cd server && npm start",
+    "start:frontend": "cd client && npm start",
     "migrate": "cd server && npx knex migrate:latest",
     "migrate:rollback": "cd server && npx knex migrate:rollback",
     "migrate:make": "cd server && npx knex migrate:make",
     "seed": "cd server && npx knex seed:run",
     "lint": "concurrently \"npm run lint:server\" \"npm run lint:client\"",
     "lint:server": "cd server && npm run lint",
-    "lint:client": "cd client && npm run lint",
-    "start:backend": "cd server && npm start",
-    "start:frontend": "cd client && npm start"
+    "lint:client": "cd client && npm run lint"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
