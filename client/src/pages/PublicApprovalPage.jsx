@@ -65,7 +65,7 @@ export default function PublicApprovalPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#09090B] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="animate-spin text-[#9A48EA]" size={32} />
       </div>
     );
@@ -73,7 +73,7 @@ export default function PublicApprovalPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#09090B] flex flex-col items-center justify-center px-6 text-center">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
         <AlertTriangle size={48} className="text-amber-400 mb-4" />
         <h1 className="text-xl font-semibold text-zinc-200 mb-2">Link indisponivel</h1>
         <p className="text-zinc-500">{error}</p>
@@ -88,9 +88,9 @@ export default function PublicApprovalPage() {
   const readOnly = allResponded || isRevoked;
 
   return (
-    <div className="min-h-screen bg-[#09090B] text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#09090B]/95 backdrop-blur border-b border-zinc-800 px-4 py-3">
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-[480px] mx-auto">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#9A48EA] flex items-center justify-center text-white text-xs font-bold">
