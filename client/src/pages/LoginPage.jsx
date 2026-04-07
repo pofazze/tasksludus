@@ -32,12 +32,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
       {/* Ambient glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#9A48EA]/[0.06] rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/[0.04] dark:bg-primary/[0.06] rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative w-full max-w-sm px-6">
         {/* Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#9A48EA] mb-4">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary mb-4">
             <span className="text-white font-display text-lg font-bold">T</span>
           </div>
           <h1 className="font-display text-xl font-semibold text-foreground">TasksLudus</h1>
@@ -45,15 +45,15 @@ export default function LoginPage() {
         </div>
 
         {/* Form */}
-        <div className="bg-surface-1 border border-border rounded-xl p-6">
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 p-2.5 rounded-lg">
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 dark:text-red-400 dark:bg-red-500/10 dark:border-red-500/20 p-2.5 rounded-lg">
                 {error}
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-[13px] text-[#A1A1AA]">Email</Label>
+              <Label htmlFor="email" className="text-[13px] text-muted-foreground">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -65,7 +65,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-[13px] text-[#A1A1AA]">Senha</Label>
+              <Label htmlFor="password" className="text-[13px] text-muted-foreground">Senha</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -77,7 +77,7 @@ export default function LoginPage() {
                 />
                 <button
                   type="button"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#52525B] hover:text-[#A1A1AA] transition-colors"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
                 >
@@ -87,7 +87,7 @@ export default function LoginPage() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-[#9A48EA] hover:bg-[#8B3CD9] text-white font-medium transition-colors"
+              className="w-full bg-primary hover:bg-primary/90 text-white font-medium transition-colors"
               disabled={loading}
             >
               {loading ? 'Entrando...' : 'Entrar'}
