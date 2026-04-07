@@ -15,6 +15,7 @@ import {
 import useServerEvent from '@/hooks/useServerEvent';
 import AgendamentoTab from '@/components/instagram/AgendamentoTab';
 import ApprovalTab from '@/components/approvals/ApprovalTab';
+import CorrectionTab from '@/components/approvals/CorrectionTab';
 
 import PageLoading from '@/components/common/PageLoading';
 import { Badge } from '@/components/ui/badge';
@@ -545,6 +546,9 @@ export default function ClientProfilePage() {
         <TabButton active={activeTab === 'aprovacao'} onClick={() => setActiveTab('aprovacao')}>
           <ClipboardCheck size={13} className="mr-1.5" /> Aprovacao
         </TabButton>
+        <TabButton active={activeTab === 'correcao'} onClick={() => setActiveTab('correcao')}>
+          <RefreshCw size={13} className="mr-1.5" /> Correcao
+        </TabButton>
       </div>
 
       {/* ─── Tab: Entregas ─────────────────────────────── */}
@@ -655,6 +659,9 @@ export default function ClientProfilePage() {
 
       {/* ─── Tab: Aprovacao ────────────────────────────── */}
       {activeTab === 'aprovacao' && <ApprovalTab clientId={id} />}
+
+      {/* ─── Tab: Correcao ─────────────────────────────── */}
+      {activeTab === 'correcao' && <CorrectionTab clientId={id} />}
 
       {/* ─── Tab: Instagram ────────────────────────────── */}
       {activeTab === 'instagram' && (

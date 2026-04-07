@@ -12,6 +12,9 @@ export const smApprove = (data) =>
 export const sendToClient = (data) =>
   api.post('/approvals/send-to-client', data).then((r) => r.data);
 
+export const listRejected = (clientId) =>
+  api.get(`/approvals/rejected/${clientId}`).then((r) => r.data);
+
 export const listBatches = (clientId) =>
   api.get(`/approvals/batches/${clientId}`).then((r) => r.data);
 
