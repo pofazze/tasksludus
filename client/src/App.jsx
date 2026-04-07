@@ -25,6 +25,7 @@ import ScheduleCalendarPage from '@/pages/ScheduleCalendarPage';
 import React from 'react';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import PublicApprovalPage from '@/pages/PublicApprovalPage';
+import { ThemeProvider } from 'next-themes';
 
 const MANAGEMENT = ['dev', 'ceo', 'director', 'manager'];
 const ADMIN = ['dev', 'ceo', 'director'];
@@ -39,7 +40,8 @@ function App() {
   }, [loadUser]);
 
   return (
-    <BrowserRouter>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <BrowserRouter>
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -96,8 +98,9 @@ function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-      <Toaster richColors position="top-right" />
-    </BrowserRouter>
+        <Toaster richColors position="top-right" />
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 
