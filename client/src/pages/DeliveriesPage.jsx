@@ -147,10 +147,10 @@ export default function DeliveriesPage() {
                   onClick={() => setFilterStatus(filterStatus === status ? '' : status)}
                   className={`flex flex-col items-center px-3 py-2 rounded-lg text-xs whitespace-nowrap transition-all ${
                     filterStatus === status
-                      ? 'ring-2 ring-purple-500 ' + PIPELINE_STATUS_COLORS[status]
+                      ? 'ring-2 ring-primary ' + PIPELINE_STATUS_COLORS[status]
                       : pipelineCounts[status] > 0
                         ? PIPELINE_STATUS_COLORS[status]
-                        : 'bg-zinc-800/50 text-zinc-500'
+                        : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   <span className="font-bold text-lg">{pipelineCounts[status]}</span>
@@ -166,12 +166,12 @@ export default function DeliveriesPage() {
               type="month"
               value={filterMonth}
               onChange={(e) => setFilterMonth(e.target.value)}
-              className="border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+              className="native-select"
             />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+              className="native-select"
             >
               <option value="">Todos os status</option>
               {PIPELINE_ORDER.map((s) => (
@@ -181,7 +181,7 @@ export default function DeliveriesPage() {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+              className="native-select"
             >
               <option value="">Todos os formatos</option>
               {Object.entries(CONTENT_TYPE_LABELS).map(([key, label]) => (
@@ -281,7 +281,7 @@ export default function DeliveriesPage() {
                     <select
                       value={form.user_id}
                       onChange={(e) => setForm({ ...form, user_id: e.target.value })}
-                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                      className="native-select"
                     >
                       <option value="">Selecione...</option>
                       {users.map((u) => (
@@ -294,7 +294,7 @@ export default function DeliveriesPage() {
                     <select
                       value={form.client_id}
                       onChange={(e) => setForm({ ...form, client_id: e.target.value })}
-                      className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                      className="native-select"
                     >
                       <option value="">Selecione...</option>
                       {clients.map((c) => (
@@ -310,7 +310,7 @@ export default function DeliveriesPage() {
                   <select
                     value={form.content_type}
                     onChange={(e) => setForm({ ...form, content_type: e.target.value })}
-                    className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                    className="native-select"
                   >
                     <option value="">Selecione...</option>
                     {Object.entries(CONTENT_TYPE_LABELS).map(([key, label]) => (
@@ -323,7 +323,7 @@ export default function DeliveriesPage() {
                   <select
                     value={form.difficulty}
                     onChange={(e) => setForm({ ...form, difficulty: e.target.value })}
-                    className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                    className="native-select"
                   >
                     <option value="easy">Fácil</option>
                     <option value="medium">Média</option>
@@ -337,7 +337,7 @@ export default function DeliveriesPage() {
                   <select
                     value={form.status}
                     onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                    className="native-select"
                   >
                     {PIPELINE_ORDER.map((s) => (
                       <option key={s} value={s}>{PIPELINE_STATUSES[s]}</option>
@@ -350,7 +350,7 @@ export default function DeliveriesPage() {
                     type="month"
                     value={form.month}
                     onChange={(e) => setForm({ ...form, month: e.target.value })}
-                    className="w-full border rounded-md px-3 py-2 text-sm bg-[#111114] text-foreground"
+                    className="native-select"
                     disabled={!!editId}
                   />
                 </div>
