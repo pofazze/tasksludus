@@ -13,7 +13,9 @@
     "seed": "cd server && npx knex seed:run",
     "lint": "concurrently \"npm run lint:server\" \"npm run lint:client\"",
     "lint:server": "cd server && npm run lint",
-    "lint:client": "cd client && npm run lint"
+    "lint:client": "cd client && npm run lint",
+    "start:backend": "cd server && npm start",
+    "start:frontend": "cd client && npm start"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
