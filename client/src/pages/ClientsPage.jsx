@@ -100,11 +100,13 @@ export default function ClientsPage() {
   const groupedClients = useMemo(() => {
     const health = filteredClients.filter((c) => c.category === 'health');
     const experts = filteredClients.filter((c) => c.category === 'experts');
-    const other = filteredClients.filter((c) => !c.category || (c.category !== 'health' && c.category !== 'experts'));
+    const test = filteredClients.filter((c) => c.category === 'test');
+    const other = filteredClients.filter((c) => !c.category || !['health', 'experts', 'test'].includes(c.category));
     const groups = [];
     if (health.length > 0) groups.push({ label: 'Ludus Health', clients: health });
     if (experts.length > 0) groups.push({ label: 'Ludus Experts', clients: experts });
     if (other.length > 0) groups.push({ label: 'Outros', clients: other });
+    if (test.length > 0) groups.push({ label: 'Testes', clients: test });
     return groups;
   }, [filteredClients]);
 
@@ -450,6 +452,7 @@ export default function ClientsPage() {
                         <SelectItem value="_none">Nenhuma</SelectItem>
                         <SelectItem value="health">Ludus Health</SelectItem>
                         <SelectItem value="experts">Ludus Experts</SelectItem>
+                        <SelectItem value="test">Testes</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
