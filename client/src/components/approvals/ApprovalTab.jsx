@@ -133,7 +133,7 @@ export default function ApprovalTab({ clientId }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16 text-zinc-500">
+      <div className="flex items-center justify-center py-16 text-muted-foreground">
         <Loader2 size={20} className="animate-spin mr-2" />
         Carregando...
       </div>
@@ -144,8 +144,8 @@ export default function ApprovalTab({ clientId }) {
 
   if (isEmpty) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-zinc-500 gap-2">
-        <CheckCircle2 size={32} className="text-zinc-700" />
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+        <CheckCircle2 size={32} className="text-muted-foreground" />
         <span className="text-sm">Nenhuma entrega em aprovacao</span>
       </div>
     );
@@ -157,19 +157,19 @@ export default function ApprovalTab({ clientId }) {
       {/* ─── SM Pending ─────────────────────────────────── */}
       {smPending.length > 0 && (
         <section>
-          <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Aguardando Revisao do Social Media ({smPending.length})
           </h3>
           <div className="space-y-2">
             {smPending.map((delivery) => (
-              <Card key={delivery.id} className="bg-zinc-900 border-zinc-800">
+              <Card key={delivery.id} className="bg-card border-border">
                 <CardContent className="p-4 flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-zinc-200 truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       {delivery.title || `Entrega #${delivery.id}`}
                     </p>
                     {delivery.due_date && (
-                      <p className="text-xs text-zinc-500 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Prazo: {fmtDate(delivery.due_date)}
                       </p>
                     )}
@@ -180,7 +180,7 @@ export default function ApprovalTab({ clientId }) {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-zinc-700 hover:bg-zinc-800 shrink-0"
+                    className="border-border hover:bg-muted shrink-0"
                     onClick={() => { setReviewDelivery(delivery); setSheetOpen(true); }}
                   >
                     Revisar
@@ -196,7 +196,7 @@ export default function ApprovalTab({ clientId }) {
       {smApproved.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Aprovado pelo Social Media ({smApproved.length})
             </h3>
             <Button
@@ -218,7 +218,7 @@ export default function ApprovalTab({ clientId }) {
           </div>
           <div className="space-y-2">
             {smApproved.map((delivery) => (
-              <Card key={delivery.id} className="bg-zinc-900 border-zinc-800">
+              <Card key={delivery.id} className="bg-card border-border">
                 <CardContent className="p-4 flex items-center gap-3">
                   <input
                     type="checkbox"
@@ -227,11 +227,11 @@ export default function ApprovalTab({ clientId }) {
                     className="w-4 h-4 accent-[#9A48EA] shrink-0 cursor-pointer"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-zinc-200 truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       {delivery.title || `Entrega #${delivery.id}`}
                     </p>
                     {delivery.due_date && (
-                      <p className="text-xs text-zinc-500 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Prazo: {fmtDate(delivery.due_date)}
                       </p>
                     )}
@@ -249,19 +249,19 @@ export default function ApprovalTab({ clientId }) {
       {/* ─── Client Pending ─────────────────────────────── */}
       {clientPending.length > 0 && (
         <section>
-          <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Aguardando Aprovacao do Cliente ({clientPending.length})
           </h3>
           <div className="space-y-2">
             {clientPending.map((delivery) => (
-              <Card key={delivery.id} className="bg-zinc-900 border-zinc-800">
+              <Card key={delivery.id} className="bg-card border-border">
                 <CardContent className="p-4 flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-zinc-200 truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       {delivery.title || `Entrega #${delivery.id}`}
                     </p>
                     {delivery.due_date && (
-                      <p className="text-xs text-zinc-500 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Prazo: {fmtDate(delivery.due_date)}
                       </p>
                     )}
@@ -279,18 +279,18 @@ export default function ApprovalTab({ clientId }) {
       {/* ─── Active Batches ─────────────────────────────── */}
       {batches.length > 0 && (
         <section>
-          <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Lotes Ativos ({batches.length})
           </h3>
           <div className="space-y-2">
             {batches.map((batch) => (
-              <Card key={batch.id} className="bg-zinc-900 border-zinc-800">
+              <Card key={batch.id} className="bg-card border-border">
                 <CardContent className="p-4 flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-zinc-200 truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       Lote de {fmtDate(batch.created_at)}
                     </p>
-                    <p className="text-xs text-zinc-500 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {batch.total_items || 0} post(s)
                       {batch.pending_count > 0 && ` · ${batch.pending_count} pendente(s)`}
                       {batch.approved_count > 0 && ` · ${batch.approved_count} aprovado(s)`}
@@ -304,7 +304,7 @@ export default function ApprovalTab({ clientId }) {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-zinc-700 hover:bg-zinc-800 gap-1"
+                      className="border-border hover:bg-muted gap-1"
                       onClick={() => {
                         const link = `${window.location.origin}/aprovacao/${batch.token}`;
                         navigator.clipboard.writeText(link);
@@ -317,7 +317,7 @@ export default function ApprovalTab({ clientId }) {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-zinc-700 hover:bg-zinc-800 gap-1"
+                      className="border-border hover:bg-muted gap-1"
                       onClick={() => window.open(`/aprovacao/${batch.token}`, '_blank')}
                       title="Abrir link"
                     >
@@ -326,7 +326,7 @@ export default function ApprovalTab({ clientId }) {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-zinc-700 hover:bg-zinc-800 gap-1"
+                      className="border-border hover:bg-muted gap-1"
                       onClick={() => { setEditBatch(batch); setEditSheetOpen(true); }}
                     >
                       <Pencil size={13} />

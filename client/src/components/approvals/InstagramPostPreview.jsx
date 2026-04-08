@@ -19,7 +19,7 @@ export default function InstagramPostPreview({ item, client, readOnly = false, o
     : client?.name;
 
   return (
-    <div className="bg-black rounded-2xl overflow-hidden border border-zinc-800 max-w-[480px] mx-auto">
+    <div className="bg-black rounded-2xl overflow-hidden border border-border max-w-[480px] mx-auto">
       {/* Instagram Header */}
       <div className="flex items-center gap-3 px-4 py-3">
         {/* Profile photo */}
@@ -37,17 +37,17 @@ export default function InstagramPostPreview({ item, client, readOnly = false, o
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-semibold text-white truncate">{igHandle}</p>
         </div>
-        <Badge variant="secondary" className="text-[10px] bg-zinc-800 text-zinc-400 border-0">
+        <Badge variant="secondary" className="text-[10px] bg-secondary text-muted-foreground border-0">
           {POST_TYPE_LABELS[item.post_type] || item.post_type}
         </Badge>
       </div>
 
       {/* Media */}
-      <div className="bg-zinc-950">
+      <div className="bg-card">
         {media.length > 0 ? (
           <CarouselPreview media={media.map((m) => ({ ...m, url: proxyMediaUrl(m.url) }))} />
         ) : (
-          <div className="aspect-square flex items-center justify-center text-zinc-600 text-sm">
+          <div className="aspect-square flex items-center justify-center text-muted-foreground text-sm">
             Sem mídia
           </div>
         )}
@@ -56,22 +56,22 @@ export default function InstagramPostPreview({ item, client, readOnly = false, o
       {/* Instagram Actions Bar */}
       <div className="flex items-center justify-between px-4 py-2.5">
         <div className="flex gap-4">
-          <Heart size={22} className="text-zinc-400" />
-          <MessageCircle size={22} className="text-zinc-400" />
-          <Send size={22} className="text-zinc-400" />
+          <Heart size={22} className="text-muted-foreground" />
+          <MessageCircle size={22} className="text-muted-foreground" />
+          <Send size={22} className="text-muted-foreground" />
         </div>
-        <Bookmark size={22} className="text-zinc-400" />
+        <Bookmark size={22} className="text-muted-foreground" />
       </div>
 
       {/* Caption */}
       {caption && (
         <div className="px-4 pb-3">
-          <p className="text-sm text-zinc-200 whitespace-pre-wrap leading-relaxed">
+          <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
             <span className="font-semibold mr-1.5">{igHandle}</span>
             {isLong && !expanded ? (
               <>
                 {caption.slice(0, 125)}...
-                <button onClick={() => setExpanded(true)} className="text-zinc-500 ml-1 cursor-pointer">
+                <button onClick={() => setExpanded(true)} className="text-muted-foreground ml-1 cursor-pointer">
                   mais
                 </button>
               </>
@@ -99,7 +99,7 @@ export default function InstagramPostPreview({ item, client, readOnly = false, o
             </span>
           </div>
           {item.rejection_reason && (
-            <p className="text-xs text-zinc-500 mt-2 px-1">Motivo: {item.rejection_reason}</p>
+            <p className="text-xs text-muted-foreground mt-2 px-1">Motivo: {item.rejection_reason}</p>
           )}
         </div>
       ) : !readOnly && onApprove && onReject ? (
@@ -113,7 +113,7 @@ export default function InstagramPostPreview({ item, client, readOnly = false, o
           </button>
           <button
             onClick={() => onReject(item.id)}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-[0.98] text-zinc-300 font-semibold text-sm transition-all cursor-pointer border border-zinc-700"
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-secondary hover:bg-surface-3 active:scale-[0.98] text-foreground font-semibold text-sm transition-all cursor-pointer border border-border"
           >
             <Undo2 size={16} />
             Reprovar

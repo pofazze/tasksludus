@@ -4,7 +4,7 @@ import { PIPELINE_STATUSES, PIPELINE_ORDER } from '@/lib/constants';
 import DeliveryCard from './DeliveryCard';
 
 const DOT_COLORS = {
-  triagem: 'bg-orange-400', planejamento: 'bg-zinc-400', captacao: 'bg-sky-400',
+  triagem: 'bg-orange-400', planejamento: 'bg-muted-foreground', captacao: 'bg-sky-400',
   edicao_de_video: 'bg-violet-400', estruturacao: 'bg-yellow-400', design: 'bg-blue-400',
   aprovacao: 'bg-pink-400', correcao: 'bg-red-400', agendamento: 'bg-amber-400',
   agendado: 'bg-teal-400', publicacao: 'bg-emerald-400',
@@ -12,7 +12,7 @@ const DOT_COLORS = {
 
 const COUNT_COLORS = {
   triagem: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
-  planejamento: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300',
+  planejamento: 'bg-secondary text-muted-foreground dark:bg-zinc-700 dark:text-zinc-300',
   captacao: 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-400',
   edicao_de_video: 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-400',
   estruturacao: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400',
@@ -59,11 +59,11 @@ function InfiniteColumn({ status, cards, onCardClick, provided, snapshot }) {
       {/* Header */}
       <div className="flex items-center gap-2 px-1.5 py-2 mb-1.5">
         <div className={`w-2 h-2 rounded-full ${DOT_COLORS[status]} shadow-sm`} />
-        <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider flex-1">
+        <span className="text-[11px] font-semibold text-muted-foreground dark:text-zinc-400 uppercase tracking-wider flex-1">
           {PIPELINE_STATUSES[status]}
         </span>
         {cards.length > 0 && (
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md tabular-nums ${COUNT_COLORS[status] || 'bg-zinc-100 text-zinc-500'}`}>
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md tabular-nums ${COUNT_COLORS[status] || 'bg-secondary text-muted-foreground'}`}>
             {cards.length}
           </span>
         )}
@@ -95,7 +95,7 @@ function InfiniteColumn({ status, cards, onCardClick, provided, snapshot }) {
         {provided.placeholder}
         {hasMore && (
           <div className="text-center py-2">
-            <span className="text-[10px] text-zinc-400 dark:text-zinc-600 font-medium">
+            <span className="text-[10px] text-muted-foreground dark:text-zinc-600 font-medium">
               +{cards.length - visibleCount} mais...
             </span>
           </div>
@@ -123,10 +123,10 @@ export default function KanbanBoard({ deliveries, onStatusChange, onCardClick })
       {/* Progress bar */}
       {totalDeliveries > 0 && (
         <div className="flex items-center gap-3 mb-3 px-1">
-          <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest tabular-nums">
+          <span className="text-[10px] font-semibold text-muted-foreground dark:text-zinc-500 uppercase tracking-widest tabular-nums">
             {totalDeliveries} {totalDeliveries === 1 ? 'entrega' : 'entregas'}
           </span>
-          <div className="flex-1 h-1 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden flex">
+          <div className="flex-1 h-1 rounded-full bg-secondary dark:bg-zinc-800 overflow-hidden flex">
             {PIPELINE_ORDER.map((status) => {
               const count = columns[status].length;
               if (count === 0) return null;

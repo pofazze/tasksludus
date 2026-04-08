@@ -260,7 +260,7 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
                 <img
                   src={proxyMediaUrl(thumbnailUrl)}
                   alt="Capa"
-                  className="w-16 h-28 rounded object-cover border border-zinc-700"
+                  className="w-16 h-28 rounded object-cover border border-border"
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
                 <span className="text-xs text-muted-foreground truncate">{thumbnailUrl}</span>
@@ -274,7 +274,7 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
                 <img
                   src={proxyMediaUrl(thumbnailUrl)}
                   alt="Capa"
-                  className="w-24 h-[170px] rounded-lg object-cover border border-zinc-700 shrink-0"
+                  className="w-24 h-[170px] rounded-lg object-cover border border-border shrink-0"
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
                 <div className="flex-1 min-w-0 space-y-3">
@@ -320,7 +320,7 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-zinc-400"
+                        className="text-muted-foreground"
                         onClick={() => { setThumbnailUrl(''); setCoverConfirmed(true); }}
                       >
                         <Trash2 size={14} className="mr-1.5" />
@@ -349,10 +349,10 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
         {media.length > 0 ? (
           <div className="space-y-2 mt-2">
             {media.map((m, i) => (
-              <div key={i} className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3">
+              <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-card/50 px-4 py-3">
                 {/* Thumbnail */}
                 {m.type === 'video' ? (
-                  <div className="w-12 h-12 rounded bg-zinc-800 flex items-center justify-center shrink-0">
+                  <div className="w-12 h-12 rounded bg-secondary flex items-center justify-center shrink-0">
                     <Video size={20} className="text-blue-400" />
                   </div>
                 ) : m.url ? (
@@ -360,11 +360,11 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
                     src={proxyMediaUrl(m.url)}
                     alt=""
                     className="w-12 h-12 rounded object-cover shrink-0"
-                    onError={(e) => { e.target.outerHTML = '<div class="w-12 h-12 rounded bg-zinc-800 flex items-center justify-center shrink-0"><svg class="text-zinc-500" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>'; }}
+                    onError={(e) => { e.target.outerHTML = '<div class="w-12 h-12 rounded bg-secondary flex items-center justify-center shrink-0"><svg class="text-muted-foreground" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div>'; }}
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded bg-zinc-800 flex items-center justify-center shrink-0">
-                    <Image size={20} className="text-zinc-500" />
+                  <div className="w-12 h-12 rounded bg-secondary flex items-center justify-center shrink-0">
+                    <Image size={20} className="text-muted-foreground" />
                   </div>
                 )}
 
@@ -398,7 +398,7 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-zinc-500 hover:text-red-400"
+                      className="h-8 w-8 text-muted-foreground hover:text-red-400"
                       onClick={() => removeMedia(i)}
                     >
                       <Trash2 size={14} />
@@ -415,7 +415,7 @@ export default function PostReviewView({ post, clientName, onBack, onSaved }) {
 
       {/* Actions */}
       {!readOnly && (
-        <div className="flex flex-wrap gap-2 border-t border-zinc-800 pt-4">
+        <div className="flex flex-wrap gap-2 border-t border-border pt-4">
           <Button
             variant="outline"
             onClick={handleSaveDraft}

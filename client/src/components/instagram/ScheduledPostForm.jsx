@@ -149,7 +149,7 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
                       'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer',
                       form.post_type === value
                         ? 'bg-[#9A48EA]/15 text-[#C084FC] ring-1 ring-[#9A48EA]/30'
-                        : 'bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700/50'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-surface-3/50'
                     )}
                   >
                     <Icon size={13} />
@@ -185,7 +185,7 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label>Legenda</Label>
-                <span className="text-[11px] text-zinc-500 tabular-nums">{form.caption.length}/2200</span>
+                <span className="text-[11px] text-muted-foreground tabular-nums">{form.caption.length}/2200</span>
               </div>
               <textarea
                 value={form.caption}
@@ -208,7 +208,7 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
                     className="flex-1"
                   />
                   {form.thumbnail_url && (
-                    <div className="w-8 h-8 rounded-md border border-zinc-700 overflow-hidden shrink-0">
+                    <div className="w-8 h-8 rounded-md border border-border overflow-hidden shrink-0">
                       <img src={form.thumbnail_url} alt="Capa" className="w-full h-full object-cover" />
                     </div>
                   )}

@@ -76,7 +76,7 @@ export default function ApprovalsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto py-8 flex items-center justify-center text-zinc-500 text-sm">
+      <div className="max-w-3xl mx-auto py-8 flex items-center justify-center text-muted-foreground text-sm">
         Carregando...
       </div>
     );
@@ -91,13 +91,13 @@ export default function ApprovalsPage() {
         </div>
         <div className="flex-1">
           <h1 className="text-lg font-semibold text-white">Aprovacoes</h1>
-          <p className="text-xs text-zinc-500">Entregas aguardando sua revisao</p>
+          <p className="text-xs text-muted-foreground">Entregas aguardando sua revisao</p>
         </div>
 
         {/* Client filter */}
         {clients.length > 1 && (
           <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger className="w-44 h-8 text-xs bg-zinc-900 border-zinc-700">
+            <SelectTrigger className="w-44 h-8 text-xs bg-card border-border">
               <SelectValue placeholder="Todos os clientes" />
             </SelectTrigger>
             <SelectContent>
@@ -113,11 +113,11 @@ export default function ApprovalsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-zinc-800 pb-2">
+      <div className="flex gap-1 mb-6 border-b border-border pb-2">
         <button
           onClick={() => setTab('pending')}
           className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-            tab === 'pending' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
+            tab === 'pending' ? 'bg-muted text-white' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <ClipboardCheck size={13} />
@@ -131,7 +131,7 @@ export default function ApprovalsPage() {
         <button
           onClick={() => setTab('corrections')}
           className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-            tab === 'corrections' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
+            tab === 'corrections' ? 'bg-muted text-white' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <AlertTriangle size={13} />
@@ -148,29 +148,29 @@ export default function ApprovalsPage() {
       {tab === 'pending' && (
         <>
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
-              <ClipboardCheck size={40} className="mb-3 text-zinc-700" />
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <ClipboardCheck size={40} className="mb-3 text-muted-foreground" />
               <p className="text-sm font-medium">Nenhuma aprovacao pendente</p>
               <p className="text-xs mt-1">Todas as entregas foram revisadas</p>
             </div>
           ) : (
             <div className="space-y-3">
               {filtered.map((delivery) => (
-                <Card key={delivery.id} className="bg-zinc-900/60 border-zinc-800">
+                <Card key={delivery.id} className="bg-card/60 border-border">
                   <CardContent className="flex items-center gap-4 py-4">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-zinc-100 truncate">
+                      <p className="text-sm font-medium text-foreground truncate">
                         {delivery.title}
                       </p>
                       {delivery.client_name && (
-                        <p className="text-xs text-zinc-500 mt-0.5 truncate">
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
                           {delivery.client_name}
                         </p>
                       )}
                     </div>
                     <Badge
                       className={`text-xs shrink-0 ${
-                        APPROVAL_STATUS_COLORS[delivery.approval_status] || 'bg-zinc-700 text-zinc-300'
+                        APPROVAL_STATUS_COLORS[delivery.approval_status] || 'bg-surface-3 text-muted-foreground'
                       }`}
                     >
                       {APPROVAL_STATUS_LABELS[delivery.approval_status] || delivery.approval_status}
@@ -194,22 +194,22 @@ export default function ApprovalsPage() {
       {tab === 'corrections' && (
         <>
           {corrections.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
-              <AlertTriangle size={40} className="mb-3 text-zinc-700" />
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <AlertTriangle size={40} className="mb-3 text-muted-foreground" />
               <p className="text-sm font-medium">Nenhuma correcao pendente</p>
             </div>
           ) : (
             <div className="space-y-3">
               {corrections.map((item) => (
-                <Card key={item.id} className="bg-zinc-900/60 border-zinc-800">
+                <Card key={item.id} className="bg-card/60 border-border">
                   <CardContent className="py-4 space-y-2">
                     <div className="flex items-center gap-4">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-100 truncate">
+                        <p className="text-sm font-medium text-foreground truncate">
                           {item.title}
                         </p>
                         {item.client_name && (
-                          <p className="text-xs text-zinc-500 mt-0.5 truncate">
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">
                             {item.client_name}
                           </p>
                         )}
@@ -229,7 +229,7 @@ export default function ApprovalsPage() {
                     {item.rejection_reason && (
                       <div className="rounded-lg bg-red-500/5 border border-red-500/20 p-2.5">
                         <p className="text-xs font-medium text-red-400 mb-0.5">Motivo:</p>
-                        <p className="text-sm text-zinc-300">{item.rejection_reason}</p>
+                        <p className="text-sm text-foreground">{item.rejection_reason}</p>
                       </div>
                     )}
                   </CardContent>

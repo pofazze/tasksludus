@@ -93,7 +93,7 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
           <SheetDescription>
             <Badge className="bg-amber-500/15 text-amber-400">Aprovacao SM</Badge>
             {postType && (
-              <span className="ml-2 text-xs text-zinc-500">
+              <span className="ml-2 text-xs text-muted-foreground">
                 {CONTENT_TYPE_LABELS[postType] || postType}
               </span>
             )}
@@ -109,7 +109,7 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
           {/* Sortable Media Grid */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-zinc-400 font-medium">Midias ({media.length})</span>
+              <span className="text-xs text-muted-foreground font-medium">Midias ({media.length})</span>
               <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()}>
                 <Upload size={14} className="mr-1" /> Adicionar
               </Button>
@@ -131,8 +131,8 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
 
           {/* Reel Cover */}
           {isReel && imageCount > 0 && (
-            <div className="mb-4 p-3 rounded-lg bg-zinc-900 border border-zinc-800">
-              <span className="text-xs text-zinc-400 font-medium mb-2 block">Capa do Reel</span>
+            <div className="mb-4 p-3 rounded-lg bg-card border border-border">
+              <span className="text-xs text-muted-foreground font-medium mb-2 block">Capa do Reel</span>
               {thumbnailUrl ? (
                 <div className="flex items-center gap-2">
                   <img
@@ -165,14 +165,14 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
           {/* Caption */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-zinc-400 font-medium">Legenda</span>
-              <span className="text-xs text-zinc-600">{caption.length}/2200</span>
+              <span className="text-xs text-muted-foreground font-medium">Legenda</span>
+              <span className="text-xs text-muted-foreground">{caption.length}/2200</span>
             </div>
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value.slice(0, 2200))}
               rows={5}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm text-zinc-200 resize-none focus:outline-none focus:ring-2 focus:ring-[#9A48EA]"
+              className="w-full bg-card border border-border rounded-lg p-3 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-[#9A48EA]"
               placeholder="Legenda da publicacao..."
             />
           </div>

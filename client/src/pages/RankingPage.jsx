@@ -10,7 +10,7 @@ import { Trophy } from 'lucide-react';
 
 const PODIUM_STYLES = [
   { border: 'border-yellow-400 border-2', bg: 'bg-yellow-500/10', icon: 'text-yellow-400', label: 'Ouro' },
-  { border: 'border-zinc-400 border-2', bg: 'bg-zinc-500/10', icon: 'text-zinc-400', label: 'Prata' },
+  { border: 'border-border border-2', bg: 'bg-zinc-500/10', icon: 'text-zinc-400', label: 'Prata' },
   { border: 'border-amber-500 border-2', bg: 'bg-amber-500/10', icon: 'text-amber-500', label: 'Bronze' },
 ];
 

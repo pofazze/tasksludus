@@ -340,7 +340,7 @@ export default function GoalsPage() {
                           <TableCell>{g.done}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <div className="w-24 h-2 bg-zinc-700 rounded-full overflow-hidden">
+                              <div className="w-24 h-2 bg-surface-3 rounded-full overflow-hidden">
                                 <div
                                   className="h-full rounded-full"
                                   style={{

@@ -625,8 +625,8 @@ export default function SettingsPage() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="rounded-lg p-2 bg-zinc-800/50">
-                          <Plug size={18} className="text-zinc-400" />
+                        <div className="rounded-lg p-2 bg-muted/50">
+                          <Plug size={18} className="text-muted-foreground" />
                         </div>
                         <CardTitle className="text-base capitalize">{integ.type.replace('_', ' ')}</CardTitle>
                       </div>
@@ -685,7 +685,7 @@ export default function SettingsPage() {
                         placeholder="(11) 99999-8888"
                         maxLength={15}
                       />
-                      <p className="text-[11px] text-zinc-500">DDD + numero (o 55 e adicionado automaticamente)</p>
+                      <p className="text-[11px] text-muted-foreground">DDD + numero (o 55 e adicionado automaticamente)</p>
                     </div>
                     <Button
                       onClick={handleWaConnect}

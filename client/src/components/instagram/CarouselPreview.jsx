@@ -27,7 +27,7 @@ function CarouselPreview({ media, className }) {
 
   if (!media || media.length === 0) {
     return (
-      <div className={cn('aspect-square max-h-[520px] rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-600', className)}>
+      <div className={cn('aspect-square max-h-[520px] rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground', className)}>
         Sem mídia
       </div>
     );
@@ -38,7 +38,7 @@ function CarouselPreview({ media, className }) {
     const item = media[0];
     const src = proxyMediaUrl(item.url);
     return (
-      <div className={cn('aspect-square max-h-[520px] rounded-xl bg-zinc-900 border border-zinc-800 overflow-hidden', className)}>
+      <div className={cn('aspect-square max-h-[520px] rounded-xl bg-card border border-border overflow-hidden', className)}>
         {item.type === 'video' ? (
           <video src={src} controls className="w-full h-full object-contain" />
         ) : (
@@ -51,12 +51,12 @@ function CarouselPreview({ media, className }) {
   return (
     <div className={cn('relative', className)}>
       {/* Carousel */}
-      <div className="overflow-hidden rounded-xl border border-zinc-800" ref={emblaRef}>
+      <div className="overflow-hidden rounded-xl border border-border" ref={emblaRef}>
         <div className="flex">
           {media.map((item, i) => {
             const src = proxyMediaUrl(item.url);
             return (
-              <div key={item.url} className="flex-[0_0_100%] min-w-0 aspect-square max-h-[520px] bg-zinc-900">
+              <div key={item.url} className="flex-[0_0_100%] min-w-0 aspect-square max-h-[520px] bg-card">
                 {item.type === 'video' ? (
                   <video src={src} controls className="w-full h-full object-contain" />
                 ) : (
@@ -94,7 +94,7 @@ function CarouselPreview({ media, className }) {
             onClick={() => emblaApi?.scrollTo(i)}
             className={cn(
               'w-1.5 h-1.5 rounded-full transition-colors cursor-pointer',
-              i === selectedIndex ? 'bg-[#9A48EA]' : 'bg-zinc-700'
+              i === selectedIndex ? 'bg-[#9A48EA]' : 'bg-surface-3'
             )}
           />
         ))}

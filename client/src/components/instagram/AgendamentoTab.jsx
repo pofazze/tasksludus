@@ -109,7 +109,7 @@ export default function AgendamentoTab({ clientId }) {
   return (
     <div className="space-y-4">
       {/* Tab bar */}
-      <div className="flex gap-1 p-1 rounded-lg bg-zinc-900 border border-zinc-800 overflow-x-auto">
+      <div className="flex gap-1 p-1 rounded-lg bg-card border border-border overflow-x-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -120,13 +120,13 @@ export default function AgendamentoTab({ clientId }) {
               className={cn(
                 'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer',
                 isActive
-                  ? 'bg-zinc-800 text-zinc-100 shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-300'
+                  ? 'bg-secondary text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <Icon size={14} />
               {tab.label}
-              <Badge variant="secondary" className={cn('text-[10px] ml-1', isActive ? 'bg-zinc-700' : 'bg-zinc-800/50')}>
+              <Badge variant="secondary" className={cn('text-[10px] ml-1', isActive ? 'bg-surface-3' : 'bg-muted/50')}>
                 {tab.count}
               </Badge>
             </button>
@@ -169,7 +169,7 @@ function PostCard({ post, onReview, readOnly }) {
   const clickupUrl = post.clickup_task_id ? `https://app.clickup.com/t/${post.clickup_task_id}` : null;
 
   return (
-    <Card className="hover:border-zinc-600 transition-colors">
+    <Card className="hover:border-border transition-colors">
       <CardContent className="py-3 px-4">
         <div className="flex items-center gap-3">
           {/* Info */}
@@ -182,7 +182,7 @@ function PostCard({ post, onReview, readOnly }) {
                 {status.label}
               </Badge>
               {formatLabel && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
                   {formatLabel}
                 </span>
               )}

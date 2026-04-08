@@ -219,7 +219,7 @@ export default function ClientsPage() {
           {/* Search + Filter bar */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-5">
             <div className="relative flex-1 sm:max-w-sm">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -298,13 +298,13 @@ export default function ClientsPage() {
                             {c.name}
                           </h3>
                           {!c.is_active && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-100 text-zinc-500 dark:bg-zinc-500/15 dark:text-zinc-400 shrink-0">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-secondary text-muted-foreground dark:bg-zinc-500/15 dark:text-zinc-400 shrink-0">
                               Inativo
                             </span>
                           )}
                         </div>
                         {c.company && (
-                          <p className="text-xs text-zinc-500 truncate flex items-center gap-1 mt-0.5">
+                          <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
                             <Building2 size={10} />
                             {c.company}
                           </p>
@@ -316,13 +316,13 @@ export default function ClientsPage() {
                         {canManage && (
                           <button
                             onClick={(e) => openEdit(e, c)}
-                            className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                             title="Editar"
                           >
                             <Pencil size={14} />
                           </button>
                         )}
-                        <ArrowRight size={14} className="text-zinc-600 ml-1" />
+                        <ArrowRight size={14} className="text-muted-foreground ml-1" />
                       </div>
                     </div>
 
@@ -362,7 +362,7 @@ export default function ClientsPage() {
                         </button>
                       ) : (
                         <span className={`inline-flex items-center gap-1 text-[11px] ${
-                          c.automations_enabled ? 'text-emerald-400' : 'text-zinc-600'
+                          c.automations_enabled ? 'text-emerald-400' : 'text-muted-foreground'
                         }`}>
                           <Bot size={10} />
                           {c.automations_enabled ? 'Auto' : 'Manual'}
@@ -508,7 +508,7 @@ export default function ClientsPage() {
               <Card>
                 <CardContent className="pt-6 space-y-4">
                   <Separator className="my-4" />
-                  <h3 className="text-sm font-medium text-zinc-300">WhatsApp</h3>
+                  <h3 className="text-sm font-medium text-foreground">WhatsApp</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="whatsapp">WhatsApp do Cliente</Label>
@@ -526,7 +526,7 @@ export default function ClientsPage() {
                         placeholder="(11) 99999-8888"
                         maxLength={15}
                       />
-                      <p className="text-[11px] text-zinc-500">O 55 e adicionado automaticamente</p>
+                      <p className="text-[11px] text-muted-foreground">O 55 e adicionado automaticamente</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="social_media_id">Social Media Responsavel</Label>

@@ -66,7 +66,7 @@ export default function VideoFrameSelector({ videoUrl, onSelectFrame, onCancel }
               onChange={handleSeek}
               className="w-full accent-[#9A48EA] cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] text-zinc-500">
+            <div className="flex justify-between text-[10px] text-muted-foreground">
               <span>{formatTime(currentTime)}</span>
               <span>{formatTime(duration)}</span>
             </div>
@@ -75,7 +75,7 @@ export default function VideoFrameSelector({ videoUrl, onSelectFrame, onCancel }
             <Button size="sm" className="h-7 text-xs bg-[#9A48EA] hover:bg-[#B06AF0] text-white" onClick={captureFrame}>
               <Check size={12} className="mr-1" /> Usar este frame
             </Button>
-            <Button size="sm" variant="ghost" className="h-7 text-xs text-zinc-400" onClick={onCancel}>
+            <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={onCancel}>
               Cancelar
             </Button>
           </div>

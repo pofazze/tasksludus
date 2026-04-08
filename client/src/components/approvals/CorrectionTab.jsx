@@ -41,7 +41,7 @@ export default function CorrectionTab({ clientId }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16 text-zinc-500">
+      <div className="flex items-center justify-center py-16 text-muted-foreground">
         <Loader2 size={20} className="animate-spin mr-2" />
         Carregando...
       </div>
@@ -50,8 +50,8 @@ export default function CorrectionTab({ clientId }) {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-zinc-500 gap-2">
-        <CheckCircle2 size={32} className="text-zinc-700" />
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+        <CheckCircle2 size={32} className="text-muted-foreground" />
         <span className="text-sm">Nenhuma correcao pendente</span>
       </div>
     );
@@ -61,7 +61,7 @@ export default function CorrectionTab({ clientId }) {
     <div className="space-y-3">
       <div className="flex items-center gap-2 mb-1">
         <AlertTriangle size={14} className="text-red-400" />
-        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Correcoes Pendentes ({items.length})
         </span>
       </div>
@@ -74,7 +74,7 @@ export default function CorrectionTab({ clientId }) {
           : [];
 
         return (
-          <Card key={item.id} className="bg-zinc-900 border-zinc-800 overflow-hidden">
+          <Card key={item.id} className="bg-card border-border overflow-hidden">
             <CardContent className="p-0">
               {/* Media preview */}
               {media.length > 0 && (
@@ -89,10 +89,10 @@ export default function CorrectionTab({ clientId }) {
                 {/* Title + type */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-zinc-200 truncate">
+                    <p className="text-sm font-medium text-foreground truncate">
                       {item.title || `Entrega #${item.id}`}
                     </p>
-                    <p className="text-xs text-zinc-500 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {item.post_type && (CONTENT_TYPE_LABELS[item.post_type] || item.post_type)}
                       {item.responded_at && ` · Reprovado em ${fmtDateTime(item.responded_at)}`}
                     </p>
@@ -106,15 +106,15 @@ export default function CorrectionTab({ clientId }) {
                 {item.rejection_reason && (
                   <div className="rounded-lg bg-red-500/5 border border-red-500/20 p-3">
                     <p className="text-xs font-medium text-red-400 mb-1">Motivo da reprovacao:</p>
-                    <p className="text-sm text-zinc-300">{item.rejection_reason}</p>
+                    <p className="text-sm text-foreground">{item.rejection_reason}</p>
                   </div>
                 )}
 
                 {/* Caption preview */}
                 {item.caption && (
-                  <div className="rounded-lg bg-zinc-800/50 p-3">
-                    <p className="text-xs font-medium text-zinc-500 mb-1">Legenda:</p>
-                    <p className="text-sm text-zinc-400 line-clamp-3">{item.caption}</p>
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Legenda:</p>
+                    <p className="text-sm text-muted-foreground line-clamp-3">{item.caption}</p>
                   </div>
                 )}
 

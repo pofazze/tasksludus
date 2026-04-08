@@ -101,7 +101,7 @@ export default function BatchEditSheet({ open, onOpenChange, batch, onUpdate }) 
 
         <SheetBody>
           {loading ? (
-            <div className="flex items-center justify-center py-12 text-zinc-500">
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
               <Loader2 size={20} className="animate-spin mr-2" />
               Carregando...
             </div>
@@ -112,11 +112,11 @@ export default function BatchEditSheet({ open, onOpenChange, batch, onUpdate }) 
                 const isEditing = editingItem?.id === item.id;
 
                 return (
-                  <Card key={item.id} className="bg-zinc-900 border-zinc-800">
+                  <Card key={item.id} className="bg-card border-border">
                     <CardContent className="p-4 space-y-3">
                       {/* Title */}
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-zinc-200 truncate">
+                        <p className="text-sm font-medium text-foreground truncate">
                           {item.delivery_title || 'Post'}
                         </p>
                         <div className="flex gap-1.5">
@@ -124,7 +124,7 @@ export default function BatchEditSheet({ open, onOpenChange, batch, onUpdate }) 
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-7 text-xs text-zinc-400 hover:text-white"
+                              className="h-7 text-xs text-muted-foreground hover:text-white"
                               onClick={() => handleEdit(item)}
                             >
                               Editar
@@ -156,7 +156,7 @@ export default function BatchEditSheet({ open, onOpenChange, batch, onUpdate }) 
                             value={caption}
                             onChange={(e) => setCaption(e.target.value.slice(0, 2200))}
                             rows={4}
-                            className="w-full bg-zinc-950 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-200 resize-none focus:outline-none focus:ring-2 focus:ring-[#9A48EA]"
+                            className="w-full bg-card border border-border rounded-lg p-3 text-sm text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-[#9A48EA]"
                           />
                           <div className="flex gap-2 justify-end">
                             <Button
@@ -180,7 +180,7 @@ export default function BatchEditSheet({ open, onOpenChange, batch, onUpdate }) 
                         </div>
                       ) : (
                         item.caption && (
-                          <p className="text-xs text-zinc-400 line-clamp-3 whitespace-pre-wrap">
+                          <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
                             {item.caption}
                           </p>
                         )

@@ -141,7 +141,7 @@ export default function DashboardPage() {
 
   // Progress bar color based on % of meta achieved
   const progressBarColor = (pct) => {
-    if (pct === null) return 'bg-zinc-700';
+    if (pct === null) return 'bg-surface-3';
     if (pct >= 100) return 'bg-[#9A48EA]';
     if (pct >= 80) return 'bg-emerald-500';
     if (pct >= 50) return 'bg-amber-500';
@@ -151,7 +151,7 @@ export default function DashboardPage() {
   // Position icon for leaderboard
   const positionIcon = (rank) => {
     if (rank === 1) return <Crown size={20} className="text-yellow-400" />;
-    if (rank === 2) return <Medal size={20} className="text-zinc-400" />;
+    if (rank === 2) return <Medal size={20} className="text-muted-foreground" />;
     if (rank === 3) return <Award size={20} className="text-amber-600" />;
     return <span className="text-sm font-bold text-muted-foreground tabular-nums">{rank}</span>;
   };
@@ -441,7 +441,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-muted-foreground">
                       {d.client_name && <span>{d.client_name} · </span>}
                       {CONTENT_TYPE_LABELS[d.content_type] || d.content_type}
-                      {d.user_name && <span className="text-zinc-600"> · {d.user_name}</span>}
+                      {d.user_name && <span className="text-muted-foreground"> · {d.user_name}</span>}
                     </p>
                   </div>
                   <Badge

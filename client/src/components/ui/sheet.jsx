@@ -101,7 +101,7 @@ function SheetContent({ className, children, side = 'right', ...props }) {
         )}
         {children}
         <DialogPrimitive.Close
-          className="absolute top-4 right-4 rounded-md p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
         >
           <X size={16} />
           <span className="sr-only">Fechar</span>
@@ -113,19 +113,19 @@ function SheetContent({ className, children, side = 'right', ...props }) {
 
 function SheetHeader({ className, ...props }) {
   return (
-    <div className={cn('flex flex-col gap-1.5 px-4 pt-5 pb-3 md:px-6 md:pt-6 md:pb-4 border-b border-zinc-800', className)} {...props} />
+    <div className={cn('flex flex-col gap-1.5 px-4 pt-5 pb-3 md:px-6 md:pt-6 md:pb-4 border-b border-border', className)} {...props} />
   );
 }
 
 function SheetTitle({ className, ...props }) {
   return (
-    <DialogPrimitive.Title className={cn('text-base font-semibold text-zinc-100', className)} {...props} />
+    <DialogPrimitive.Title className={cn('text-base font-semibold text-foreground', className)} {...props} />
   );
 }
 
 function SheetDescription({ className, ...props }) {
   return (
-    <DialogPrimitive.Description className={cn('text-sm text-zinc-500', className)} {...props} />
+    <DialogPrimitive.Description className={cn('text-sm text-muted-foreground', className)} {...props} />
   );
 }
 
@@ -137,7 +137,7 @@ function SheetBody({ className, ...props }) {
 
 function SheetFooter({ className, ...props }) {
   return (
-    <div className={cn('flex flex-wrap items-center gap-2 justify-end px-4 py-3 md:px-6 md:py-4 border-t border-zinc-800', className)} {...props} />
+    <div className={cn('flex flex-wrap items-center gap-2 justify-end px-4 py-3 md:px-6 md:py-4 border-t border-border', className)} {...props} />
   );
 }
 

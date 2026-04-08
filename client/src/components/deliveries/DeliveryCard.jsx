@@ -18,7 +18,7 @@ const FORMAT_COLORS = {
 };
 
 const STATUS_DOT = {
-  triagem: 'bg-orange-400', planejamento: 'bg-zinc-400', captacao: 'bg-sky-400',
+  triagem: 'bg-orange-400', planejamento: 'bg-muted-foreground', captacao: 'bg-sky-400',
   edicao_de_video: 'bg-violet-400', estruturacao: 'bg-yellow-400', design: 'bg-blue-400',
   aprovacao: 'bg-pink-400', correcao: 'bg-red-400', agendamento: 'bg-amber-400',
   agendado: 'bg-teal-400', publicacao: 'bg-emerald-400',
@@ -31,8 +31,8 @@ export default function DeliveryCard({ delivery, showClient = false, onClick, is
     : delivery.media_urls || [];
   const thumbnail = mediaUrls[0] || delivery.thumbnail_url;
   const thumbUrl = thumbnail ? proxyMediaUrl(thumbnail) : null;
-  const fmtColor = FORMAT_COLORS[delivery.content_type] || { bg: 'bg-zinc-100 dark:bg-zinc-800', text: 'text-zinc-600 dark:text-zinc-400' };
-  const statusDot = STATUS_DOT[delivery.status] || 'bg-zinc-400';
+  const fmtColor = FORMAT_COLORS[delivery.content_type] || { bg: 'bg-secondary dark:bg-zinc-800', text: 'text-muted-foreground dark:text-zinc-400' };
+  const statusDot = STATUS_DOT[delivery.status] || 'bg-muted-foreground';
 
   return (
     <div
@@ -42,7 +42,7 @@ export default function DeliveryCard({ delivery, showClient = false, onClick, is
         transition-all duration-200
         ${isDragging
           ? 'shadow-lg shadow-purple-500/10 ring-1 ring-purple-400/40 scale-[1.01]'
-          : 'shadow-sm hover:shadow-md border border-zinc-100 dark:border-zinc-800 hover:border-purple-200 dark:hover:border-purple-500/30'
+          : 'shadow-sm hover:shadow-md border border-border dark:border-zinc-800 hover:border-purple-200 dark:hover:border-purple-500/30'
         }
       `}
     >
@@ -62,18 +62,18 @@ export default function DeliveryCard({ delivery, showClient = false, onClick, is
           </div>
         </div>
       ) : (
-        <div className="relative aspect-[16/10] w-full bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-800/50 dark:to-zinc-900 flex items-center justify-center">
-          <Image size={20} className="text-zinc-300 dark:text-zinc-600" />
-          <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-200/80 dark:bg-zinc-700/80">
+        <div className="relative aspect-[16/10] w-full bg-gradient-to-br from-zinc-50 to-surface-1 dark:from-zinc-800/50 dark:to-zinc-900 flex items-center justify-center">
+          <Image size={20} className="text-muted-foreground dark:text-zinc-600" />
+          <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-2/80 dark:bg-zinc-700/80">
             <div className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />
-            <span className="text-[9px] text-zinc-600 dark:text-zinc-300 font-medium">{PIPELINE_STATUSES[delivery.status]}</span>
+            <span className="text-[9px] text-muted-foreground dark:text-zinc-300 font-medium">{PIPELINE_STATUSES[delivery.status]}</span>
           </div>
         </div>
       )}
 
       {/* Content */}
       <div className="px-3 py-2.5">
-        <p className="text-[13px] font-semibold leading-snug line-clamp-2 text-zinc-800 dark:text-zinc-200 group-hover:text-purple-700 dark:group-hover:text-purple-400 transition-colors">
+        <p className="text-[13px] font-semibold leading-snug line-clamp-2 text-foreground dark:text-zinc-200 group-hover:text-purple-700 dark:group-hover:text-purple-400 transition-colors">
           {delivery.title}
         </p>
 
@@ -83,7 +83,7 @@ export default function DeliveryCard({ delivery, showClient = false, onClick, is
             {CONTENT_TYPE_LABELS[delivery.content_type] || delivery.content_type}
           </span>
           {delivery.created_at && (
-            <span className="text-[10px] text-zinc-400 dark:text-zinc-500 ml-auto tabular-nums">
+            <span className="text-[10px] text-muted-foreground dark:text-zinc-500 ml-auto tabular-nums">
               {new Date(delivery.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
             </span>
           )}
@@ -91,19 +91,19 @@ export default function DeliveryCard({ delivery, showClient = false, onClick, is
 
         {/* User row */}
         {delivery.user_name && (
-          <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
-            <Avatar className="h-5 w-5 ring-1 ring-zinc-200 dark:ring-zinc-700">
+          <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-border dark:border-zinc-800/80">
+            <Avatar className="h-5 w-5 ring-1 ring-border dark:ring-zinc-700">
               <AvatarImage src={delivery.user_avatar_url} />
               <AvatarFallback className="text-[7px] font-bold bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400">
                 {initials(delivery.user_name)}
               </AvatarFallback>
             </Avatar>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate font-medium">{delivery.user_name}</span>
+            <span className="text-[11px] text-muted-foreground dark:text-zinc-400 truncate font-medium">{delivery.user_name}</span>
           </div>
         )}
 
         {showClient && delivery.client_name && (
-          <div className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-wider">
+          <div className="mt-1 text-[10px] text-muted-foreground dark:text-zinc-500 font-medium uppercase tracking-wider">
             {delivery.client_name}
           </div>
         )}

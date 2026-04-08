@@ -172,7 +172,7 @@ export default function DeliveriesPage() {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-full max-w-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-sm text-zinc-700 dark:text-zinc-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 outline-none transition-all cursor-pointer"
+        className="h-10 w-full max-w-xs rounded-xl border border-border dark:border-border bg-white dark:bg-muted px-3 text-sm text-muted-foreground dark:text-foreground focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 outline-none transition-all cursor-pointer"
       >
         <option value="">Selecione um cliente...</option>
         {clients.map((c) => (
@@ -183,9 +183,9 @@ export default function DeliveriesPage() {
   );
 
   const NoClientMessage = () => (
-    <div className="flex flex-col items-center justify-center py-20 text-zinc-400 gap-3">
-      <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-        <Calendar size={28} className="text-zinc-300 dark:text-zinc-600" />
+    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+      <div className="w-16 h-16 rounded-2xl bg-secondary dark:bg-muted flex items-center justify-center">
+        <Calendar size={28} className="text-muted-foreground dark:text-muted-foreground" />
       </div>
       <span className="text-sm font-medium">Selecione um cliente para continuar</span>
     </div>
@@ -323,10 +323,10 @@ export default function DeliveriesPage() {
       <div className="px-4 md:px-6 pt-4 md:pt-6 pb-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div>
-            <h1 className="text-3xl font-bold font-display text-zinc-900 dark:text-white tracking-tight">
+            <h1 className="text-3xl font-bold font-display text-foreground dark:text-white tracking-tight">
               Entregas
             </h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground mt-1">
               {deliveries.length} {deliveries.length === 1 ? 'entrega' : 'entregas'} este mês
             </p>
           </div>
@@ -335,12 +335,12 @@ export default function DeliveriesPage() {
               type="month"
               value={filterMonth}
               onChange={(e) => setFilterMonth(e.target.value)}
-              className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-sm text-zinc-700 dark:text-zinc-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 outline-none transition-all"
+              className="h-9 rounded-xl border border-border dark:border-border bg-white dark:bg-muted px-3 text-sm text-muted-foreground dark:text-foreground focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 outline-none transition-all"
             />
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-sm text-zinc-700 dark:text-zinc-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 outline-none transition-all cursor-pointer"
+              className="h-9 rounded-xl border border-border dark:border-border bg-white dark:bg-muted px-3 text-sm text-muted-foreground dark:text-foreground focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 outline-none transition-all cursor-pointer"
             >
               <option value="">Todos os formatos</option>
               {Object.entries(CONTENT_TYPE_LABELS).map(([key, label]) => (
@@ -359,7 +359,7 @@ export default function DeliveriesPage() {
         </div>
 
         {/* ── Tabs Navigation ───────────────────────────────── */}
-        <div className="flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-800 -mx-4 md:-mx-6 px-4 md:px-6 overflow-x-auto">
+        <div className="flex items-center gap-1 border-b border-border dark:border-border -mx-4 md:-mx-6 px-4 md:px-6 overflow-x-auto">
           {[
             { key: 'pipeline', icon: LayoutGrid, label: 'Pipeline' },
             { key: 'agendamento', icon: Calendar, label: 'Agendamento' },
@@ -374,7 +374,7 @@ export default function DeliveriesPage() {
                 relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap cursor-pointer
                 ${activeTab === key
                   ? 'text-purple-600 dark:text-purple-400'
-                  : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  : 'text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground'
                 }
               `}
             >
@@ -388,13 +388,13 @@ export default function DeliveriesPage() {
 
           {/* View toggle (only on pipeline tab) */}
           {activeTab === 'pipeline' && (
-            <div className="ml-auto flex items-center gap-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5 shrink-0">
+            <div className="ml-auto flex items-center gap-0.5 bg-secondary dark:bg-muted rounded-lg p-0.5 shrink-0">
               <button
                 onClick={() => setPipelineView('kanban')}
                 className={`p-1.5 rounded-md transition-all cursor-pointer ${
                   pipelineView === 'kanban'
-                    ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200'
-                    : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                    ? 'bg-white dark:bg-surface-3 shadow-sm text-foreground dark:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground dark:hover:text-foreground'
                 }`}
               >
                 <LayoutGrid size={15} />
@@ -403,8 +403,8 @@ export default function DeliveriesPage() {
                 onClick={() => setPipelineView('list')}
                 className={`p-1.5 rounded-md transition-all cursor-pointer ${
                   pipelineView === 'list'
-                    ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200'
-                    : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                    ? 'bg-white dark:bg-surface-3 shadow-sm text-foreground dark:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground dark:hover:text-foreground'
                 }`}
               >
                 <List size={15} />
@@ -426,7 +426,7 @@ export default function DeliveriesPage() {
               onCardClick={handleCardClick}
             />
           ) : (
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            <div className="bg-white dark:bg-card rounded-2xl border border-border dark:border-border overflow-hidden">
               <DeliveryListTable
                 deliveries={deliveries}
                 onRowClick={handleCardClick}
@@ -440,7 +440,7 @@ export default function DeliveriesPage() {
         {/* Tab 2: Agendamento */}
         {activeTab === 'agendamento' && (
           <>
-            <div className="flex items-center gap-1 mb-5 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 w-fit">
+            <div className="flex items-center gap-1 mb-5 p-1 rounded-xl bg-secondary dark:bg-muted w-fit">
               {[
                 { key: 'todos', label: 'Todos' },
                 { key: 'agendados', label: 'Agendados' },
@@ -451,8 +451,8 @@ export default function DeliveriesPage() {
                   onClick={() => setAgendamentoFilter(opt.key)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                     agendamentoFilter === opt.key
-                      ? 'bg-white dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 shadow-sm'
-                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                      ? 'bg-white dark:bg-surface-3 text-foreground dark:text-foreground shadow-sm'
+                      : 'text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground'
                   }`}
                 >
                   {opt.label}
@@ -460,9 +460,9 @@ export default function DeliveriesPage() {
               ))}
             </div>
             {agendamentoDeliveries.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-zinc-400 gap-3">
-                <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                  <Calendar size={28} className="text-zinc-300 dark:text-zinc-600" />
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+                <div className="w-16 h-16 rounded-2xl bg-secondary dark:bg-muted flex items-center justify-center">
+                  <Calendar size={28} className="text-muted-foreground dark:text-muted-foreground" />
                 </div>
                 <span className="text-sm font-medium">Nenhuma entrega para agendamento</span>
               </div>

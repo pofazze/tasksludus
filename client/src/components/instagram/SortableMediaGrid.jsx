@@ -42,19 +42,19 @@ function SortableItem({ item, index, onRemove, readOnly }) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        'relative group aspect-square rounded-lg border border-zinc-800 overflow-hidden bg-zinc-900',
+        'relative group aspect-square rounded-lg border border-border overflow-hidden bg-card',
         isDragging && 'z-10 opacity-70 ring-2 ring-[#9A48EA]',
       )}
     >
       {/* Order badge */}
-      <span className="absolute top-1.5 left-1.5 z-10 flex items-center justify-center w-5 h-5 rounded-full bg-black/70 text-[10px] font-medium text-zinc-300 tabular-nums">
+      <span className="absolute top-1.5 left-1.5 z-10 flex items-center justify-center w-5 h-5 rounded-full bg-black/70 text-[10px] font-medium text-foreground tabular-nums">
         {index + 1}
       </span>
 
       {/* Drag handle */}
       {!readOnly && (
         <button
-          className="absolute top-1.5 right-1.5 z-10 p-1 rounded-md bg-black/70 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+          className="absolute top-1.5 right-1.5 z-10 p-1 rounded-md bg-black/70 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
           {...attributes}
           {...listeners}
         >
@@ -74,8 +74,8 @@ function SortableItem({ item, index, onRemove, readOnly }) {
 
       {/* Media preview */}
       {isVideo ? (
-        <div className="w-full h-full flex items-center justify-center bg-zinc-900">
-          <Film size={24} className="text-zinc-600" />
+        <div className="w-full h-full flex items-center justify-center bg-card">
+          <Film size={24} className="text-muted-foreground" />
         </div>
       ) : (
         <img
@@ -95,7 +95,7 @@ function SortableItem({ item, index, onRemove, readOnly }) {
       {/* Type badge */}
       <span className={cn(
         'absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-medium',
-        isVideo ? 'bg-blue-500/20 text-blue-400' : 'bg-zinc-700/80 text-zinc-400'
+        isVideo ? 'bg-blue-500/20 text-blue-400' : 'bg-surface-3/80 text-muted-foreground'
       )}>
         {isVideo ? 'Vídeo' : 'Imagem'}
       </span>
@@ -124,7 +124,7 @@ function SortableMediaGrid({ media, onChange, onRemove, readOnly = false, classN
 
   if (!media || media.length === 0) {
     return (
-      <div className="flex items-center justify-center h-32 rounded-lg border border-dashed border-zinc-700 text-zinc-500 text-sm">
+      <div className="flex items-center justify-center h-32 rounded-lg border border-dashed border-border text-muted-foreground text-sm">
         Nenhuma mídia adicionada
       </div>
     );

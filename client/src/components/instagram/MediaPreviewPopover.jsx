@@ -30,10 +30,10 @@ export default function MediaPreviewPopover({ media, anchorRect, onClose }) {
   };
 
   return (
-    <div ref={ref} style={style} className="w-[400px] rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800">
-        <span className="text-xs text-zinc-400 truncate">{media.name || 'Preview'}</span>
-        <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 cursor-pointer">
+    <div ref={ref} style={style} className="w-[400px] rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+        <span className="text-xs text-muted-foreground truncate">{media.name || 'Preview'}</span>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground cursor-pointer">
           <X size={14} />
         </button>
       </div>

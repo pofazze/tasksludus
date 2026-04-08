@@ -77,13 +77,13 @@ function DateTimePicker({ value, onChange, className, disabled }) {
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className={cn(
-          'flex items-center gap-2 h-8 w-full rounded-lg border border-zinc-700 bg-transparent px-2.5 py-1 text-sm transition-colors cursor-pointer',
+          'flex items-center gap-2 h-8 w-full rounded-lg border border-border bg-transparent px-2.5 py-1 text-sm transition-colors cursor-pointer',
           'hover:border-slate-400 dark:hover:border-zinc-600 focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/50',
           'disabled:pointer-events-none disabled:opacity-50',
-          !dateValue && 'text-zinc-500'
+          !dateValue && 'text-muted-foreground'
         )}
       >
-        <CalendarDays size={14} className="text-zinc-500 shrink-0" />
+        <CalendarDays size={14} className="text-muted-foreground shrink-0" />
         {dateValue ? fmtBRT(dateValue) : 'Selecionar data e hora'}
       </button>
 
@@ -92,7 +92,7 @@ function DateTimePicker({ value, onChange, className, disabled }) {
           {/* Backdrop */}
           <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setOpen(false)} />
           {/* Calendar overlay - centered */}
-          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl p-4 w-[300px]">
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 rounded-xl border border-border bg-card shadow-2xl p-4 w-[300px]">
           <DayPicker
             mode="single"
             selected={selectedDayForPicker}
@@ -106,24 +106,24 @@ function DateTimePicker({ value, onChange, className, disabled }) {
               month_caption: 'flex justify-center items-center px-1 relative',
               caption_label: 'text-sm font-medium text-foreground',
               nav: 'flex items-center',
-              button_previous: 'absolute left-0 h-6 w-6 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 cursor-pointer transition-colors',
-              button_next: 'absolute right-0 h-6 w-6 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 cursor-pointer transition-colors',
+              button_previous: 'absolute left-0 h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-colors',
+              button_next: 'absolute right-0 h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-colors',
               weekdays: 'flex',
-              weekday: 'w-9 text-[11px] font-medium text-zinc-500 text-center',
+              weekday: 'w-9 text-[11px] font-medium text-muted-foreground text-center',
               week: 'flex',
               day: 'w-9 h-9 text-center p-0',
-              day_button: 'w-9 h-9 text-sm rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 cursor-pointer transition-colors flex items-center justify-center',
+              day_button: 'w-9 h-9 text-sm rounded-md text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer transition-colors flex items-center justify-center',
               selected: 'bg-[#9A48EA] text-white hover:bg-[#B06AF0]',
               today: 'font-bold text-[#9A48EA]',
-              outside: 'text-zinc-700',
-              disabled: 'text-zinc-800 cursor-not-allowed',
+              outside: 'text-muted-foreground',
+              disabled: 'text-foreground cursor-not-allowed',
               chevron: 'w-3.5 h-3.5',
             }}
           />
 
           {/* Time picker */}
-          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-zinc-800">
-            <span className="text-xs text-zinc-500">Horário:</span>
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+            <span className="text-xs text-muted-foreground">Horário:</span>
             <select
               value={hour}
               onChange={(e) => handleTimeChange(Number(e.target.value), minute)}
@@ -135,7 +135,7 @@ function DateTimePicker({ value, onChange, className, disabled }) {
                 </option>
               ))}
             </select>
-            <span className="text-zinc-500">:</span>
+            <span className="text-muted-foreground">:</span>
             <select
               value={minute}
               onChange={(e) => handleTimeChange(hour, Number(e.target.value))}

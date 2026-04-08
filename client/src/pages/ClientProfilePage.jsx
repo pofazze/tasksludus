@@ -322,7 +322,7 @@ export default function ClientProfilePage() {
         ) : phases.length > 0 ? (
           <div className="relative ml-4">
             {/* Vertical line */}
-            <div className="absolute left-3 top-2 bottom-2 w-px bg-zinc-700" />
+            <div className="absolute left-3 top-2 bottom-2 w-px bg-border" />
 
             {phases.map((phase, i) => {
               const isActive = !phase.exited_at;
@@ -331,7 +331,7 @@ export default function ClientProfilePage() {
                 <div key={phase.id} className="relative pl-10 pb-6 last:pb-0">
                   {/* Node dot */}
                   <div className={`absolute left-1.5 top-1.5 w-3.5 h-3.5 rounded-full border-2 border-background ${
-                    isActive ? 'bg-purple-500' : 'bg-zinc-600'
+                    isActive ? 'bg-purple-500' : 'bg-surface-3'
                   }`}>
                     {isActive && (
                       <span className="absolute inset-0 rounded-full bg-purple-500 animate-ping opacity-40" />
@@ -381,7 +381,7 @@ export default function ClientProfilePage() {
       <div className="mb-8">
         <button
           onClick={() => navigate('/clients')}
-          className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer mb-4"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer mb-4"
         >
           <ArrowLeft size={12} /> Voltar para clientes
         </button>
@@ -408,7 +408,7 @@ export default function ClientProfilePage() {
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
               {client.company && (
-                <span className="text-sm text-zinc-500">{client.company}</span>
+                <span className="text-sm text-muted-foreground">{client.company}</span>
               )}
               {client.instagram_account && (
                 <a
@@ -428,36 +428,36 @@ export default function ClientProfilePage() {
         {/* Compact metrics row */}
         <div className="flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-2 mt-4 sm:mt-5 px-1">
           <div className="flex items-center gap-1.5">
-            <Package size={13} className="text-zinc-500" />
+            <Package size={13} className="text-muted-foreground" />
             <span className="text-sm font-semibold tabular-nums">{metrics.totalDeliveries}</span>
-            <span className="text-xs text-zinc-500">entregas</span>
+            <span className="text-xs text-muted-foreground">entregas</span>
           </div>
           <div className="flex items-center gap-1.5">
             <CheckCircle2 size={13} className="text-emerald-400" />
             <span className="text-sm font-semibold tabular-nums text-emerald-400">{metrics.publishedCount}</span>
-            <span className="text-xs text-zinc-500">publicadas</span>
+            <span className="text-xs text-muted-foreground">publicadas</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Clock size={13} className="text-amber-400" />
             <span className="text-sm font-semibold tabular-nums text-amber-400">{metrics.inProduction}</span>
-            <span className="text-xs text-zinc-500">em produção</span>
+            <span className="text-xs text-muted-foreground">em produção</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Filter size={13} className="text-zinc-500" />
+            <Filter size={13} className="text-muted-foreground" />
             <span className="text-sm font-semibold tabular-nums">{distinctFormats}</span>
-            <span className="text-xs text-zinc-500">formatos</span>
+            <span className="text-xs text-muted-foreground">formatos</span>
           </div>
           {client.instagram_account && (
             <>
               <div className="flex items-center gap-1.5">
                 <Instagram size={13} className="text-pink-400" />
                 <span className="text-sm font-semibold tabular-nums text-pink-400">{metrics.igSummary.totalPosts}</span>
-                <span className="text-xs text-zinc-500">posts IG</span>
+                <span className="text-xs text-muted-foreground">posts IG</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <TrendingUp size={13} className="text-pink-400" />
                 <span className="text-sm font-semibold tabular-nums text-pink-400">{fmtNumber(metrics.igSummary.totalReach)}</span>
-                <span className="text-xs text-zinc-500">alcance</span>
+                <span className="text-xs text-muted-foreground">alcance</span>
               </div>
             </>
           )}
@@ -465,7 +465,7 @@ export default function ClientProfilePage() {
       </div>
 
       {/* ─── Tabs ──────────────────────────────────────── */}
-      <div className="flex items-center border-b border-zinc-200 dark:border-zinc-800 mb-5 -mx-4 md:-mx-6 px-4 md:px-6 overflow-x-auto">
+      <div className="flex items-center border-b border-border dark:border-border mb-5 -mx-4 md:-mx-6 px-4 md:px-6 overflow-x-auto">
         {[
           { key: 'entregas', icon: Package, label: 'Pipeline' },
           { key: 'aprovacao', icon: ClipboardCheck, label: 'Aprovação' },
@@ -479,7 +479,7 @@ export default function ClientProfilePage() {
             className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === key
                 ? 'text-purple-600 dark:text-purple-400'
-                : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                : 'text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground'
             }`}
           >
             <Icon size={15} />
@@ -492,13 +492,13 @@ export default function ClientProfilePage() {
 
         {/* View toggle (only on entregas tab) */}
         {activeTab === 'entregas' && (
-          <div className="ml-auto flex items-center gap-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5 shrink-0 my-1.5">
+          <div className="ml-auto flex items-center gap-0.5 bg-secondary dark:bg-muted rounded-lg p-0.5 shrink-0 my-1.5">
             <button
               onClick={() => setEntregasView('kanban')}
               className={`p-1.5 rounded-md transition-all cursor-pointer ${
                 entregasView === 'kanban'
-                  ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200'
-                  : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                  ? 'bg-white dark:bg-surface-3 shadow-sm text-foreground dark:text-foreground'
+                  : 'text-muted-foreground hover:text-foreground dark:hover:text-foreground'
               }`}
             >
               <LayoutGrid size={15} />
@@ -507,8 +507,8 @@ export default function ClientProfilePage() {
               onClick={() => setEntregasView('list')}
               className={`p-1.5 rounded-md transition-all cursor-pointer ${
                 entregasView === 'list'
-                  ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200'
-                  : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                  ? 'bg-white dark:bg-surface-3 shadow-sm text-foreground dark:text-foreground'
+                  : 'text-muted-foreground hover:text-foreground dark:hover:text-foreground'
               }`}
             >
               <List size={15} />
@@ -527,7 +527,7 @@ export default function ClientProfilePage() {
               className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
                 kanbanMonth === ''
                   ? 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400'
-                  : 'bg-zinc-100 text-zinc-500 hover:text-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:text-zinc-200'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground dark:bg-muted/50 dark:text-muted-foreground dark:hover:text-foreground'
               }`}
             >
               Todo tempo
@@ -542,7 +542,7 @@ export default function ClientProfilePage() {
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
                     kanbanMonth === m
                       ? 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400'
-                      : 'bg-zinc-100 text-zinc-500 hover:text-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:text-zinc-200'
+                      : 'bg-secondary text-muted-foreground hover:text-foreground dark:bg-muted/50 dark:text-muted-foreground dark:hover:text-foreground'
                   }`}
                 >
                   {label}
@@ -558,7 +558,7 @@ export default function ClientProfilePage() {
               onCardClick={handleKanbanCardClick}
             />
           ) : (
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            <div className="bg-white dark:bg-card rounded-2xl border border-border dark:border-border overflow-hidden">
               <DeliveryListTable
                 deliveries={filteredDeliveries}
                 onRowClick={handleKanbanCardClick}
@@ -589,9 +589,9 @@ export default function ClientProfilePage() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
-                      igConnection?.connected ? 'bg-emerald-500/15' : 'bg-zinc-800'
+                      igConnection?.connected ? 'bg-emerald-500/15' : 'bg-muted'
                     }`}>
-                      <Instagram size={18} className={igConnection?.connected ? 'text-emerald-400' : 'text-zinc-500'} />
+                      <Instagram size={18} className={igConnection?.connected ? 'text-emerald-400' : 'text-muted-foreground'} />
                     </div>
                     <div>
                       {igConnection?.connected ? (
@@ -682,8 +682,8 @@ export default function ClientProfilePage() {
                 ].map(({ label, value }) => (
                   <Card key={label}>
                     <CardContent className="px-3 pt-3 pb-2">
-                      <p className="text-[11px] text-zinc-500">{label}</p>
-                      <p className="text-base font-semibold text-zinc-100 tabular-nums">
+                      <p className="text-[11px] text-muted-foreground">{label}</p>
+                      <p className="text-base font-semibold text-foreground tabular-nums">
                         {value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
                       </p>
                     </CardContent>
@@ -699,12 +699,12 @@ export default function ClientProfilePage() {
                     href={p.post_url || p.permalink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group relative aspect-square rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer"
+                    className="group relative aspect-square rounded-lg overflow-hidden bg-card border border-border hover:border-border transition-colors cursor-pointer"
                   >
                     {p.media_url ? (
                       <img src={p.media_url} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-700">
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                         <ImageIcon size={24} />
                       </div>
                     )}
@@ -788,8 +788,8 @@ function TabButton({ active, onClick, children }) {
       onClick={onClick}
       className={`inline-flex items-center px-3.5 py-1.5 rounded-md text-sm font-medium transition-all cursor-pointer ${
         active
-          ? 'bg-zinc-800 text-zinc-100 shadow-sm'
-          : 'text-zinc-500 hover:text-zinc-300'
+          ? 'bg-muted text-foreground shadow-sm'
+          : 'text-muted-foreground hover:text-foreground'
       }`}
     >
       {children}

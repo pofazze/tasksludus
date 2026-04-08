@@ -244,7 +244,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
               {status.label}
             </Badge>
             {formatLabel ? (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
                 {formatLabel}
               </span>
             ) : (
@@ -300,14 +300,14 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
           {/* Format badge when selected inline (not from ClickUp) */}
           {!readOnly && hasFormat && !format && (
             <div className="mb-4 flex items-center gap-2">
-              <span className="text-xs text-zinc-400">Formato:</span>
+              <span className="text-xs text-muted-foreground">Formato:</span>
               <Badge variant="secondary" className="text-[10px]">
                 {POST_TYPE_OPTIONS.find((o) => o.value === effectivePostType)?.label || effectivePostType}
               </Badge>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-5 text-[10px] text-zinc-500 px-1.5"
+                className="h-5 text-[10px] text-muted-foreground px-1.5"
                 onClick={() => setSelectedPostType(null)}
               >
                 Alterar
@@ -327,7 +327,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
                   <img
                     src={proxyMediaUrl(thumbnailUrl)}
                     alt="Capa"
-                    className="w-12 h-20 rounded object-cover border border-zinc-700"
+                    className="w-12 h-20 rounded object-cover border border-border"
                     onError={(e) => { e.target.style.display = 'none'; }}
                   />
                   <span className="text-xs text-muted-foreground">Capa definida</span>
@@ -344,13 +344,13 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
 
               {/* Current cover preview */}
               {thumbnailUrl && (
-                <div className="flex items-center gap-3 mb-3 p-2 rounded-lg border border-zinc-800 bg-zinc-900/50">
+                <div className="flex items-center gap-3 mb-3 p-2 rounded-lg border border-border bg-card/50">
                   <img src={proxyMediaUrl(thumbnailUrl)} alt="Capa" className="w-12 h-20 rounded object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
                   <div className="flex-1">
                     <p className="text-xs text-emerald-400 font-medium">Capa selecionada</p>
-                    <p className="text-[10px] text-zinc-500 truncate">{extractFilename(thumbnailUrl)}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{extractFilename(thumbnailUrl)}</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs text-zinc-500 hover:text-red-400" onClick={() => { setThumbnailUrl(''); setCoverConfirmed(true); setCoverMode(null); }}>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-red-400" onClick={() => { setThumbnailUrl(''); setCoverConfirmed(true); setCoverMode(null); }}>
                     <Trash2 size={12} />
                   </Button>
                 </div>
@@ -390,7 +390,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
                       />
                     ))}
                   </div>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs text-zinc-400" onClick={() => setCoverMode(null)}>Cancelar</Button>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={() => setCoverMode(null)}>Cancelar</Button>
                 </div>
               )}
 
@@ -423,10 +423,10 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
             {media.length > 0 ? (
               <div className="space-y-1.5">
                 {media.map((m, i) => (
-                  <div key={i} className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2.5">
+                  <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-card/50 px-3 py-2.5">
                     {m.type === 'video' ? (
                       <div
-                        className="w-16 h-16 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0 cursor-pointer"
+                        className="w-16 h-16 rounded-lg bg-secondary flex items-center justify-center shrink-0 cursor-pointer"
                         onClick={(e) => {
                           const rect = e.currentTarget.getBoundingClientRect();
                           setPreviewAnchor({ top: rect.top, sheetWidth: window.innerWidth - rect.left + 20 });
@@ -448,15 +448,15 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     ) : (
-                      <div className="w-16 h-16 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
-                        <Image size={20} className="text-zinc-500" />
+                      <div className="w-16 h-16 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                        <Image size={20} className="text-muted-foreground" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <Badge variant="secondary" className="text-[10px]">
                         {m.type === 'video' ? 'Vídeo' : 'Imagem'}
                       </Badge>
-                      <p className="text-[10px] text-zinc-500 truncate mt-0.5">
+                      <p className="text-[10px] text-muted-foreground truncate mt-0.5">
                         {extractFilename(m.url)}
                       </p>
                     </div>
@@ -483,7 +483,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-zinc-500 hover:text-red-400"
+                          className="h-7 w-7 text-muted-foreground hover:text-red-400"
                           onClick={() => removeMedia(i)}
                         >
                           <Trash2 size={12} />
@@ -545,7 +545,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
             Legenda
           </label>
           {readOnly ? (
-            <p className="text-sm text-zinc-400 whitespace-pre-wrap">{caption || '—'}</p>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{caption || '—'}</p>
           ) : (
             <textarea
               value={caption}

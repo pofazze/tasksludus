@@ -71,7 +71,7 @@ export default function DeliveryDetailModal({ delivery, onClose, onEdit }) {
         className={`
           relative w-full max-w-4xl max-h-[92vh] overflow-hidden
           bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl shadow-black/20
-          border border-zinc-200/50 dark:border-zinc-800
+          border border-border/50 dark:border-zinc-800
           flex flex-col transition-all duration-300 ease-out
           ${animateIn ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}
         `}
@@ -79,7 +79,7 @@ export default function DeliveryDetailModal({ delivery, onClose, onEdit }) {
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/10 dark:bg-white/10 backdrop-blur-sm flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:bg-black/20 dark:hover:bg-white/20 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/10 dark:bg-white/10 backdrop-blur-sm flex items-center justify-center text-muted-foreground dark:text-zinc-300 hover:bg-black/20 dark:hover:bg-white/20 transition-colors cursor-pointer"
         >
           <X size={16} />
         </button>
@@ -87,7 +87,7 @@ export default function DeliveryDetailModal({ delivery, onClose, onEdit }) {
         <div className="flex-1 overflow-y-auto">
           {/* Media */}
           {hasMedia && (
-            <div className="relative bg-zinc-950">
+            <div className="relative bg-card">
               <div className="aspect-video w-full overflow-hidden flex items-center justify-center">
                 <img
                   src={proxyMediaUrl(typeof mediaUrls[activeMedia] === 'object' ? mediaUrls[activeMedia].url : mediaUrls[activeMedia])}
@@ -117,14 +117,14 @@ export default function DeliveryDetailModal({ delivery, onClose, onEdit }) {
           <div className="p-6 sm:p-8">
             {/* Title + status */}
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight font-display">
+              <h2 className="text-2xl font-bold text-foreground dark:text-white leading-tight font-display">
                 {delivery.title}
               </h2>
               <div className="flex items-center gap-2.5 mt-3 flex-wrap">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase ${PIPELINE_STATUS_COLORS[delivery.status] || 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'}`}>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase ${PIPELINE_STATUS_COLORS[delivery.status] || 'bg-secondary text-muted-foreground dark:bg-zinc-800 dark:text-zinc-400'}`}>
                   {PIPELINE_STATUSES[delivery.status] || delivery.status}
                 </span>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-secondary text-muted-foreground dark:bg-zinc-800 dark:text-zinc-400">
                   {CONTENT_TYPE_LABELS[delivery.content_type] || delivery.content_type}
                 </span>
               </div>
@@ -132,19 +132,19 @@ export default function DeliveryDetailModal({ delivery, onClose, onEdit }) {
 
             {/* Caption/description */}
             {caption && (
-              <div className="mb-6 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+              <div className="mb-6 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-border dark:border-zinc-800">
                 <div className="flex items-center gap-2 mb-2">
-                  <FileText size={14} className="text-zinc-400" />
-                  <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">Legenda</span>
+                  <FileText size={14} className="text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Legenda</span>
                 </div>
-                <p className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">{caption}</p>
+                <p className="text-sm text-muted-foreground dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">{caption}</p>
               </div>
             )}
 
             {/* Info grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
               {infoItems.map((item, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+                <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-border dark:border-zinc-800">
                   <div className="w-9 h-9 rounded-xl bg-white dark:bg-zinc-700/50 shadow-sm flex items-center justify-center flex-shrink-0">
                     {item.avatar ? (
                       <Avatar className="h-7 w-7">
@@ -152,12 +152,12 @@ export default function DeliveryDetailModal({ delivery, onClose, onEdit }) {
                         <AvatarFallback className="text-[9px] font-bold bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400">{item.avatar.fallback}</AvatarFallback>
                       </Avatar>
                     ) : (
-                      <item.icon size={16} className="text-zinc-400 dark:text-zinc-500" />
+                      <item.icon size={16} className="text-muted-foreground dark:text-zinc-500" />
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wider">{item.label}</p>
-                    <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200 truncate">{item.value}</p>
+                    <p className="text-[10px] text-muted-foreground dark:text-zinc-500 font-semibold uppercase tracking-wider">{item.label}</p>
+                    <p className="text-sm font-medium text-muted-foreground dark:text-zinc-200 truncate">{item.value}</p>
                   </div>
                 </div>
               ))}
@@ -167,14 +167,14 @@ export default function DeliveryDetailModal({ delivery, onClose, onEdit }) {
             {previousResponsibles.length > 1 && (
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
-                  <Users size={14} className="text-zinc-400" />
-                  <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">Historico de responsaveis</span>
+                  <Users size={14} className="text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Historico de responsaveis</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {previousResponsibles.map((r, i) => (
-                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
-                      <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{r.name}</span>
-                      <span className="text-[10px] text-zinc-400">({r.phase})</span>
+                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-border dark:border-zinc-800">
+                      <span className="text-xs font-medium text-muted-foreground dark:text-zinc-300">{r.name}</span>
+                      <span className="text-[10px] text-muted-foreground">({r.phase})</span>
                     </div>
                   ))}
                 </div>
@@ -191,13 +191,13 @@ export default function DeliveryDetailModal({ delivery, onClose, onEdit }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
+        <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-border dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
           {onEdit && (
             <button onClick={() => onEdit(delivery)} className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 active:scale-[0.98] transition-all cursor-pointer shadow-sm shadow-purple-600/20">
               Editar
             </button>
           )}
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
+          <button onClick={onClose} className="px-5 py-2.5 rounded-xl text-sm font-medium text-muted-foreground dark:text-zinc-400 hover:bg-secondary dark:hover:bg-zinc-800 transition-colors cursor-pointer">
             Fechar
           </button>
         </div>
