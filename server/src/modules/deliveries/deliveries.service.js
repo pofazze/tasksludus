@@ -8,6 +8,7 @@ class DeliveriesService {
       .select(
         'deliveries.*',
         'users.name as user_name',
+        'users.avatar_url as user_avatar_url',
         'clients.name as client_name'
       )
       .orderBy('deliveries.created_at', 'desc');
@@ -31,6 +32,7 @@ class DeliveriesService {
       .select(
         'deliveries.*',
         'users.name as user_name',
+        'users.avatar_url as user_avatar_url',
         'clients.name as client_name'
       )
       .where('deliveries.id', id)
