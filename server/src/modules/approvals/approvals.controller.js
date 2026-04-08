@@ -5,7 +5,7 @@ const logger = require('../../utils/logger');
 class ApprovalsController {
   async listSmPending(req, res, next) {
     try {
-      const deliveries = await service.listSmPending(req.user.id);
+      const deliveries = await service.listSmPending(req.user.id, req.user.role);
       res.json(deliveries);
     } catch (err) {
       next(err);
@@ -23,7 +23,7 @@ class ApprovalsController {
 
   async listSmRejected(req, res, next) {
     try {
-      const deliveries = await service.listSmRejected(req.user.id);
+      const deliveries = await service.listSmRejected(req.user.id, req.user.role);
       res.json(deliveries);
     } catch (err) {
       next(err);

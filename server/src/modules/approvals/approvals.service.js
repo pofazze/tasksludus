@@ -12,8 +12,8 @@ class ApprovalsService {
    * Get deliveries with approval_status 'sm_pending' for clients
    * where social_media_id = userId
    */
-  async listSmPending(userId) {
-    return db('deliveries')
+  async listSmPending(userId, role) {
+    const query = db('deliveries')
       .join('clients', 'deliveries.client_id', 'clients.id')
       .leftJoin('scheduled_posts', 'scheduled_posts.delivery_id', 'deliveries.id')
       .leftJoin('approval_items', 'approval_items.delivery_id', 'deliveries.id')
@@ -27,8 +27,12 @@ class ApprovalsService {
         db.raw('COALESCE(scheduled_posts.post_type, approval_items.post_type) as post_type')
       )
       .where('deliveries.approval_status', 'sm_pending')
-      .where('clients.social_media_id', userId)
       .orderBy('deliveries.created_at', 'desc');
+
+    if (!['ceo', 'dev', 'admin'].includes(role)) {
+      query.where('clients.social_media_id', userId);
+    }
+    return query;
   }
 
   // ─── List By Client ───────────────────────────────────────────
@@ -87,8 +91,8 @@ class ApprovalsService {
   /**
    * Get rejected deliveries for clients where social_media_id = userId
    */
-  async listSmRejected(userId) {
-    return db('deliveries')
+  async listSmRejected(userId, role) {
+    const query = db('deliveries')
       .join('clients', 'deliveries.client_id', 'clients.id')
       .join('approval_items', 'approval_items.delivery_id', 'deliveries.id')
       .leftJoin('scheduled_posts', 'scheduled_posts.delivery_id', 'deliveries.id')
@@ -105,8 +109,12 @@ class ApprovalsService {
       )
       .where('deliveries.approval_status', 'client_rejected')
       .where('approval_items.status', 'rejected')
-      .where('clients.social_media_id', userId)
       .orderBy('approval_items.responded_at', 'desc');
+
+    if (!['ceo', 'dev', 'admin'].includes(role)) {
+      query.where('clients.social_media_id', userId);
+    }
+    return query;
   }
 
   // ─── SM Approve ───────────────────────────────────────────────
@@ -395,16 +403,19 @@ class ApprovalsService {
       throw Object.assign(new Error('Batch already revoked'), { status: 400 });
     }
 
-    // Get all items to revert their deliveries (pending or already responded)
+    // Get all items
     const items = await db('approval_items')
       .where({ batch_id: batchId })
       .select('*');
 
-    // Revert deliveries back to sm_approved
+    // Revert only pending and approved items to sm_approved
+    // Rejected items stay as client_rejected (they need correction)
     for (const item of items) {
-      await db('deliveries')
-        .where({ id: item.delivery_id })
-        .update({ approval_status: 'sm_approved', updated_at: new Date() });
+      if (item.status !== 'rejected') {
+        await db('deliveries')
+          .where({ id: item.delivery_id })
+          .update({ approval_status: 'sm_approved', updated_at: new Date() });
+      }
     }
 
     // Revoke the batch
