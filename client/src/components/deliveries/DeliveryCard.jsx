@@ -26,7 +26,10 @@ const STATUS_DOT = {
 
 export default function DeliveryCard({ delivery, showClient = false, onClick, isDragging = false }) {
   const initials = (name) => name?.split(' ').map((n) => n[0]).join('').slice(0, 2) || '?';
-  const thumbnail = delivery.media_urls?.[0];
+  const mediaUrls = typeof delivery.media_urls === 'string'
+    ? (() => { try { return JSON.parse(delivery.media_urls); } catch { return []; } })()
+    : delivery.media_urls || [];
+  const thumbnail = mediaUrls[0] || delivery.thumbnail_url;
   const thumbUrl = thumbnail ? proxyMediaUrl(thumbnail) : null;
   const fmtColor = FORMAT_COLORS[delivery.content_type] || { bg: 'bg-zinc-100 dark:bg-zinc-800', text: 'text-zinc-600 dark:text-zinc-400' };
   const statusDot = STATUS_DOT[delivery.status] || 'bg-zinc-400';

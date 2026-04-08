@@ -22,7 +22,10 @@ export default function DeliveryDetailModal({ delivery, onClose, onEdit }) {
   if (!delivery) return null;
 
   const initials = (name) => name?.split(' ').map((n) => n[0]).join('').slice(0, 2) || '?';
-  const mediaUrls = Array.isArray(delivery.media_urls) ? delivery.media_urls : [];
+  const rawMedia = typeof delivery.media_urls === 'string'
+    ? (() => { try { return JSON.parse(delivery.media_urls); } catch { return []; } })()
+    : delivery.media_urls || [];
+  const mediaUrls = Array.isArray(rawMedia) ? rawMedia : [];
   const hasMedia = mediaUrls.length > 0;
 
   const infoItems = [

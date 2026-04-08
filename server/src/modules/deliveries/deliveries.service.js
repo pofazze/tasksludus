@@ -5,11 +5,15 @@ class DeliveriesService {
     const query = db('deliveries')
       .join('users', 'deliveries.user_id', 'users.id')
       .join('clients', 'deliveries.client_id', 'clients.id')
+      .leftJoin('scheduled_posts', 'scheduled_posts.delivery_id', 'deliveries.id')
+      .leftJoin('approval_items', 'approval_items.delivery_id', 'deliveries.id')
       .select(
         'deliveries.*',
         'users.name as user_name',
         'users.avatar_url as user_avatar_url',
-        'clients.name as client_name'
+        'clients.name as client_name',
+        db.raw('COALESCE(scheduled_posts.media_urls, approval_items.media_urls) as media_urls'),
+        db.raw('COALESCE(scheduled_posts.thumbnail_url, approval_items.thumbnail_url) as thumbnail_url')
       )
       .orderBy('deliveries.created_at', 'desc');
 
@@ -29,11 +33,15 @@ class DeliveriesService {
     const delivery = await db('deliveries')
       .join('users', 'deliveries.user_id', 'users.id')
       .join('clients', 'deliveries.client_id', 'clients.id')
+      .leftJoin('scheduled_posts', 'scheduled_posts.delivery_id', 'deliveries.id')
+      .leftJoin('approval_items', 'approval_items.delivery_id', 'deliveries.id')
       .select(
         'deliveries.*',
         'users.name as user_name',
         'users.avatar_url as user_avatar_url',
-        'clients.name as client_name'
+        'clients.name as client_name',
+        db.raw('COALESCE(scheduled_posts.media_urls, approval_items.media_urls) as media_urls'),
+        db.raw('COALESCE(scheduled_posts.thumbnail_url, approval_items.thumbnail_url) as thumbnail_url')
       )
       .where('deliveries.id', id)
       .first();
