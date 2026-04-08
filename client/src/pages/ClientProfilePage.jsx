@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import KanbanBoard from '@/components/deliveries/KanbanBoard';
 import DeliveryListTable from '@/components/deliveries/DeliveryListTable';
 import DeliveryDetailModal from '@/components/deliveries/DeliveryDetailModal';
@@ -68,31 +68,23 @@ export default function ClientProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Internal views: 'profile' | 'delivery'
   const [view, setView] = useState('profile');
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [modalDelivery, setModalDelivery] = useState(null);
   const [phases, setPhases] = useState([]);
   const [phasesLoading, setPhasesLoading] = useState(false);
 
-  // Tab: 'entregas' | 'aprovacao' | 'correcao' | 'instagram'
   const [activeTab, setActiveTab] = useState('entregas');
-  const [entregasView, setEntregasView] = useState('kanban'); // 'kanban' | 'list'
+  const [entregasView, setEntregasView] = useState('kanban');
   const [draftCount, setDraftCount] = useState(0);
 
-  // Filters
   const [filterMonth, setFilterMonth] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
 
-  // Instagram sync
   const [igSyncing, setIgSyncing] = useState(false);
-
-  // Instagram OAuth connection
   const [igConnection, setIgConnection] = useState(null);
   const [igConnecting, setIgConnecting] = useState(false);
-
-  // Kanban month filter (empty string = all time)
   const [kanbanMonth, setKanbanMonth] = useState(getCurrentMonth());
 
   const fetchProfile = async () => {
@@ -109,25 +101,19 @@ export default function ClientProfilePage() {
     }
   };
 
-  useEffect(() => {
-    fetchProfile();
-  }, [id]);
+  useEffect(() => { fetchProfile(); }, [id]);
 
-  // Re-fetch when server pushes relevant events
   const profileEvents = useMemo(() => ['delivery:created', 'delivery:updated', 'delivery:deleted', 'post:updated'], []);
   useServerEvent(profileEvents, fetchProfile);
 
-  // Fetch draft count for Agendamento tab badge
   useEffect(() => {
     listScheduledPosts({ client_id: id, status: 'draft' })
       .then((data) => setDraftCount(data.length))
       .catch(() => {});
   }, [id]);
 
-  // Fetch Instagram connection status
   useEffect(() => {
     getConnectionStatus(id).then(setIgConnection).catch(() => setIgConnection(null));
-    // Check for OAuth callback params
     const params = new URLSearchParams(window.location.search);
     if (params.get('instagram_connected') === 'true') {
       toast.success('Instagram conectado com sucesso!');
@@ -167,12 +153,8 @@ export default function ClientProfilePage() {
     }
   };
 
-  const handleKanbanCardClick = (delivery) => {
-    setModalDelivery(delivery);
-  };
+  const handleKanbanCardClick = (delivery) => setModalDelivery(delivery);
 
-
-  // ─── Instagram sync ───────────────────────────────────
   const syncInstagram = async () => {
     setIgSyncing(true);
     try {
@@ -238,106 +220,70 @@ export default function ClientProfilePage() {
   // ═══════════════════════════════════════════════════════
   if (view === 'delivery' && selectedDelivery) {
     const d = selectedDelivery;
-    const clickupUrl = d.clickup_task_id
-      ? `https://app.clickup.com/t/${d.clickup_task_id}`
-      : null;
+    const clickupUrl = d.clickup_task_id ? `https://app.clickup.com/t/${d.clickup_task_id}` : null;
 
     return (
-      <div>
-        {/* Header */}
+      <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <Button variant="ghost" size="icon" onClick={backToProfile}>
             <ArrowLeft size={18} />
           </Button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold font-display truncate">{d.title}</h1>
+            <h1 className="text-xl font-bold font-display truncate">{d.title}</h1>
             <p className="text-sm text-muted-foreground">{client.name}</p>
           </div>
+          {clickupUrl && (
+            <Button variant="outline" size="sm" asChild>
+              <a href={clickupUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink size={13} className="mr-1.5" /> ClickUp
+              </a>
+            </Button>
+          )}
         </div>
 
-        {/* Status & badges */}
         <div className="flex flex-wrap gap-2 mb-6">
           <Badge variant="secondary" className={PIPELINE_STATUS_COLORS[d.status] || ''}>
             {PIPELINE_STATUSES[d.status] || d.status}
           </Badge>
-          {d.content_type && (
-            <Badge variant="outline">{CONTENT_TYPE_LABELS[d.content_type] || d.content_type}</Badge>
-          )}
-          {d.difficulty && (
-            <Badge variant="outline">{DIFFICULTY_LABELS[d.difficulty] || d.difficulty}</Badge>
-          )}
-          {d.urgency && d.urgency !== 'normal' && (
-            <Badge variant="destructive">{d.urgency}</Badge>
-          )}
+          {d.content_type && <Badge variant="outline">{CONTENT_TYPE_LABELS[d.content_type] || d.content_type}</Badge>}
+          {d.difficulty && <Badge variant="outline">{DIFFICULTY_LABELS[d.difficulty] || d.difficulty}</Badge>}
+          {d.urgency && d.urgency !== 'normal' && <Badge variant="destructive">{d.urgency}</Badge>}
         </div>
 
-        {/* Info grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-          <Card>
-            <CardContent className="pt-4 pb-3 px-4">
-              <p className="text-xs text-muted-foreground flex items-center gap-1"><User size={12} /> Responsável</p>
-              <p className="text-sm font-medium mt-1">{d.user_name || '—'}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-3 px-4">
-              <p className="text-xs text-muted-foreground flex items-center gap-1"><Calendar size={12} /> Mês</p>
-              <p className="text-sm font-medium mt-1">{d.month ? new Date(d.month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : '—'}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-3 px-4">
-              <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock size={12} /> Início</p>
-              <p className="text-sm font-medium mt-1">{fmtDate(d.started_at || d.created_at)}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 pb-3 px-4">
-              <p className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 size={12} /> Conclusão</p>
-              <p className="text-sm font-medium mt-1">{fmtDate(d.completed_at)}</p>
-            </CardContent>
-          </Card>
+          {[
+            { icon: User, label: 'Responsável', value: d.user_name || '—' },
+            { icon: Calendar, label: 'Mês', value: d.month ? new Date(d.month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : '—' },
+            { icon: Clock, label: 'Início', value: fmtDate(d.started_at || d.created_at) },
+            { icon: CheckCircle2, label: 'Conclusão', value: fmtDate(d.completed_at) },
+          ].map(({ icon: Icon, label, value }) => (
+            <Card key={label}>
+              <CardContent className="pt-4 pb-3 px-4">
+                <p className="text-xs text-muted-foreground flex items-center gap-1"><Icon size={12} /> {label}</p>
+                <p className="text-sm font-medium mt-1">{value}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* ClickUp link */}
-        {clickupUrl && (
-          <div className="mb-8">
-            <a
-              href={clickupUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-purple-400 hover:underline"
-            >
-              Abrir no ClickUp <ExternalLink size={12} />
-            </a>
-          </div>
-        )}
-
-        {/* Phase Timeline */}
-        <h2 className="text-lg font-semibold mb-4">Timeline de Fases</h2>
+        <h2 className="text-base font-semibold mb-4">Timeline de Fases</h2>
         {phasesLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : phases.length > 0 ? (
           <div className="relative ml-4">
-            {/* Vertical line */}
             <div className="absolute left-3 top-2 bottom-2 w-px bg-border" />
-
-            {phases.map((phase, i) => {
+            {phases.map((phase) => {
               const isActive = !phase.exited_at;
-              const statusColor = PIPELINE_STATUS_COLORS[phase.phase] || 'bg-zinc-500/15 text-zinc-400';
+              const statusColor = PIPELINE_STATUS_COLORS[phase.phase] || '';
               return (
                 <div key={phase.id} className="relative pl-10 pb-6 last:pb-0">
-                  {/* Node dot */}
                   <div className={`absolute left-1.5 top-1.5 w-3.5 h-3.5 rounded-full border-2 border-background ${
-                    isActive ? 'bg-purple-500' : 'bg-surface-3'
+                    isActive ? 'bg-primary' : 'bg-muted-foreground/30'
                   }`}>
-                    {isActive && (
-                      <span className="absolute inset-0 rounded-full bg-purple-500 animate-ping opacity-40" />
-                    )}
+                    {isActive && <span className="absolute inset-0 rounded-full bg-primary animate-ping opacity-40" />}
                   </div>
-
                   <div className="flex flex-col sm:flex-row sm:items-start gap-2">
                     <Badge variant="secondary" className={`${statusColor} shrink-0`}>
                       {PIPELINE_STATUSES[phase.phase] || phase.phase}
@@ -353,9 +299,7 @@ export default function ClientProfilePage() {
                         {phase.exited_at && ` → ${fmtDateTime(phase.exited_at)}`}
                       </p>
                       {phase.duration_seconds != null && (
-                        <p className="text-xs text-muted-foreground/70">
-                          Duração: {formatDuration(phase.duration_seconds)}
-                        </p>
+                        <p className="text-xs text-muted-foreground/70">Duração: {formatDuration(phase.duration_seconds)}</p>
                       )}
                     </div>
                   </div>
@@ -364,7 +308,7 @@ export default function ClientProfilePage() {
             })}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground py-6">Nenhuma fase registrada para esta entrega.</p>
+          <p className="text-sm text-muted-foreground py-6">Nenhuma fase registrada.</p>
         )}
       </div>
     );
@@ -377,47 +321,45 @@ export default function ClientProfilePage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-8">
-        <button
-          onClick={() => navigate('/clients')}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer mb-4"
-        >
-          <ArrowLeft size={12} /> Voltar para clientes
-        </button>
+      {/* Back link */}
+      <button
+        onClick={() => navigate('/clients')}
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer mb-5"
+      >
+        <ArrowLeft size={12} /> Clientes
+      </button>
 
+      {/* ─── Header Card ─────────────────────────────── */}
+      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 mb-6">
         <div className="flex items-start gap-4">
-          {/* Avatar */}
-          <Avatar className="w-12 h-12 rounded-xl shrink-0">
+          <Avatar className="w-14 h-14 rounded-xl shrink-0">
             <AvatarImage src={client.avatar_url} className="rounded-xl object-cover" />
-            <AvatarFallback className="rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400 text-lg font-bold">
+            <AvatarFallback className="rounded-xl bg-primary/10 text-primary text-lg font-bold">
               {clientInitials}
             </AvatarFallback>
           </Avatar>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold font-display truncate">{client.name}</h1>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-bold font-display truncate">{client.name}</h1>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                 client.is_active !== false
-                  ? 'bg-emerald-500/15 text-emerald-400'
-                  : 'bg-zinc-500/15 text-zinc-400'
+                  ? 'bg-emerald-500/15 text-emerald-500'
+                  : 'bg-muted text-muted-foreground'
               }`}>
                 {client.is_active !== false ? 'Ativo' : 'Inativo'}
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
-              {client.company && (
-                <span className="text-sm text-muted-foreground">{client.company}</span>
-              )}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+              {client.company && <span className="text-sm text-muted-foreground">{client.company}</span>}
               {client.instagram_account && (
                 <a
                   href={`https://instagram.com/${client.instagram_account.replace('@', '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-pink-400 hover:text-pink-300 text-sm inline-flex items-center gap-1 transition-colors"
+                  className="text-pink-500 hover:text-pink-400 text-sm inline-flex items-center gap-1 transition-colors"
                 >
-                  <Instagram size={12} />
+                  <Instagram size={13} />
                   {client.instagram_account.startsWith('@') ? client.instagram_account : `@${client.instagram_account}`}
                 </a>
               )}
@@ -425,129 +367,69 @@ export default function ClientProfilePage() {
           </div>
         </div>
 
-        {/* Compact metrics row */}
-        <div className="flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-2 mt-4 sm:mt-5 px-1">
-          <div className="flex items-center gap-1.5">
-            <Package size={13} className="text-muted-foreground" />
-            <span className="text-sm font-semibold tabular-nums">{metrics.totalDeliveries}</span>
-            <span className="text-xs text-muted-foreground">entregas</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 size={13} className="text-emerald-400" />
-            <span className="text-sm font-semibold tabular-nums text-emerald-400">{metrics.publishedCount}</span>
-            <span className="text-xs text-muted-foreground">publicadas</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Clock size={13} className="text-amber-400" />
-            <span className="text-sm font-semibold tabular-nums text-amber-400">{metrics.inProduction}</span>
-            <span className="text-xs text-muted-foreground">em produção</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Filter size={13} className="text-muted-foreground" />
-            <span className="text-sm font-semibold tabular-nums">{distinctFormats}</span>
-            <span className="text-xs text-muted-foreground">formatos</span>
-          </div>
-          {client.instagram_account && (
-            <>
-              <div className="flex items-center gap-1.5">
-                <Instagram size={13} className="text-pink-400" />
-                <span className="text-sm font-semibold tabular-nums text-pink-400">{metrics.igSummary.totalPosts}</span>
-                <span className="text-xs text-muted-foreground">posts IG</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <TrendingUp size={13} className="text-pink-400" />
-                <span className="text-sm font-semibold tabular-nums text-pink-400">{fmtNumber(metrics.igSummary.totalReach)}</span>
-                <span className="text-xs text-muted-foreground">alcance</span>
-              </div>
-            </>
-          )}
+        {/* Metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-5 pt-5 border-t border-border">
+          {[
+            { icon: Package, value: metrics.totalDeliveries, label: 'entregas', color: 'text-foreground' },
+            { icon: CheckCircle2, value: metrics.publishedCount, label: 'publicadas', color: 'text-emerald-500' },
+            { icon: Clock, value: metrics.inProduction, label: 'em produção', color: 'text-amber-500' },
+            { icon: Filter, value: distinctFormats, label: 'formatos', color: 'text-foreground' },
+            ...(client.instagram_account ? [
+              { icon: Instagram, value: metrics.igSummary.totalPosts, label: 'posts IG', color: 'text-pink-500' },
+              { icon: TrendingUp, value: fmtNumber(metrics.igSummary.totalReach), label: 'alcance', color: 'text-pink-500' },
+            ] : []),
+          ].map(({ icon: Icon, value, label, color }) => (
+            <div key={label} className="flex items-center gap-2">
+              <Icon size={14} className={color} />
+              <span className={`text-sm font-semibold tabular-nums ${color}`}>{value}</span>
+              <span className="text-xs text-muted-foreground">{label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* ─── Tabs ──────────────────────────────────────── */}
-      <div className="flex items-center border-b border-border dark:border-border mb-5 -mx-4 md:-mx-6 px-4 md:px-6 overflow-x-auto">
-        {[
-          { key: 'entregas', icon: Package, label: 'Pipeline' },
-          { key: 'aprovacao', icon: ClipboardCheck, label: 'Aprovação' },
-          { key: 'correcao', icon: RefreshCw, label: 'Correção' },
-          { key: 'agendamento', icon: Calendar, label: 'Agendamento' },
-          { key: 'instagram', icon: Instagram, label: 'Instagram' },
-        ].map(({ key, icon: Icon, label }) => (
-          <button
-            key={key}
-            onClick={() => setActiveTab(key)}
-            className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
-              activeTab === key
-                ? 'text-purple-600 dark:text-purple-400'
-                : 'text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground'
-            }`}
-          >
-            <Icon size={15} />
-            {label}
-            {activeTab === key && (
-              <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-purple-600 dark:bg-purple-400 rounded-full" />
-            )}
-          </button>
-        ))}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="flex items-center gap-3 mb-5">
+          <TabsList variant="line" className="flex-1 overflow-x-auto">
+            <TabsTrigger value="entregas"><Package size={14} /> Pipeline</TabsTrigger>
+            <TabsTrigger value="aprovacao"><ClipboardCheck size={14} /> Aprovação</TabsTrigger>
+            <TabsTrigger value="correcao"><RefreshCw size={14} /> Correção</TabsTrigger>
+            <TabsTrigger value="agendamento"><Calendar size={14} /> Agendamento</TabsTrigger>
+            <TabsTrigger value="instagram"><Instagram size={14} /> Instagram</TabsTrigger>
+          </TabsList>
 
-        {/* View toggle (only on entregas tab) */}
-        {activeTab === 'entregas' && (
-          <div className="ml-auto flex items-center gap-0.5 bg-secondary dark:bg-muted rounded-lg p-0.5 shrink-0 my-1.5">
-            <button
-              onClick={() => setEntregasView('kanban')}
-              className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                entregasView === 'kanban'
-                  ? 'bg-white dark:bg-surface-3 shadow-sm text-foreground dark:text-foreground'
-                  : 'text-muted-foreground hover:text-foreground dark:hover:text-foreground'
-              }`}
-            >
-              <LayoutGrid size={15} />
-            </button>
-            <button
-              onClick={() => setEntregasView('list')}
-              className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                entregasView === 'list'
-                  ? 'bg-white dark:bg-surface-3 shadow-sm text-foreground dark:text-foreground'
-                  : 'text-muted-foreground hover:text-foreground dark:hover:text-foreground'
-              }`}
-            >
-              <List size={15} />
-            </button>
-          </div>
-        )}
-      </div>
+          {activeTab === 'entregas' && (
+            <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5 shrink-0">
+              <button
+                onClick={() => setEntregasView('kanban')}
+                className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  entregasView === 'kanban' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                onClick={() => setEntregasView('list')}
+                className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  entregasView === 'list' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <List size={15} />
+              </button>
+            </div>
+          )}
+        </div>
 
-      {/* ─── Tab: Entregas (kanban + list) ─────────────── */}
-      {activeTab === 'entregas' && (
-        <>
-          {/* Month filter */}
-          <div className="flex items-center gap-1 mb-4 overflow-x-auto">
-            <button
-              onClick={() => setKanbanMonth('')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                kanbanMonth === ''
-                  ? 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400'
-                  : 'bg-secondary text-muted-foreground hover:text-foreground dark:bg-muted/50 dark:text-muted-foreground dark:hover:text-foreground'
-              }`}
-            >
-              Todo tempo
-            </button>
+        {/* ─── Tab: Pipeline ───────────────────────────── */}
+        <TabsContent value="entregas">
+          {/* Month pills */}
+          <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1">
+            <MonthPill active={kanbanMonth === ''} onClick={() => setKanbanMonth('')}>Todo tempo</MonthPill>
             {availableMonths.map((m) => {
               const [y, mo] = m.split('-');
               const label = new Date(Number(y), Number(mo) - 1).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-              return (
-                <button
-                  key={m}
-                  onClick={() => setKanbanMonth(m)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                    kanbanMonth === m
-                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400'
-                      : 'bg-secondary text-muted-foreground hover:text-foreground dark:bg-muted/50 dark:text-muted-foreground dark:hover:text-foreground'
-                  }`}
-                >
-                  {label}
-                </button>
-              );
+              return <MonthPill key={m} active={kanbanMonth === m} onClick={() => setKanbanMonth(m)}>{label}</MonthPill>;
             })}
           </div>
 
@@ -558,7 +440,7 @@ export default function ClientProfilePage() {
               onCardClick={handleKanbanCardClick}
             />
           ) : (
-            <div className="bg-white dark:bg-card rounded-2xl border border-border dark:border-border overflow-hidden">
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
               <DeliveryListTable
                 deliveries={filteredDeliveries}
                 onRowClick={handleKanbanCardClick}
@@ -567,232 +449,208 @@ export default function ClientProfilePage() {
               />
             </div>
           )}
-        </>
-      )}
+        </TabsContent>
 
-      {/* ─── Tab: Agendamento ─────────────────────────── */}
-      {activeTab === 'agendamento' && <AgendamentoTab clientId={id} />}
+        {/* ─── Tab: Aprovação ──────────────────────────── */}
+        <TabsContent value="aprovacao">
+          <ApprovalTab clientId={id} />
+        </TabsContent>
 
-      {/* ─── Tab: Aprovação ────────────────────────────── */}
-      {activeTab === 'aprovacao' && <ApprovalTab clientId={id} />}
+        {/* ─── Tab: Correção ───────────────────────────── */}
+        <TabsContent value="correcao">
+          <CorrectionTab clientId={id} />
+        </TabsContent>
 
-      {/* ─── Tab: Correção ─────────────────────────────── */}
-      {activeTab === 'correcao' && <CorrectionTab clientId={id} />}
+        {/* ─── Tab: Agendamento ────────────────────────── */}
+        <TabsContent value="agendamento">
+          <AgendamentoTab clientId={id} />
+        </TabsContent>
 
-      {/* ─── Tab: Instagram ────────────────────────────── */}
-      {activeTab === 'instagram' && (
-        <>
-          {/* Instagram Connection Card */}
-          {canManage && (
-            <Card className="mb-6">
-              <CardContent className="py-4 px-5">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
-                      igConnection?.connected ? 'bg-emerald-500/15' : 'bg-muted'
-                    }`}>
-                      <Instagram size={18} className={igConnection?.connected ? 'text-emerald-400' : 'text-muted-foreground'} />
-                    </div>
-                    <div>
-                      {igConnection?.connected ? (
-                        <>
-                          <p className="text-sm font-medium text-emerald-400">Conectado</p>
-                          <p className="text-xs text-muted-foreground">
-                            @{igConnection.username}
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-sm font-medium">Instagram Business</p>
-                          <p className="text-xs text-muted-foreground">Conecte para publicar automaticamente</p>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {igConnection?.connected ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-400 border-red-400/30 hover:bg-red-400/10"
-                        disabled={igConnecting}
-                        onClick={async () => {
-                          if (!confirm('Desconectar o Instagram deste cliente?')) return;
-                          setIgConnecting(true);
-                          try {
-                            await disconnectInstagram(id);
-                            setIgConnection({ connected: false });
-                            toast.success('Instagram desconectado');
-                          } catch {
-                            toast.error('Erro ao desconectar');
-                          } finally {
-                            setIgConnecting(false);
-                          }
-                        }}
-                      >
-                        Desconectar
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        disabled={igConnecting}
-                        onClick={async () => {
-                          setIgConnecting(true);
-                          try {
-                            const { url } = await getOAuthUrl(id);
-                            window.location.href = url;
-                          } catch {
-                            toast.error('Erro ao iniciar conexão');
-                            setIgConnecting(false);
-                          }
-                        }}
-                      >
-                        {igConnecting ? <Loader2 size={14} className="mr-2 animate-spin" /> : <Instagram size={14} className="mr-2" />}
-                        Conectar Instagram
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        {/* ─── Tab: Instagram ──────────────────────────── */}
+        <TabsContent value="instagram">
+          <InstagramSection
+            clientId={id}
+            canManage={canManage}
+            igConnection={igConnection}
+            setIgConnection={setIgConnection}
+            igConnecting={igConnecting}
+            setIgConnecting={setIgConnecting}
+            igSyncing={igSyncing}
+            syncInstagram={syncInstagram}
+            igPosts={igPosts}
+          />
+        </TabsContent>
+      </Tabs>
 
-          {canManage && (
-            <div className="flex justify-end mb-4">
-              <Button size="sm" onClick={syncInstagram} disabled={igSyncing}>
-                {igSyncing ? (
-                  <Loader2 size={14} className="mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw size={14} className="mr-2" />
-                )}
-                {igSyncing ? 'Sincronizando...' : 'Sincronizar Posts'}
-              </Button>
-            </div>
-          )}
-
-          {igPosts.length > 0 ? (
-            <>
-              {/* Metrics summary bar */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                {[
-                  { label: 'Posts', value: igPosts.length },
-                  { label: 'Impressões', value: igPosts.reduce((s, p) => s + (p.metrics?.impressions || 0), 0) },
-                  { label: 'Alcance', value: igPosts.reduce((s, p) => s + (p.metrics?.reach || 0), 0) },
-                  { label: 'Engajamento', value: igPosts.reduce((s, p) => s + (p.metrics?.engagement || 0), 0) },
-                ].map(({ label, value }) => (
-                  <Card key={label}>
-                    <CardContent className="px-3 pt-3 pb-2">
-                      <p className="text-[11px] text-muted-foreground">{label}</p>
-                      <p className="text-base font-semibold text-foreground tabular-nums">
-                        {value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Visual grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                {igPosts.map((p) => (
-                  <a
-                    key={p.id}
-                    href={p.post_url || p.permalink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group relative aspect-square rounded-lg overflow-hidden bg-card border border-border hover:border-border transition-colors cursor-pointer"
-                  >
-                    {p.media_url ? (
-                      <img src={p.media_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                        <ImageIcon size={24} />
-                      </div>
-                    )}
-                    {/* Type badge */}
-                    {p.media_type && p.media_type !== 'IMAGE' && (
-                      <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-black/60 text-white">
-                        {p.media_type === 'VIDEO' ? 'Reel' : p.media_type === 'CAROUSEL_ALBUM' ? 'Carrossel' : p.media_type}
-                      </span>
-                    )}
-                    {/* Metrics overlay on hover */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white text-xs">
-                      {p.metrics?.impressions != null && (
-                        <span className="flex items-center gap-1 tabular-nums">
-                          <Eye size={12} /> {p.metrics.impressions >= 1000 ? `${(p.metrics.impressions / 1000).toFixed(1)}k` : p.metrics.impressions}
-                        </span>
-                      )}
-                      {p.metrics?.reach != null && (
-                        <span className="flex items-center gap-1 tabular-nums">
-                          <Users size={12} /> {p.metrics.reach >= 1000 ? `${(p.metrics.reach / 1000).toFixed(1)}k` : p.metrics.reach}
-                        </span>
-                      )}
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-12 space-y-3">
-              <Instagram size={40} className="mx-auto text-muted-foreground" />
-              <p className="text-muted-foreground">Nenhum post sincronizado</p>
-              {canManage && (
-                <p className="text-sm text-muted-foreground">
-                  Clique em &quot;Sincronizar Posts&quot; para buscar dados do Instagram.
-                </p>
-              )}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Delivery Detail Modal */}
       {modalDelivery && (
         <DeliveryDetailModal
           delivery={modalDelivery}
           onClose={() => setModalDelivery(null)}
-          onEdit={(d) => {
-            setModalDelivery(null);
-            openDeliveryDetail(d);
-          }}
+          onEdit={(d) => { setModalDelivery(null); openDeliveryDetail(d); }}
         />
       )}
     </div>
   );
 }
 
-// ─── Sub-components ───────────────────────────────────────
-
-// MetricCard kept for potential reuse in delivery detail view
-function MetricCard({ label, value, icon, accent }) {
-  const accentStyles = {
-    emerald: 'text-emerald-400',
-    amber: 'text-amber-400',
-    pink: 'text-pink-400',
-  };
-
-  return (
-    <Card>
-      <CardContent className="pt-4 pb-3 px-4">
-        <p className="text-xs text-muted-foreground flex items-center gap-1">{icon} {label}</p>
-        <p className={`text-xl font-bold mt-1 ${accentStyles[accent] || ''}`}>
-          {value}
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function TabButton({ active, onClick, children }) {
+// ─── MonthPill ────────────────────────────────────────────
+function MonthPill({ active, onClick, children }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center px-3.5 py-1.5 rounded-md text-sm font-medium transition-all cursor-pointer ${
+      className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
         active
-          ? 'bg-muted text-foreground shadow-sm'
-          : 'text-muted-foreground hover:text-foreground'
+          ? 'bg-primary/15 text-primary'
+          : 'bg-muted text-muted-foreground hover:text-foreground'
       }`}
     >
       {children}
     </button>
+  );
+}
+
+// ─── Instagram Section ────────────────────────────────────
+function InstagramSection({ clientId, canManage, igConnection, setIgConnection, igConnecting, setIgConnecting, igSyncing, syncInstagram, igPosts }) {
+  return (
+    <div className="space-y-5">
+      {canManage && (
+        <Card>
+          <CardContent className="py-4 px-5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                  igConnection?.connected ? 'bg-emerald-500/15' : 'bg-muted'
+                }`}>
+                  <Instagram size={18} className={igConnection?.connected ? 'text-emerald-500' : 'text-muted-foreground'} />
+                </div>
+                <div>
+                  {igConnection?.connected ? (
+                    <>
+                      <p className="text-sm font-medium text-emerald-500">Conectado</p>
+                      <p className="text-xs text-muted-foreground">@{igConnection.username}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium">Instagram Business</p>
+                      <p className="text-xs text-muted-foreground">Conecte para publicar automaticamente</p>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {igConnection?.connected ? (
+                  <>
+                    <Button size="sm" variant="outline" onClick={syncInstagram} disabled={igSyncing}>
+                      {igSyncing ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <RefreshCw size={14} className="mr-1.5" />}
+                      {igSyncing ? 'Sincronizando...' : 'Sincronizar'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                      disabled={igConnecting}
+                      onClick={async () => {
+                        if (!confirm('Desconectar o Instagram deste cliente?')) return;
+                        setIgConnecting(true);
+                        try {
+                          await disconnectInstagram(clientId);
+                          setIgConnection({ connected: false });
+                          toast.success('Instagram desconectado');
+                        } catch {
+                          toast.error('Erro ao desconectar');
+                        } finally {
+                          setIgConnecting(false);
+                        }
+                      }}
+                    >
+                      Desconectar
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    disabled={igConnecting}
+                    onClick={async () => {
+                      setIgConnecting(true);
+                      try {
+                        const { url } = await getOAuthUrl(clientId);
+                        window.location.href = url;
+                      } catch {
+                        toast.error('Erro ao iniciar conexão');
+                        setIgConnecting(false);
+                      }
+                    }}
+                  >
+                    {igConnecting ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Instagram size={14} className="mr-1.5" />}
+                    Conectar Instagram
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {igPosts.length > 0 ? (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: 'Posts', value: igPosts.length },
+              { label: 'Impressões', value: igPosts.reduce((s, p) => s + (p.metrics?.impressions || 0), 0) },
+              { label: 'Alcance', value: igPosts.reduce((s, p) => s + (p.metrics?.reach || 0), 0) },
+              { label: 'Engajamento', value: igPosts.reduce((s, p) => s + (p.metrics?.engagement || 0), 0) },
+            ].map(({ label, value }) => (
+              <Card key={label}>
+                <CardContent className="px-3 pt-3 pb-2">
+                  <p className="text-[11px] text-muted-foreground">{label}</p>
+                  <p className="text-base font-semibold tabular-nums">
+                    {value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            {igPosts.map((p) => (
+              <a
+                key={p.id}
+                href={p.post_url || p.permalink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative aspect-square rounded-lg overflow-hidden bg-card border border-border hover:border-primary/40 transition-colors cursor-pointer"
+              >
+                {p.media_url ? (
+                  <img src={p.media_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    <ImageIcon size={24} />
+                  </div>
+                )}
+                {p.media_type && p.media_type !== 'IMAGE' && (
+                  <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-black/60 text-white">
+                    {p.media_type === 'VIDEO' ? 'Reel' : p.media_type === 'CAROUSEL_ALBUM' ? 'Carrossel' : p.media_type}
+                  </span>
+                )}
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white text-xs">
+                  {p.metrics?.impressions != null && (
+                    <span className="flex items-center gap-1 tabular-nums"><Eye size={12} /> {p.metrics.impressions >= 1000 ? `${(p.metrics.impressions / 1000).toFixed(1)}k` : p.metrics.impressions}</span>
+                  )}
+                  {p.metrics?.reach != null && (
+                    <span className="flex items-center gap-1 tabular-nums"><Users size={12} /> {p.metrics.reach >= 1000 ? `${(p.metrics.reach / 1000).toFixed(1)}k` : p.metrics.reach}</span>
+                  )}
+                </div>
+              </a>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="text-center py-16 space-y-3">
+          <Instagram size={40} className="mx-auto text-muted-foreground" />
+          <p className="text-muted-foreground">Nenhum post sincronizado</p>
+          {canManage && <p className="text-sm text-muted-foreground">Clique em &quot;Sincronizar&quot; para buscar dados do Instagram.</p>}
+        </div>
+      )}
+    </div>
   );
 }
