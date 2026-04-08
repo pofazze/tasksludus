@@ -24,10 +24,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import KanbanBoard from '@/components/deliveries/KanbanBoard';
+import DeliveryListTable from '@/components/deliveries/DeliveryListTable';
 import DeliveryDetailModal from '@/components/deliveries/DeliveryDetailModal';
 import {
   ArrowLeft, Calendar, CheckCircle2, ClipboardCheck, Clock, ExternalLink, Eye,
-  Filter, Image as ImageIcon, Instagram, Loader2, Package, RefreshCw, TrendingUp, User, Users,
+  Filter, Image as ImageIcon, Instagram, LayoutGrid, List, Loader2, Package, RefreshCw, TrendingUp, User, Users,
 } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -74,8 +75,9 @@ export default function ClientProfilePage() {
   const [phases, setPhases] = useState([]);
   const [phasesLoading, setPhasesLoading] = useState(false);
 
-  // Tab: 'entregas' | 'instagram' | 'agendamento'
+  // Tab: 'entregas' | 'aprovacao' | 'correcao' | 'instagram'
   const [activeTab, setActiveTab] = useState('entregas');
+  const [entregasView, setEntregasView] = useState('kanban'); // 'kanban' | 'list'
   const [draftCount, setDraftCount] = useState(0);
 
   // Filters
@@ -462,11 +464,63 @@ export default function ClientProfilePage() {
         </div>
       </div>
 
-      {/* ─── Kanban Board ──────────────────────────────── */}
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-          <h2 className="text-lg font-semibold">Pipeline</h2>
-          <div className="flex items-center gap-1 overflow-x-auto">
+      {/* ─── Tabs ──────────────────────────────────────── */}
+      <div className="flex items-center border-b border-zinc-200 dark:border-zinc-800 mb-5 -mx-4 md:-mx-6 px-4 md:px-6 overflow-x-auto">
+        {[
+          { key: 'entregas', icon: Package, label: 'Entregas' },
+          { key: 'aprovacao', icon: ClipboardCheck, label: 'Aprovação' },
+          { key: 'correcao', icon: RefreshCw, label: 'Correção' },
+          { key: 'instagram', icon: Instagram, label: 'Instagram' },
+        ].map(({ key, icon: Icon, label }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === key
+                ? 'text-purple-600 dark:text-purple-400'
+                : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+            }`}
+          >
+            <Icon size={15} />
+            {label}
+            {activeTab === key && (
+              <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-purple-600 dark:bg-purple-400 rounded-full" />
+            )}
+          </button>
+        ))}
+
+        {/* View toggle (only on entregas tab) */}
+        {activeTab === 'entregas' && (
+          <div className="ml-auto flex items-center gap-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5 shrink-0 my-1.5">
+            <button
+              onClick={() => setEntregasView('kanban')}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                entregasView === 'kanban'
+                  ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200'
+                  : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+              }`}
+            >
+              <LayoutGrid size={15} />
+            </button>
+            <button
+              onClick={() => setEntregasView('list')}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                entregasView === 'list'
+                  ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200'
+                  : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+              }`}
+            >
+              <List size={15} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ─── Tab: Entregas (kanban + list) ─────────────── */}
+      {activeTab === 'entregas' && (
+        <>
+          {/* Month filter */}
+          <div className="flex items-center gap-1 mb-4 overflow-x-auto">
             <button
               onClick={() => setKanbanMonth('')}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
@@ -495,149 +549,30 @@ export default function ClientProfilePage() {
               );
             })}
           </div>
-        </div>
 
-        <KanbanBoard
-          deliveries={Object.values(kanbanDeliveries).flat()}
-          onStatusChange={handleKanbanStatusChange}
-          onCardClick={handleKanbanCardClick}
-        />
-      </div>
-
-      {/* ─── Tabs ──────────────────────────────────────── */}
-      <div className="flex gap-0.5 mb-5 rounded-lg bg-zinc-900 p-1 border border-zinc-800 w-full sm:w-fit overflow-x-auto">
-        <TabButton active={activeTab === 'entregas'} onClick={() => setActiveTab('entregas')}>
-          <Package size={13} className="mr-1.5" /> Entregas
-        </TabButton>
-        <TabButton active={activeTab === 'agendamento'} onClick={() => setActiveTab('agendamento')}>
-          <Calendar size={13} className="mr-1.5" /> Agendamento
-          {draftCount > 0 && (
-            <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-400 px-1">
-              {draftCount}
-            </span>
-          )}
-        </TabButton>
-        <TabButton active={activeTab === 'instagram'} onClick={() => setActiveTab('instagram')}>
-          <Instagram size={13} className="mr-1.5" /> Instagram
-        </TabButton>
-        <TabButton active={activeTab === 'aprovacao'} onClick={() => setActiveTab('aprovacao')}>
-          <ClipboardCheck size={13} className="mr-1.5" /> Aprovacao
-        </TabButton>
-        <TabButton active={activeTab === 'correcao'} onClick={() => setActiveTab('correcao')}>
-          <RefreshCw size={13} className="mr-1.5" /> Correcao
-        </TabButton>
-      </div>
-
-      {/* ─── Tab: Entregas ─────────────────────────────── */}
-      {activeTab === 'entregas' && (
-        <>
-          {/* Filters */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <input
-              type="month"
-              value={filterMonth}
-              onChange={(e) => setFilterMonth(e.target.value)}
-              placeholder="Mês"
-              className="bg-transparent border border-zinc-700 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+          {entregasView === 'kanban' ? (
+            <KanbanBoard
+              deliveries={Object.values(kanbanDeliveries).flat()}
+              onStatusChange={handleKanbanStatusChange}
+              onCardClick={handleKanbanCardClick}
             />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="bg-transparent border border-zinc-700 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
-            >
-              <option value="">Todos os status</option>
-              {PIPELINE_ORDER.map((s) => (
-                <option key={s} value={s}>{PIPELINE_STATUSES[s]}</option>
-              ))}
-            </select>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="bg-transparent border border-zinc-700 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
-            >
-              <option value="">Todos os formatos</option>
-              {Object.entries(CONTENT_TYPE_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-            {(filterMonth || filterStatus || filterType) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => { setFilterMonth(''); setFilterStatus(''); setFilterType(''); }}
-                className="text-xs"
-              >
-                Limpar filtros
-              </Button>
-            )}
-          </div>
-
-          <Card>
-            <CardContent className="p-0 overflow-x-auto">
-              <Table className="min-w-[600px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Formato</TableHead>
-                    <TableHead>Responsável</TableHead>
-                    <TableHead>Mês</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDeliveries.map((d) => (
-                    <TableRow key={d.id}>
-                      <TableCell>
-                        <button
-                          onClick={() => openDeliveryDetail(d)}
-                          className="font-medium hover:text-purple-400 transition-colors cursor-pointer text-left max-w-[280px] truncate block"
-                        >
-                          {d.title}
-                        </button>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={PIPELINE_STATUS_COLORS[d.status] || ''}>
-                          {PIPELINE_STATUSES[d.status] || d.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {CONTENT_TYPE_LABELS[d.content_type] || d.content_type || '—'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{d.user_name || '—'}</TableCell>
-                      <TableCell className="text-muted-foreground">{d.month ? fmtDate(d.month) : '—'}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => openDeliveryDetail(d)}>
-                          <Eye size={16} />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredDeliveries.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        Nenhuma entrega encontrada
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          ) : (
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+              <DeliveryListTable
+                deliveries={filteredDeliveries}
+                onRowClick={handleKanbanCardClick}
+                onEdit={(d) => openDeliveryDetail(d)}
+                canManage={canManage}
+              />
+            </div>
+          )}
         </>
       )}
 
-      {/* ─── Tab: Agendamento ──────────────────────────── */}
-      {activeTab === 'agendamento' && (
-        <AgendamentoTab clientId={id} />
-      )}
-
-      {/* ─── Tab: Aprovacao ────────────────────────────── */}
+      {/* ─── Tab: Aprovação ────────────────────────────── */}
       {activeTab === 'aprovacao' && <ApprovalTab clientId={id} />}
 
-      {/* ─── Tab: Correcao ─────────────────────────────── */}
+      {/* ─── Tab: Correção ─────────────────────────────── */}
       {activeTab === 'correcao' && <CorrectionTab clientId={id} />}
 
       {/* ─── Tab: Instagram ────────────────────────────── */}
