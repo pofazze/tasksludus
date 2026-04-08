@@ -210,6 +210,19 @@ export default function ClientProfilePage() {
     return new Set(profile.deliveries.map((d) => d.content_type).filter(Boolean)).size;
   }, [profile]);
 
+  // Tab badge counts
+  const approvalCount = useMemo(() => {
+    if (!profile) return 0;
+    return profile.deliveries.filter((d) =>
+      d.approval_status && ['sm_pending', 'sm_approved', 'client_pending'].includes(d.approval_status)
+    ).length;
+  }, [profile]);
+
+  const correctionCount = useMemo(() => {
+    if (!profile) return 0;
+    return profile.deliveries.filter((d) => d.approval_status === 'client_rejected').length;
+  }, [profile]);
+
   if (loading) return <PageLoading />;
   if (!profile) return null;
 
@@ -393,9 +406,18 @@ export default function ClientProfilePage() {
         <div className="flex items-center gap-3 mb-5">
           <TabsList variant="line" className="flex-1 overflow-x-auto">
             <TabsTrigger value="entregas"><Package size={14} /> Pipeline</TabsTrigger>
-            <TabsTrigger value="aprovacao"><ClipboardCheck size={14} /> Aprovação</TabsTrigger>
-            <TabsTrigger value="correcao"><RefreshCw size={14} /> Correção</TabsTrigger>
-            <TabsTrigger value="agendamento"><Calendar size={14} /> Agendamento</TabsTrigger>
+            <TabsTrigger value="aprovacao">
+              <ClipboardCheck size={14} /> Aprovação
+              {approvalCount > 0 && <CountBadge count={approvalCount} />}
+            </TabsTrigger>
+            <TabsTrigger value="correcao">
+              <RefreshCw size={14} /> Correção
+              {correctionCount > 0 && <CountBadge count={correctionCount} color="destructive" />}
+            </TabsTrigger>
+            <TabsTrigger value="agendamento">
+              <Calendar size={14} /> Agendamento
+              {draftCount > 0 && <CountBadge count={draftCount} />}
+            </TabsTrigger>
             <TabsTrigger value="instagram"><Instagram size={14} /> Instagram</TabsTrigger>
           </TabsList>
 
@@ -494,6 +516,18 @@ export default function ClientProfilePage() {
 }
 
 // ─── MonthPill ────────────────────────────────────────────
+function CountBadge({ count, color = 'primary' }) {
+  const colors = {
+    primary: 'bg-primary text-primary-foreground',
+    destructive: 'bg-destructive text-white',
+  };
+  return (
+    <span className={`ml-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold inline-flex items-center justify-center leading-none ${colors[color]}`}>
+      {count}
+    </span>
+  );
+}
+
 function MonthPill({ active, onClick, children }) {
   return (
     <button
