@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import ApprovalReviewSheet from '@/components/approvals/ApprovalReviewSheet';
 import BatchEditSheet from '@/components/approvals/BatchEditSheet';
-import { CheckCircle2, Send, XCircle, Loader2, Pencil } from 'lucide-react';
+import { CheckCircle2, Send, XCircle, Loader2, Pencil, Copy, ExternalLink } from 'lucide-react';
 
 const SSE_EVENTS = ['approval:updated', 'delivery:updated'];
 
@@ -301,6 +301,28 @@ export default function ApprovalTab({ clientId }) {
                     Ativo
                   </Badge>
                   <div className="flex gap-1.5 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-zinc-700 hover:bg-zinc-800 gap-1"
+                      onClick={() => {
+                        const link = `${window.location.origin}/aprovacao/${batch.token}`;
+                        navigator.clipboard.writeText(link);
+                        toast.success('Link copiado!');
+                      }}
+                      title="Copiar link"
+                    >
+                      <Copy size={13} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-zinc-700 hover:bg-zinc-800 gap-1"
+                      onClick={() => window.open(`/aprovacao/${batch.token}`, '_blank')}
+                      title="Abrir link"
+                    >
+                      <ExternalLink size={13} />
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
