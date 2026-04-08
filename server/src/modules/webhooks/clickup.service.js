@@ -134,6 +134,14 @@ class ClickUpWebhookService {
           .update({ approval_status: 'sm_pending', updated_at: new Date() });
         logger.info(`Delivery ${delivery.id} approval_status → sm_pending`);
       }
+
+      // Clear client_rejected when task leaves correção (producer moved it after fixing)
+      if (newStatus !== 'correcao' && delivery.approval_status === 'client_rejected') {
+        await db('deliveries')
+          .where({ id: delivery.id })
+          .update({ approval_status: null, updated_at: new Date() });
+        logger.info(`Delivery ${delivery.id} approval_status cleared (left correção)`);
+      }
     } else {
       logger.info(`No delivery found for ClickUp task ${clickupTaskId} — will auto-create`);
       await this.autoCreateDelivery(clickupTaskId, event, task);

@@ -1,15 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { listRejected, smApprove } from '@/services/approvals';
+import { listRejected } from '@/services/approvals';
 import { CONTENT_TYPE_LABELS } from '@/lib/constants';
 import useServerEvent from '@/hooks/useServerEvent';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CarouselPreview } from '@/components/instagram/CarouselPreview';
 import { proxyMediaUrl } from '@/lib/utils';
-import ApprovalReviewSheet from '@/components/approvals/ApprovalReviewSheet';
-import { AlertTriangle, CheckCircle2, Loader2, RotateCcw } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
 const SSE_EVENTS = ['approval:updated', 'delivery:updated'];
 
@@ -23,8 +21,6 @@ const fmtDateTime = (d) =>
 export default function CorrectionTab({ clientId }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [reviewDelivery, setReviewDelivery] = useState(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -42,11 +38,6 @@ export default function CorrectionTab({ clientId }) {
   }, [fetchData]);
 
   useServerEvent(SSE_EVENTS, fetchData);
-
-  const handleResubmit = async ({ delivery_id, caption, media_urls, thumbnail_url, post_type }) => {
-    await smApprove({ delivery_id, caption, media_urls, thumbnail_url, post_type });
-    await fetchData();
-  };
 
   if (loading) {
     return (
@@ -127,27 +118,12 @@ export default function CorrectionTab({ clientId }) {
                   </div>
                 )}
 
-                {/* Action */}
-                <Button
-                  size="sm"
-                  className="w-full bg-[#9A48EA] hover:bg-[#B06AF0] gap-1.5"
-                  onClick={() => { setReviewDelivery(item); setSheetOpen(true); }}
-                >
-                  <RotateCcw size={13} />
-                  Corrigir e Reenviar
-                </Button>
               </div>
             </CardContent>
           </Card>
         );
       })}
 
-      <ApprovalReviewSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        delivery={reviewDelivery}
-        onApprove={handleResubmit}
-      />
     </div>
   );
 }

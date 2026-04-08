@@ -16,7 +16,9 @@ class ApprovalsService {
     const query = db('deliveries')
       .join('clients', 'deliveries.client_id', 'clients.id')
       .leftJoin('scheduled_posts', 'scheduled_posts.delivery_id', 'deliveries.id')
-      .leftJoin('approval_items', 'approval_items.delivery_id', 'deliveries.id')
+      .leftJoin(
+        db.raw(`LATERAL (SELECT * FROM approval_items ai WHERE ai.delivery_id = deliveries.id ORDER BY ai.created_at DESC LIMIT 1) AS approval_items ON true`)
+      )
       .select(
         'deliveries.*',
         'clients.name as client_name',
@@ -44,7 +46,9 @@ class ApprovalsService {
     return db('deliveries')
       .join('clients', 'deliveries.client_id', 'clients.id')
       .leftJoin('scheduled_posts', 'scheduled_posts.delivery_id', 'deliveries.id')
-      .leftJoin('approval_items', 'approval_items.delivery_id', 'deliveries.id')
+      .leftJoin(
+        db.raw(`LATERAL (SELECT * FROM approval_items ai WHERE ai.delivery_id = deliveries.id ORDER BY ai.created_at DESC LIMIT 1) AS approval_items ON true`)
+      )
       .select(
         'deliveries.*',
         'clients.name as client_name',
@@ -67,7 +71,9 @@ class ApprovalsService {
   async listRejected(clientId) {
     return db('deliveries')
       .join('clients', 'deliveries.client_id', 'clients.id')
-      .join('approval_items', 'approval_items.delivery_id', 'deliveries.id')
+      .join(
+        db.raw(`LATERAL (SELECT * FROM approval_items ai WHERE ai.delivery_id = deliveries.id AND ai.status = 'rejected' ORDER BY ai.created_at DESC LIMIT 1) AS approval_items ON true`)
+      )
       .leftJoin('scheduled_posts', 'scheduled_posts.delivery_id', 'deliveries.id')
       .select(
         'deliveries.*',
@@ -82,7 +88,6 @@ class ApprovalsService {
       )
       .where('deliveries.client_id', clientId)
       .where('deliveries.approval_status', 'client_rejected')
-      .where('approval_items.status', 'rejected')
       .orderBy('approval_items.responded_at', 'desc');
   }
 
@@ -94,7 +99,9 @@ class ApprovalsService {
   async listSmRejected(userId, role) {
     const query = db('deliveries')
       .join('clients', 'deliveries.client_id', 'clients.id')
-      .join('approval_items', 'approval_items.delivery_id', 'deliveries.id')
+      .join(
+        db.raw(`LATERAL (SELECT * FROM approval_items ai WHERE ai.delivery_id = deliveries.id AND ai.status = 'rejected' ORDER BY ai.created_at DESC LIMIT 1) AS approval_items ON true`)
+      )
       .leftJoin('scheduled_posts', 'scheduled_posts.delivery_id', 'deliveries.id')
       .select(
         'deliveries.*',
@@ -108,7 +115,6 @@ class ApprovalsService {
         db.raw('COALESCE(scheduled_posts.post_type, approval_items.post_type) as post_type')
       )
       .where('deliveries.approval_status', 'client_rejected')
-      .where('approval_items.status', 'rejected')
       .orderBy('approval_items.responded_at', 'desc');
 
     if (!['ceo', 'dev', 'admin'].includes(role)) {
