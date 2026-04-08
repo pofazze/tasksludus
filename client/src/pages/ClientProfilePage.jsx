@@ -467,10 +467,10 @@ export default function ClientProfilePage() {
       {/* ─── Tabs ──────────────────────────────────────── */}
       <div className="flex items-center border-b border-zinc-200 dark:border-zinc-800 mb-5 -mx-4 md:-mx-6 px-4 md:px-6 overflow-x-auto">
         {[
-          { key: 'entregas', icon: Package, label: 'Entregas' },
-          { key: 'agendamento', icon: Calendar, label: 'Agendamento' },
+          { key: 'entregas', icon: Package, label: 'Pipeline' },
           { key: 'aprovacao', icon: ClipboardCheck, label: 'Aprovação' },
           { key: 'correcao', icon: RefreshCw, label: 'Correção' },
+          { key: 'agendamento', icon: Calendar, label: 'Agendamento' },
           { key: 'instagram', icon: Instagram, label: 'Instagram' },
         ].map(({ key, icon: Icon, label }) => (
           <button
