@@ -239,15 +239,21 @@ class ClickUpWebhookService {
       logger.info(`Delivery ${delivery.id} updated from ClickUp`);
     }
 
-    // If attachments or content_type changed and task is in agendamento, refresh scheduled post
-    // (refreshScheduledPostMedia also syncs post_type from delivery.content_type)
+    // If attachments or content_type changed, refresh media in relevant places
     const needsRefresh = hasAttachmentChange || updates.content_type;
-    if (needsRefresh && delivery.status === 'agendamento') {
-      // Use updated content_type if it changed
+    if (needsRefresh) {
       const freshDelivery = updates.content_type
         ? { ...delivery, content_type: updates.content_type }
         : delivery;
-      await this.refreshScheduledPostMedia(clickupTaskId, freshDelivery);
+
+      if (delivery.status === 'agendamento') {
+        await this.refreshScheduledPostMedia(clickupTaskId, freshDelivery);
+      }
+
+      // Refresh pending approval_items when attachments change in aprovação/correção
+      if (['aprovacao', 'correcao'].includes(delivery.status)) {
+        await this.refreshApprovalItemMedia(clickupTaskId, freshDelivery);
+      }
     }
   }
 
@@ -332,6 +338,59 @@ class ClickUpWebhookService {
       logger.info(`Scheduled post media refreshed`, { clickupTaskId, mediaCount: mediaUrls.length });
     } catch (err) {
       logger.error(`refreshScheduledPostMedia error: ${err.message}`);
+    }
+  }
+
+  /**
+   * Refresh media_urls on pending approval_items from ClickUp attachments
+   */
+  async refreshApprovalItemMedia(clickupTaskId, delivery) {
+    try {
+      const task = await this.fetchTask(clickupTaskId);
+      if (!task?.attachments) return;
+
+      const allMedia = task.attachments
+        .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
+        .map((a, i) => ({
+          url: a.url,
+          type: a.mimetype?.startsWith('video/') ? 'video' : 'image',
+          order: i,
+        }));
+
+      const postTypeMap = {
+        reel: 'reel', video: 'reel', carrossel: 'carousel', feed: 'image', story: 'story',
+      };
+      const postType = delivery?.content_type
+        ? (postTypeMap[delivery.content_type] || 'image')
+        : null;
+
+      let mediaUrls = allMedia;
+      let thumbnailUrl = null;
+      if (['reel', 'video'].includes(postType)) {
+        const videos = allMedia.filter((m) => m.type === 'video');
+        const images = allMedia.filter((m) => m.type === 'image');
+        if (videos.length > 0 && images.length > 0) {
+          thumbnailUrl = images[0].url;
+          mediaUrls = videos.map((v, i) => ({ ...v, order: i }));
+        }
+      }
+
+      // Update all pending approval_items for this delivery
+      const updated = await db('approval_items')
+        .where({ delivery_id: delivery.id, status: 'pending' })
+        .update({
+          media_urls: JSON.stringify(mediaUrls),
+          thumbnail_url: thumbnailUrl,
+          post_type: postType,
+          updated_at: new Date(),
+        });
+
+      if (updated > 0) {
+        eventBus.emit('sse', { type: 'approval:updated', payload: { deliveryId: delivery.id, clientId: delivery.client_id } });
+        logger.info(`Refreshed ${updated} pending approval_item(s) media`, { clickupTaskId, mediaCount: mediaUrls.length });
+      }
+    } catch (err) {
+      logger.error(`refreshApprovalItemMedia error: ${err.message}`);
     }
   }
 
