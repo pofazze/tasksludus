@@ -21,7 +21,10 @@ import PageLoading from '@/components/common/PageLoading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import KanbanBoard from '@/components/deliveries/KanbanBoard';
+import DeliveryDetailModal from '@/components/deliveries/DeliveryDetailModal';
 import {
   ArrowLeft, Calendar, CheckCircle2, ClipboardCheck, Clock, ExternalLink, Eye,
   Filter, Image as ImageIcon, Instagram, Loader2, Package, RefreshCw, TrendingUp, User, Users,
@@ -67,6 +70,7 @@ export default function ClientProfilePage() {
   // Internal views: 'profile' | 'delivery'
   const [view, setView] = useState('profile');
   const [selectedDelivery, setSelectedDelivery] = useState(null);
+  const [modalDelivery, setModalDelivery] = useState(null);
   const [phases, setPhases] = useState([]);
   const [phasesLoading, setPhasesLoading] = useState(false);
 
@@ -149,6 +153,20 @@ export default function ClientProfilePage() {
     setView('profile');
     setSelectedDelivery(null);
     setPhases([]);
+  };
+
+  const handleKanbanStatusChange = async (deliveryId, newStatus) => {
+    try {
+      await api.put(`/deliveries/${deliveryId}`, { status: newStatus });
+      toast.success('Status atualizado');
+      fetchProfile();
+    } catch {
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
+  const handleKanbanCardClick = (delivery) => {
+    setModalDelivery(delivery);
   };
 
 
@@ -368,9 +386,12 @@ export default function ClientProfilePage() {
 
         <div className="flex items-start gap-4">
           {/* Avatar */}
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-[#9A48EA]/15 text-[#9A48EA] text-lg font-bold shrink-0">
-            {clientInitials}
-          </div>
+          <Avatar className="w-12 h-12 rounded-xl shrink-0">
+            <AvatarImage src={client.avatar_url} className="rounded-xl object-cover" />
+            <AvatarFallback className="rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-400 text-lg font-bold">
+              {clientInitials}
+            </AvatarFallback>
+          </Avatar>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -448,10 +469,10 @@ export default function ClientProfilePage() {
           <div className="flex items-center gap-1 overflow-x-auto">
             <button
               onClick={() => setKanbanMonth('')}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
                 kanbanMonth === ''
-                  ? 'bg-[#9A48EA]/20 text-[#9A48EA]'
-                  : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
+                  ? 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400'
+                  : 'bg-zinc-100 text-zinc-500 hover:text-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:text-zinc-200'
               }`}
             >
               Todo tempo
@@ -463,10 +484,10 @@ export default function ClientProfilePage() {
                 <button
                   key={m}
                   onClick={() => setKanbanMonth(m)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
                     kanbanMonth === m
-                      ? 'bg-[#9A48EA]/20 text-[#9A48EA]'
-                      : 'bg-zinc-800/50 text-zinc-400 hover:text-zinc-200'
+                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400'
+                      : 'bg-zinc-100 text-zinc-500 hover:text-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-400 dark:hover:text-zinc-200'
                   }`}
                 >
                   {label}
@@ -476,55 +497,11 @@ export default function ClientProfilePage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto pb-2 -mx-2 px-2">
-          <div className="flex gap-3" style={{ minWidth: `${PIPELINE_ORDER.length * 180}px` }}>
-            {PIPELINE_ORDER.map((status) => {
-              const cards = kanbanDeliveries[status] || [];
-              const colorClass = PIPELINE_STATUS_COLORS[status] || '';
-              return (
-                <div key={status} className="flex-1 min-w-[160px]">
-                  {/* Column header */}
-                  <div className="flex items-center gap-2 mb-2 px-1">
-                    <Badge variant="secondary" className={`${colorClass} text-xs`}>
-                      {PIPELINE_STATUSES[status]}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{cards.length}</span>
-                  </div>
-
-                  {/* Cards stack — max 5 visible, scroll for more */}
-                  <div className="space-y-2 min-h-[60px] max-h-[340px] overflow-y-auto pr-0.5 scrollbar-thin">
-                    {cards.map((d) => (
-                      <button
-                        key={d.id}
-                        onClick={() => openDeliveryDetail(d)}
-                        className="w-full text-left p-2.5 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:border-zinc-600 hover:bg-zinc-800/50 transition-colors cursor-pointer group"
-                      >
-                        <p className="text-sm font-medium truncate group-hover:text-purple-300 transition-colors">
-                          {d.title}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          {d.content_type && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
-                              {CONTENT_TYPE_LABELS[d.content_type] || d.content_type}
-                            </span>
-                          )}
-                          {d.user_name && (
-                            <span className="text-[10px] text-muted-foreground truncate">
-                              {d.user_name.split(' ')[0]}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                    {cards.length === 0 && (
-                      <div className="text-xs text-muted-foreground/50 text-center py-4">—</div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <KanbanBoard
+          deliveries={Object.values(kanbanDeliveries).flat()}
+          onStatusChange={handleKanbanStatusChange}
+          onCardClick={handleKanbanCardClick}
+        />
       </div>
 
       {/* ─── Tabs ──────────────────────────────────────── */}
@@ -827,6 +804,18 @@ export default function ClientProfilePage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Delivery Detail Modal */}
+      {modalDelivery && (
+        <DeliveryDetailModal
+          delivery={modalDelivery}
+          onClose={() => setModalDelivery(null)}
+          onEdit={(d) => {
+            setModalDelivery(null);
+            openDeliveryDetail(d);
+          }}
+        />
       )}
     </div>
   );

@@ -40,7 +40,7 @@ function App() {
   }, [loadUser]);
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <BrowserRouter>
       <Routes>
         {/* Public routes */}
