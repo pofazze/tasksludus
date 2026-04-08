@@ -2,15 +2,11 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { CarouselPreview } from '@/components/instagram/CarouselPreview';
 import { proxyMediaUrl } from '@/lib/utils';
-import { Heart, MessageCircle, Send, Bookmark } from 'lucide-react';
+import { Heart, MessageCircle, Send, Bookmark, ArrowRight, Undo2, CheckCircle2, XCircle } from 'lucide-react';
 
 const POST_TYPE_LABELS = {
-  reel: 'Reel',
-  feed: 'Feed',
-  carrossel: 'Carrossel',
-  carousel: 'Carrossel',
-  story: 'Story',
-  image: 'Feed',
+  reel: 'Reel', feed: 'Feed', carrossel: 'Carrossel', carousel: 'Carrossel',
+  story: 'Story', image: 'Feed',
 };
 
 export default function InstagramPostPreview({ item, client, readOnly = false, onApprove, onReject }) {
@@ -18,20 +14,30 @@ export default function InstagramPostPreview({ item, client, readOnly = false, o
   const media = typeof item.media_urls === 'string' ? JSON.parse(item.media_urls) : (item.media_urls || []);
   const caption = item.caption || '';
   const isLong = caption.length > 125;
+  const igHandle = client?.instagram_account
+    ? (client.instagram_account.startsWith('@') ? client.instagram_account : `@${client.instagram_account}`)
+    : client?.name;
 
   return (
-    <div className="bg-black rounded-xl overflow-hidden border border-zinc-800 max-w-[480px] mx-auto">
+    <div className="bg-black rounded-2xl overflow-hidden border border-zinc-800 max-w-[480px] mx-auto">
       {/* Instagram Header */}
-      <div className="flex items-center gap-3 px-3 py-2.5">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#9A48EA] to-pink-500 flex items-center justify-center text-white text-xs font-bold">
-          {client?.instagram_account?.[0]?.toUpperCase() || client?.name?.[0]?.toUpperCase() || '?'}
-        </div>
+      <div className="flex items-center gap-3 px-4 py-3">
+        {/* Profile photo */}
+        {client?.avatar_url ? (
+          <img
+            src={client.avatar_url}
+            alt=""
+            className="w-9 h-9 rounded-full object-cover ring-2 ring-pink-500/30"
+          />
+        ) : (
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center text-white text-xs font-bold ring-2 ring-pink-500/30">
+            {client?.name?.[0]?.toUpperCase() || '?'}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">
-            {client?.instagram_account || client?.name}
-          </p>
+          <p className="text-[13px] font-semibold text-white truncate">{igHandle}</p>
         </div>
-        <Badge variant="secondary" className="text-[10px] bg-zinc-800 text-zinc-400">
+        <Badge variant="secondary" className="text-[10px] bg-zinc-800 text-zinc-400 border-0">
           {POST_TYPE_LABELS[item.post_type] || item.post_type}
         </Badge>
       </div>
@@ -41,14 +47,14 @@ export default function InstagramPostPreview({ item, client, readOnly = false, o
         {media.length > 0 ? (
           <CarouselPreview media={media.map((m) => ({ ...m, url: proxyMediaUrl(m.url) }))} />
         ) : (
-          <div className="h-64 flex items-center justify-center text-zinc-600 text-sm">
-            Sem midia
+          <div className="aspect-square flex items-center justify-center text-zinc-600 text-sm">
+            Sem mídia
           </div>
         )}
       </div>
 
       {/* Instagram Actions Bar */}
-      <div className="flex items-center justify-between px-3 py-2">
+      <div className="flex items-center justify-between px-4 py-2.5">
         <div className="flex gap-4">
           <Heart size={22} className="text-zinc-400" />
           <MessageCircle size={22} className="text-zinc-400" />
@@ -59,13 +65,13 @@ export default function InstagramPostPreview({ item, client, readOnly = false, o
 
       {/* Caption */}
       {caption && (
-        <div className="px-3 pb-3">
-          <p className="text-sm text-zinc-200 whitespace-pre-wrap">
-            <span className="font-semibold mr-1">{client?.instagram_account || client?.name}</span>
+        <div className="px-4 pb-3">
+          <p className="text-sm text-zinc-200 whitespace-pre-wrap leading-relaxed">
+            <span className="font-semibold mr-1.5">{igHandle}</span>
             {isLong && !expanded ? (
               <>
                 {caption.slice(0, 125)}...
-                <button onClick={() => setExpanded(true)} className="text-zinc-500 ml-1">
+                <button onClick={() => setExpanded(true)} className="text-zinc-500 ml-1 cursor-pointer">
                   mais
                 </button>
               </>
@@ -78,29 +84,38 @@ export default function InstagramPostPreview({ item, client, readOnly = false, o
 
       {/* Status or Action buttons */}
       {item.status !== 'pending' ? (
-        <div className="px-3 pb-3">
-          <Badge className={item.status === 'approved'
-            ? 'bg-emerald-500/15 text-emerald-400'
-            : 'bg-red-500/15 text-red-400'
-          }>
-            {item.status === 'approved' ? 'Aprovado' : 'Reprovado'}
-          </Badge>
+        <div className="px-4 pb-4">
+          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl ${
+            item.status === 'approved'
+              ? 'bg-emerald-500/10 text-emerald-400'
+              : 'bg-red-500/10 text-red-400'
+          }`}>
+            {item.status === 'approved'
+              ? <CheckCircle2 size={16} />
+              : <XCircle size={16} />
+            }
+            <span className="text-sm font-medium">
+              {item.status === 'approved' ? 'Aprovado' : 'Reprovado'}
+            </span>
+          </div>
           {item.rejection_reason && (
-            <p className="text-xs text-zinc-500 mt-2">Motivo: {item.rejection_reason}</p>
+            <p className="text-xs text-zinc-500 mt-2 px-1">Motivo: {item.rejection_reason}</p>
           )}
         </div>
       ) : !readOnly && onApprove && onReject ? (
-        <div className="px-3 pb-3 flex gap-2">
+        <div className="px-4 pb-4 flex gap-2.5">
           <button
             onClick={() => onApprove(item.id)}
-            className="flex-1 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-semibold text-sm transition-all cursor-pointer"
           >
             Aprovar
+            <ArrowRight size={16} />
           </button>
           <button
             onClick={() => onReject(item.id)}
-            className="flex-1 py-3 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-sm transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-[0.98] text-zinc-300 font-semibold text-sm transition-all cursor-pointer border border-zinc-700"
           >
+            <Undo2 size={16} />
             Reprovar
           </button>
         </div>

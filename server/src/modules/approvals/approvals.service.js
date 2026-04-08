@@ -276,7 +276,8 @@ class ApprovalsService {
       .select(
         'approval_batches.*',
         'clients.name as client_name',
-        'clients.instagram_account'
+        'clients.instagram_account',
+        'clients.avatar_url as client_avatar_url'
       )
       .where('approval_batches.token', token)
       .first();

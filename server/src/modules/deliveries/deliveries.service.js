@@ -13,7 +13,9 @@ class DeliveriesService {
         'users.avatar_url as user_avatar_url',
         'clients.name as client_name',
         db.raw('COALESCE(scheduled_posts.media_urls, approval_items.media_urls) as media_urls'),
-        db.raw('COALESCE(scheduled_posts.thumbnail_url, approval_items.thumbnail_url) as thumbnail_url')
+        db.raw('COALESCE(scheduled_posts.thumbnail_url, approval_items.thumbnail_url) as thumbnail_url'),
+        db.raw('COALESCE(scheduled_posts.caption, approval_items.caption) as caption'),
+        'scheduled_posts.scheduled_at'
       )
       .orderBy('deliveries.created_at', 'desc');
 
@@ -41,7 +43,9 @@ class DeliveriesService {
         'users.avatar_url as user_avatar_url',
         'clients.name as client_name',
         db.raw('COALESCE(scheduled_posts.media_urls, approval_items.media_urls) as media_urls'),
-        db.raw('COALESCE(scheduled_posts.thumbnail_url, approval_items.thumbnail_url) as thumbnail_url')
+        db.raw('COALESCE(scheduled_posts.thumbnail_url, approval_items.thumbnail_url) as thumbnail_url'),
+        db.raw('COALESCE(scheduled_posts.caption, approval_items.caption) as caption'),
+        'scheduled_posts.scheduled_at'
       )
       .where('deliveries.id', id)
       .first();

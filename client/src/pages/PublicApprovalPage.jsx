@@ -81,7 +81,8 @@ export default function PublicApprovalPage() {
     );
   }
 
-  const { batch, items, client } = data;
+  const { batch, items } = data;
+  const client = { name: batch.client_name, instagram_account: batch.instagram_account, avatar_url: batch.client_avatar_url };
   const respondedCount = items.filter((i) => i.status !== 'pending').length;
   const allResponded = respondedCount === items.length;
   const isRevoked = batch.status === 'revoked';
