@@ -347,8 +347,8 @@ class ApprovalsService {
     if (!batch) {
       throw Object.assign(new Error('Approval batch not found'), { status: 404 });
     }
-    if (batch.status === 'revoked') {
-      throw Object.assign(new Error('Este link de aprovação foi revogado'), { status: 410 });
+    if (batch.status !== 'pending') {
+      throw Object.assign(new Error('Este link de aprovação não está mais ativo'), { status: 410 });
     }
 
     const batchItems = await db('approval_items')

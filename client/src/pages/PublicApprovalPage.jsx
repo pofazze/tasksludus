@@ -28,11 +28,27 @@ export default function PublicApprovalPage() {
     }
   };
 
+  // Update a single item in local state without re-fetching
+  const updateItemLocally = (itemId, newStatus, rejReason) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      const updatedItems = prev.items.map((item) =>
+        item.id === itemId
+          ? { ...item, status: newStatus, rejection_reason: rejReason || null, responded_at: new Date().toISOString() }
+          : item
+      );
+      return { ...prev, items: updatedItems };
+    });
+  };
+
   const handleApprove = async (itemId) => {
     setSubmitting(true);
     try {
-      await clientRespond(token, itemId, { status: 'approved' });
-      await fetchBatch();
+      const result = await clientRespond(token, itemId, { status: 'approved' });
+      updateItemLocally(itemId, 'approved');
+      if (!result.allResponded) {
+        await fetchBatch();
+      }
     } catch {
       alert('Erro ao aprovar. Tente novamente.');
     } finally {
@@ -49,13 +65,16 @@ export default function PublicApprovalPage() {
     if (!rejectionReason.trim()) return;
     setSubmitting(true);
     try {
-      await clientRespond(token, rejectingId, {
+      const result = await clientRespond(token, rejectingId, {
         status: 'rejected',
         rejection_reason: rejectionReason.trim(),
       });
+      updateItemLocally(rejectingId, 'rejected', rejectionReason.trim());
       setRejectingId(null);
       setRejectionReason('');
-      await fetchBatch();
+      if (!result.allResponded) {
+        await fetchBatch();
+      }
     } catch {
       alert('Erro ao reprovar. Tente novamente.');
     } finally {
