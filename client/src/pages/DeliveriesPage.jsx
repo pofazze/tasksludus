@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import KanbanBoard from '@/components/deliveries/KanbanBoard';
 import DeliveryListTable from '@/components/deliveries/DeliveryListTable';
 import DeliveryDetailModal from '@/components/deliveries/DeliveryDetailModal';
@@ -48,6 +47,7 @@ export default function DeliveriesPage() {
   // Views
   const [view, setView] = useState('list'); // 'list' | 'form'
   const [pipelineView, setPipelineView] = useState('kanban'); // 'kanban' | 'list'
+  const [activeTab, setActiveTab] = useState('pipeline');
 
   // Form
   const [editId, setEditId] = useState(null);
@@ -168,11 +168,11 @@ export default function DeliveriesPage() {
   // ─── Client selector helper ───────────────────────────────
 
   const ClientSelector = ({ value, onChange }) => (
-    <div className="mb-4">
+    <div className="mb-5">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="native-select"
+        className="h-10 w-full max-w-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-sm text-zinc-700 dark:text-zinc-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 outline-none transition-all cursor-pointer"
       >
         <option value="">Selecione um cliente...</option>
         {clients.map((c) => (
@@ -183,9 +183,11 @@ export default function DeliveriesPage() {
   );
 
   const NoClientMessage = () => (
-    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
-      <Calendar size={32} />
-      <span className="text-sm">Selecione um cliente</span>
+    <div className="flex flex-col items-center justify-center py-20 text-zinc-400 gap-3">
+      <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+        <Calendar size={28} className="text-zinc-300 dark:text-zinc-600" />
+      </div>
+      <span className="text-sm font-medium">Selecione um cliente para continuar</span>
     </div>
   );
 
@@ -316,174 +318,200 @@ export default function DeliveriesPage() {
   // ─── Main tabbed view ─────────────────────────────────────
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold font-display">Entregas</h1>
-        <div className="flex items-center gap-3">
-          <input
-            type="month"
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-            className="native-select"
-          />
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="native-select"
-          >
-            <option value="">Todos os formatos</option>
-            {Object.entries(CONTENT_TYPE_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
-          {canManage && (
-            <Button onClick={openNew}>
-              <Plus size={16} className="mr-2" /> Nova Entrega
-            </Button>
+    <div className="-m-4 md:-m-6">
+      {/* ── Header ──────────────────────────────────────────── */}
+      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+          <div>
+            <h1 className="text-3xl font-bold font-display text-zinc-900 dark:text-white tracking-tight">
+              Entregas
+            </h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+              {deliveries.length} {deliveries.length === 1 ? 'entrega' : 'entregas'} este mês
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <input
+              type="month"
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-sm text-zinc-700 dark:text-zinc-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 outline-none transition-all"
+            />
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-sm text-zinc-700 dark:text-zinc-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 outline-none transition-all cursor-pointer"
+            >
+              <option value="">Todos os formatos</option>
+              {Object.entries(CONTENT_TYPE_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            {canManage && (
+              <button
+                onClick={openNew}
+                className="h-9 px-4 rounded-xl text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 active:scale-[0.98] transition-all shadow-sm shadow-purple-600/20 flex items-center gap-2 cursor-pointer"
+              >
+                <Plus size={15} /> Nova
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Tabs Navigation ───────────────────────────────── */}
+        <div className="flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-800 -mx-4 md:-mx-6 px-4 md:px-6 overflow-x-auto">
+          {[
+            { key: 'pipeline', icon: LayoutGrid, label: 'Pipeline' },
+            { key: 'agendamento', icon: Calendar, label: 'Agendamento' },
+            { key: 'instagram', icon: Instagram, label: 'Instagram' },
+            { key: 'aprovacao', icon: CheckCircle, label: 'Aprovação' },
+            { key: 'correcao', icon: AlertTriangle, label: 'Correção' },
+          ].map(({ key, icon: Icon, label }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`
+                relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap cursor-pointer
+                ${activeTab === key
+                  ? 'text-purple-600 dark:text-purple-400'
+                  : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                }
+              `}
+            >
+              <Icon size={15} />
+              {label}
+              {activeTab === key && (
+                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-purple-600 dark:bg-purple-400 rounded-full" />
+              )}
+            </button>
+          ))}
+
+          {/* View toggle (only on pipeline tab) */}
+          {activeTab === 'pipeline' && (
+            <div className="ml-auto flex items-center gap-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg p-0.5 shrink-0">
+              <button
+                onClick={() => setPipelineView('kanban')}
+                className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  pipelineView === 'kanban'
+                    ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200'
+                    : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                }`}
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                onClick={() => setPipelineView('list')}
+                className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  pipelineView === 'list'
+                    ? 'bg-white dark:bg-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200'
+                    : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                }`}
+              >
+                <List size={15} />
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="pipeline">
-        <TabsList>
-          <TabsTrigger value="pipeline">
-            <LayoutGrid size={14} />
-            Pipeline
-          </TabsTrigger>
-          <TabsTrigger value="agendamento">
-            <Calendar size={14} />
-            Agendamento
-          </TabsTrigger>
-          <TabsTrigger value="instagram">
-            <Instagram size={14} />
-            Instagram
-          </TabsTrigger>
-          <TabsTrigger value="aprovacao">
-            <CheckCircle size={14} />
-            Aprovacao
-          </TabsTrigger>
-          <TabsTrigger value="correcao">
-            <AlertTriangle size={14} />
-            Correcao
-          </TabsTrigger>
-        </TabsList>
+      {/* ── Tab Content ─────────────────────────────────────── */}
+      <div className="px-4 md:px-6 pt-5 pb-4">
 
-        {/* ── Tab 1: Pipeline ──────────────────────────────── */}
-        <TabsContent value="pipeline">
-          {/* View toggle */}
-          <div className="flex items-center gap-1 mb-4">
-            <Button
-              variant={pipelineView === 'kanban' ? 'default' : 'ghost'}
-              size="icon"
-              onClick={() => setPipelineView('kanban')}
-              className="h-8 w-8"
-            >
-              <LayoutGrid size={16} />
-            </Button>
-            <Button
-              variant={pipelineView === 'list' ? 'default' : 'ghost'}
-              size="icon"
-              onClick={() => setPipelineView('list')}
-              className="h-8 w-8"
-            >
-              <List size={16} />
-            </Button>
-          </div>
-
-          {pipelineView === 'kanban' ? (
+        {/* Tab 1: Pipeline */}
+        {activeTab === 'pipeline' && (
+          pipelineView === 'kanban' ? (
             <KanbanBoard
               deliveries={deliveries}
               onStatusChange={handleStatusChange}
               onCardClick={handleCardClick}
             />
           ) : (
-            <Card>
-              <CardContent className="p-0">
-                <DeliveryListTable
-                  deliveries={deliveries}
-                  onRowClick={handleCardClick}
-                  onEdit={openEdit}
-                  canManage={canManage}
-                />
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* ── Tab 2: Agendamento ───────────────────────────── */}
-        <TabsContent value="agendamento">
-          {/* Filter toggle */}
-          <div className="flex items-center gap-1 mb-4 p-1 rounded-lg bg-muted w-fit">
-            {[
-              { key: 'todos', label: 'Todos' },
-              { key: 'agendados', label: 'Agendados' },
-              { key: 'aprovados', label: 'Aprovados' },
-            ].map((opt) => (
-              <button
-                key={opt.key}
-                onClick={() => setAgendamentoFilter(opt.key)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  agendamentoFilter === opt.key
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          {agendamentoDeliveries.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
-              <Calendar size={32} />
-              <span className="text-sm">Nenhuma entrega para agendamento</span>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+              <DeliveryListTable
+                deliveries={deliveries}
+                onRowClick={handleCardClick}
+                onEdit={openEdit}
+                canManage={canManage}
+              />
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {agendamentoDeliveries.map((d) => (
-                <DeliveryCard
-                  key={d.id}
-                  delivery={d}
-                  showClient
-                  onClick={handleCardClick}
-                />
+          )
+        )}
+
+        {/* Tab 2: Agendamento */}
+        {activeTab === 'agendamento' && (
+          <>
+            <div className="flex items-center gap-1 mb-5 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 w-fit">
+              {[
+                { key: 'todos', label: 'Todos' },
+                { key: 'agendados', label: 'Agendados' },
+                { key: 'aprovados', label: 'Aprovados' },
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setAgendamentoFilter(opt.key)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                    agendamentoFilter === opt.key
+                      ? 'bg-white dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 shadow-sm'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
               ))}
             </div>
-          )}
-        </TabsContent>
+            {agendamentoDeliveries.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-zinc-400 gap-3">
+                <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                  <Calendar size={28} className="text-zinc-300 dark:text-zinc-600" />
+                </div>
+                <span className="text-sm font-medium">Nenhuma entrega para agendamento</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {agendamentoDeliveries.map((d) => (
+                  <DeliveryCard key={d.id} delivery={d} showClient onClick={handleCardClick} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
-        {/* ── Tab 3: Instagram ─────────────────────────────── */}
-        <TabsContent value="instagram">
-          <ClientSelector value={selectedClientId} onChange={setSelectedClientId} />
-          {selectedClientId ? (
-            <AgendamentoTab clientId={selectedClientId} />
-          ) : (
-            <NoClientMessage />
-          )}
-        </TabsContent>
+        {/* Tab 3: Instagram */}
+        {activeTab === 'instagram' && (
+          <>
+            <ClientSelector value={selectedClientId} onChange={setSelectedClientId} />
+            {selectedClientId ? (
+              <AgendamentoTab clientId={selectedClientId} />
+            ) : (
+              <NoClientMessage />
+            )}
+          </>
+        )}
 
-        {/* ── Tab 4: Aprovacao ─────────────────────────────── */}
-        <TabsContent value="aprovacao">
-          <ClientSelector value={selectedClientId} onChange={setSelectedClientId} />
-          {selectedClientId ? (
-            <ApprovalTab clientId={selectedClientId} />
-          ) : (
-            <NoClientMessage />
-          )}
-        </TabsContent>
+        {/* Tab 4: Aprovação */}
+        {activeTab === 'aprovacao' && (
+          <>
+            <ClientSelector value={selectedClientId} onChange={setSelectedClientId} />
+            {selectedClientId ? (
+              <ApprovalTab clientId={selectedClientId} />
+            ) : (
+              <NoClientMessage />
+            )}
+          </>
+        )}
 
-        {/* ── Tab 5: Correcao ──────────────────────────────── */}
-        <TabsContent value="correcao">
-          <ClientSelector value={selectedClientId} onChange={setSelectedClientId} />
-          {selectedClientId ? (
-            <CorrectionTab clientId={selectedClientId} />
-          ) : (
-            <NoClientMessage />
-          )}
-        </TabsContent>
-      </Tabs>
+        {/* Tab 5: Correção */}
+        {activeTab === 'correcao' && (
+          <>
+            <ClientSelector value={selectedClientId} onChange={setSelectedClientId} />
+            {selectedClientId ? (
+              <CorrectionTab clientId={selectedClientId} />
+            ) : (
+              <NoClientMessage />
+            )}
+          </>
+        )}
+      </div>
 
       {/* Detail modal */}
       {selectedDelivery && (
