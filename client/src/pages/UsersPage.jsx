@@ -224,7 +224,9 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className={ROLE_COLORS[u.role]}>
-                          {ROLE_LABELS[u.role] || u.role}
+                          {u.role === 'producer' && u.producer_type && PRODUCER_TYPE_LABELS[u.producer_type]
+                            ? PRODUCER_TYPE_LABELS[u.producer_type]
+                            : ROLE_LABELS[u.role] || u.role}
                         </Badge>
                       </TableCell>
                       {isCeo(user?.role) && (
@@ -331,8 +333,9 @@ export default function UsersPage() {
             <div>
               <h1 className="text-2xl font-bold font-display">{selectedUser?.name}</h1>
               <p className="text-sm text-muted-foreground">
-                {ROLE_LABELS[selectedUser?.role] || selectedUser?.role}
-                {selectedUser?.producer_type && ` · ${PRODUCER_TYPE_LABELS[selectedUser.producer_type] || selectedUser.producer_type}`}
+                {selectedUser?.role === 'producer' && selectedUser?.producer_type && PRODUCER_TYPE_LABELS[selectedUser.producer_type]
+                  ? PRODUCER_TYPE_LABELS[selectedUser.producer_type]
+                  : ROLE_LABELS[selectedUser?.role] || selectedUser?.role}
               </p>
             </div>
           </div>
