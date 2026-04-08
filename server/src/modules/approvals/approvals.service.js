@@ -472,6 +472,7 @@ class ApprovalsService {
         db.raw("count(approval_items.id) filter (where approval_items.status = 'rejected') as rejected_count")
       )
       .where('approval_batches.client_id', clientId)
+      .where('approval_batches.status', 'pending')
       .groupBy('approval_batches.id')
       .orderBy('approval_batches.created_at', 'desc');
   }
