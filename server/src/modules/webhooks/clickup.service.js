@@ -168,8 +168,8 @@ class ClickUpWebhookService {
         .where({ clickup_task_id: clickupTaskId })
         .first();
       await this.autoCreateScheduledPost(clickupTaskId, freshDelivery, task);
-    } else {
-      // Task moved AWAY from agendamento — clean up draft/scheduled post
+    } else if (newStatus !== 'agendado') {
+      // Task moved AWAY from agendamento/agendado — clean up draft/scheduled post
       await this.cleanupScheduledPost(clickupTaskId);
     }
   }
