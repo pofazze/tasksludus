@@ -182,11 +182,22 @@ class ApprovalsService {
       );
     }
 
-    // Always create a new batch (each send generates a unique link)
-    const [batch] = await db('approval_batches')
-      .insert({ client_id: clientId, created_by: userId })
-      .returning('*');
-    logger.info('Created new approval batch', { batchId: batch.id, clientId });
+    // Check if there's an existing pending batch for this client — reuse it
+    let batch = await db('approval_batches')
+      .where({ client_id: clientId, status: 'pending' })
+      .orderBy('created_at', 'desc')
+      .first();
+
+    const isExistingBatch = !!batch;
+
+    if (!batch) {
+      [batch] = await db('approval_batches')
+        .insert({ client_id: clientId, created_by: userId })
+        .returning('*');
+      logger.info('Created new approval batch', { batchId: batch.id, clientId });
+    } else {
+      logger.info('Reusing existing pending batch', { batchId: batch.id, clientId });
+    }
 
     // Create approval_items and update deliveries
     const createdItems = [];
@@ -216,10 +227,13 @@ class ApprovalsService {
     const baseUrl = (env.clientUrl || 'http://localhost:4401').split(',')[0].trim();
     const approvalLink = `${baseUrl}/aprovacao/${batch.token}`;
 
-    // Send WhatsApp message
-    const whatsappMessage =
-      `Olá! Temos ${createdItems.length} post(s) aguardando sua aprovação.\n\n` +
-      `Acesse o link abaixo para aprovar ou solicitar correções:\n${approvalLink}`;
+    // Send WhatsApp message — different text if adding to existing batch
+    const whatsappMessage = isExistingBatch
+      ? `Novas publicações foram adicionadas ao seu link de aprovação! ` +
+        `${createdItems.length} novo(s) post(s) inserido(s).\n\n` +
+        `Acesse o mesmo link para revisar:\n${approvalLink}`
+      : `Olá! Temos ${createdItems.length} post(s) aguardando sua aprovação.\n\n` +
+        `Acesse o link abaixo para aprovar ou solicitar correções:\n${approvalLink}`;
 
     // Send to group if available, otherwise to client's personal WhatsApp
     const whatsappDest = client.whatsapp_group || evolutionService.buildPersonalJid(client.whatsapp);
