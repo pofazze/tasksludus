@@ -39,6 +39,15 @@ class ApprovalsController {
     }
   }
 
+  async getDeliveryMedia(req, res, next) {
+    try {
+      const data = await service.getDeliveryMedia(req.params.deliveryId);
+      res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async smApprove(req, res, next) {
     try {
       const { error, value } = smApproveSchema.validate(req.body);

@@ -9,6 +9,9 @@ export const listSmRejected = () =>
 export const listByClient = (clientId) =>
   api.get(`/approvals/client/${clientId}`).then((r) => r.data);
 
+export const getDeliveryMedia = (deliveryId) =>
+  api.get(`/approvals/delivery/${deliveryId}/media`).then((r) => r.data);
+
 export const smApprove = (data) =>
   api.post('/approvals/sm-approve', data).then((r) => r.data);
 

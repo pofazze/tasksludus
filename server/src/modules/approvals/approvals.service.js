@@ -123,6 +123,62 @@ class ApprovalsService {
     return query;
   }
 
+  // ─── Delivery Media (from ClickUp) ────────────────────────────
+
+  /**
+   * Fetch fresh media from ClickUp attachments for a delivery
+   */
+  async getDeliveryMedia(deliveryId) {
+    const delivery = await db('deliveries').where({ id: deliveryId }).first();
+    if (!delivery) {
+      throw Object.assign(new Error('Delivery not found'), { status: 404 });
+    }
+    if (!delivery.clickup_task_id) {
+      return { media_urls: [], thumbnail_url: null, caption: null, post_type: null };
+    }
+
+    const clickupService = require('../webhooks/clickup.service');
+    const task = await clickupService.fetchTask(delivery.clickup_task_id);
+    if (!task) {
+      return { media_urls: [], thumbnail_url: null, caption: null, post_type: null };
+    }
+
+    const attachments = task.attachments || [];
+    const allMedia = attachments
+      .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
+      .map((a, i) => ({
+        url: a.url,
+        type: a.mimetype?.startsWith('video/') ? 'video' : 'image',
+        order: i,
+      }));
+
+    const postTypeMap = {
+      reel: 'reel', video: 'reel', carrossel: 'carousel', feed: 'image', story: 'story',
+    };
+    const postType = delivery.content_type
+      ? (postTypeMap[delivery.content_type] || 'image')
+      : null;
+
+    let mediaUrls = allMedia;
+    let thumbnailUrl = null;
+    if (['reel', 'video'].includes(postType)) {
+      const videos = allMedia.filter((m) => m.type === 'video');
+      const images = allMedia.filter((m) => m.type === 'image');
+      if (videos.length > 0 && images.length > 0) {
+        thumbnailUrl = images[0].url;
+        mediaUrls = videos.map((v, i) => ({ ...v, order: i }));
+      }
+    }
+
+    // Extract caption from "Legenda" custom field
+    const legendaField = task.custom_fields?.find(
+      (cf) => cf.name?.toLowerCase() === 'legenda'
+    );
+    const caption = legendaField?.value?.trim() || task.name || '';
+
+    return { media_urls: mediaUrls, thumbnail_url: thumbnailUrl, caption, post_type: postType };
+  }
+
   // ─── SM Approve ───────────────────────────────────────────────
 
   /**
