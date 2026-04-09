@@ -10,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import ApprovalReviewSheet from '@/components/approvals/ApprovalReviewSheet';
-import { ClipboardCheck, AlertTriangle, RotateCcw, CheckCircle2, Undo2 } from 'lucide-react';
+import { ClipboardCheck, AlertTriangle, RotateCcw, CheckCircle2 } from 'lucide-react';
 
 const SSE_EVENTS = ['approval:updated', 'delivery:updated'];
 
@@ -21,7 +21,6 @@ export default function ApprovalsPage() {
   const [loading, setLoading] = useState(true);
   const [clientFilter, setClientFilter] = useState('all');
   const [tab, setTab] = useState('pending'); // 'pending' | 'approved' | 'corrections'
-  const [revertingId, setRevertingId] = useState(null);
 
   const [reviewDelivery, setReviewDelivery] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -79,16 +78,13 @@ export default function ApprovalsPage() {
   };
 
   const handleRevert = async (deliveryId) => {
-    setRevertingId(deliveryId);
-    try {
-      await smRevert({ delivery_id: deliveryId });
-      toast.success('Tarefa voltou para pendente');
-      await fetchDeliveries();
-    } catch {
-      toast.error('Erro ao voltar tarefa');
-    } finally {
-      setRevertingId(null);
-    }
+    await smRevert({ delivery_id: deliveryId });
+    await fetchDeliveries();
+  };
+
+  const handleSaveApproved = async (data) => {
+    await smApprove(data);
+    await fetchDeliveries();
   };
 
   if (loading) {
@@ -250,13 +246,10 @@ export default function ApprovalsPage() {
                     </Badge>
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="shrink-0 text-xs h-7 gap-1 border-border hover:bg-muted"
-                      disabled={revertingId === delivery.id}
-                      onClick={() => handleRevert(delivery.id)}
+                      className="shrink-0 bg-[#9A48EA] hover:bg-[#B06AF0] text-white text-xs h-7"
+                      onClick={() => handleRevisar(delivery)}
                     >
-                      <Undo2 size={12} />
-                      Voltar
+                      Editar
                     </Button>
                   </CardContent>
                 </Card>
@@ -320,7 +313,10 @@ export default function ApprovalsPage() {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         delivery={reviewDelivery}
+        mode={tab === 'approved' ? 'edit' : 'approve'}
         onApprove={tab === 'corrections' ? handleResubmit : handleApprove}
+        onSave={handleSaveApproved}
+        onRevert={handleRevert}
       />
     </div>
   );

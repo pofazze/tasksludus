@@ -159,6 +159,16 @@ class ApprovalsService {
       ? (postTypeMap[delivery.content_type] || 'image')
       : null;
 
+    // Sort media alphabetically by filename for carousels
+    if (['carousel', 'carrossel'].includes(postType) && allMedia.length > 1) {
+      allMedia.sort((a, b) => {
+        const nameA = a.url.split('/').pop().replace(/\.[^.]+$/, '').toLowerCase();
+        const nameB = b.url.split('/').pop().replace(/\.[^.]+$/, '').toLowerCase();
+        return nameA.localeCompare(nameB, undefined, { numeric: true });
+      });
+      allMedia.forEach((m, i) => { m.order = i; });
+    }
+
     let mediaUrls = allMedia;
     let thumbnailUrl = null;
     if (['reel', 'video'].includes(postType)) {
@@ -220,10 +230,10 @@ class ApprovalsService {
     if (!delivery) {
       throw Object.assign(new Error('Delivery not found'), { status: 404 });
     }
-    const allowedStatuses = ['sm_pending', 'client_rejected'];
+    const allowedStatuses = ['sm_pending', 'sm_approved', 'client_rejected'];
     if (!allowedStatuses.includes(delivery.approval_status)) {
       throw Object.assign(
-        new Error(`Delivery must be in sm_pending or client_rejected status (current: ${delivery.approval_status})`),
+        new Error(`Delivery must be in sm_pending, sm_approved, or client_rejected status (current: ${delivery.approval_status})`),
         { status: 400 }
       );
     }

@@ -12,9 +12,9 @@ import { proxyMediaUrl } from '@/lib/utils';
 import { uploadMedia } from '@/services/instagram';
 import { getDeliveryMedia } from '@/services/approvals';
 import { CONTENT_TYPE_LABELS } from '@/lib/constants';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2, Upload, Undo2, Save } from 'lucide-react';
 
-export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onApprove }) {
+export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onApprove, onSave, onRevert, mode = 'approve' }) {
   const [caption, setCaption] = useState('');
   const [media, setMedia] = useState([]);
   const [thumbnailUrl, setThumbnailUrl] = useState('');
@@ -64,6 +64,14 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
   const isReel = ['reel', 'video'].includes(postType);
   const imageCount = media.filter((m) => m.type === 'image').length;
 
+  const buildPayload = () => ({
+    delivery_id: delivery.id,
+    caption,
+    media_urls: media,
+    thumbnail_url: isReel ? (thumbnailUrl || null) : null,
+    post_type: postType || delivery.content_type || 'feed',
+  });
+
   const handleApprove = async () => {
     if (media.length === 0) {
       toast.error('Adicione pelo menos uma midia');
@@ -76,17 +84,41 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
 
     setSaving(true);
     try {
-      await onApprove({
-        delivery_id: delivery.id,
-        caption,
-        media_urls: media,
-        thumbnail_url: isReel ? (thumbnailUrl || null) : null,
-        post_type: postType || delivery.content_type || 'feed',
-      });
+      await onApprove(buildPayload());
       onOpenChange(false);
       toast.success('Aprovado pelo social media');
     } catch {
       toast.error('Erro ao aprovar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (media.length === 0) {
+      toast.error('Adicione pelo menos uma midia');
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(buildPayload());
+      onOpenChange(false);
+      toast.success('Alteracoes salvas');
+    } catch {
+      toast.error('Erro ao salvar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRevert = async () => {
+    setSaving(true);
+    try {
+      await onRevert(delivery.id);
+      onOpenChange(false);
+      toast.success('Tarefa voltou para pendente');
+    } catch {
+      toast.error('Erro ao voltar tarefa');
     } finally {
       setSaving(false);
     }
@@ -115,7 +147,9 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
         <SheetHeader>
           <SheetTitle>{delivery?.title || 'Revisao'}</SheetTitle>
           <SheetDescription>
-            <Badge className="bg-amber-500/15 text-amber-400">Aprovacao SM</Badge>
+            <Badge className={mode === 'edit' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}>
+              {mode === 'edit' ? 'Aprovado (SM)' : 'Aprovacao SM'}
+            </Badge>
             {postType && (
               <span className="ml-2 text-xs text-muted-foreground">
                 {CONTENT_TYPE_LABELS[postType] || postType}
@@ -212,14 +246,36 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
         </SheetBody>
 
         <SheetFooter>
-          <Button
-            onClick={handleApprove}
-            disabled={saving || loadingMedia}
-            className="w-full bg-[#9A48EA] hover:bg-[#B06AF0]"
-          >
-            {saving ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
-            Aprovar
-          </Button>
+          {mode === 'edit' ? (
+            <div className="flex gap-2 w-full">
+              <Button
+                variant="outline"
+                onClick={handleRevert}
+                disabled={saving || loadingMedia}
+                className="flex-1 gap-1.5 border-border"
+              >
+                <Undo2 size={14} />
+                Voltar p/ Pendente
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving || loadingMedia}
+                className="flex-1 bg-[#9A48EA] hover:bg-[#B06AF0] gap-1.5"
+              >
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                Salvar
+              </Button>
+            </div>
+          ) : (
+            <Button
+              onClick={handleApprove}
+              disabled={saving || loadingMedia}
+              className="w-full bg-[#9A48EA] hover:bg-[#B06AF0]"
+            >
+              {saving ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
+              Aprovar
+            </Button>
+          )}
         </SheetFooter>
       </SheetContent>
     </Sheet>

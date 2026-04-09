@@ -17,7 +17,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { X, GripVertical, Film, Image as ImageIcon } from 'lucide-react';
+import { X, Film, Image as ImageIcon, ArrowDownAZ } from 'lucide-react';
 import { cn, proxyMediaUrl } from '@/lib/utils';
 
 function SortableItem({ item, index, onRemove, readOnly }) {
@@ -44,28 +44,20 @@ function SortableItem({ item, index, onRemove, readOnly }) {
       className={cn(
         'relative group aspect-square rounded-lg border border-border overflow-hidden bg-card',
         isDragging && 'z-10 opacity-70 ring-2 ring-[#9A48EA]',
+        !readOnly && 'cursor-grab active:cursor-grabbing',
       )}
+      {...(readOnly ? {} : { ...attributes, ...listeners })}
     >
       {/* Order badge */}
       <span className="absolute top-1.5 left-1.5 z-10 flex items-center justify-center w-5 h-5 rounded-full bg-black/70 text-[10px] font-medium text-foreground tabular-nums">
         {index + 1}
       </span>
 
-      {/* Drag handle */}
-      {!readOnly && (
-        <button
-          className="absolute top-1.5 right-1.5 z-10 p-1 rounded-md bg-black/70 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical size={12} />
-        </button>
-      )}
-
       {/* Remove button */}
       {!readOnly && onRemove && (
         <button
-          onClick={() => onRemove(index)}
+          onClick={(e) => { e.stopPropagation(); onRemove(index); }}
+          onPointerDown={(e) => e.stopPropagation()}
           className="absolute bottom-1.5 right-1.5 z-10 p-1 rounded-md bg-black/70 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-red-300"
         >
           <X size={12} />
@@ -81,14 +73,7 @@ function SortableItem({ item, index, onRemove, readOnly }) {
         <img
           src={proxyMediaUrl(item.url)}
           alt={`Mídia ${index + 1}`}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            e.target.style.display = 'none';
-            e.target.parentElement.classList.add('flex', 'items-center', 'justify-center');
-            const icon = document.createElement('div');
-            icon.innerHTML = '?';
-            e.target.parentElement.appendChild(icon);
-          }}
+          className="w-full h-full object-cover pointer-events-none"
         />
       )}
 
@@ -101,6 +86,20 @@ function SortableItem({ item, index, onRemove, readOnly }) {
       </span>
     </div>
   );
+}
+
+/**
+ * Extract the sortable part of a URL (filename without extension).
+ * Handles both path-based and query-param URLs.
+ */
+function extractFilename(url) {
+  try {
+    const pathname = new URL(url).pathname;
+    const name = pathname.split('/').pop() || '';
+    return name.replace(/\.[^.]+$/, '').toLowerCase();
+  } catch {
+    return url.toLowerCase();
+  }
 }
 
 function SortableMediaGrid({ media, onChange, onRemove, readOnly = false, className }) {
@@ -122,6 +121,13 @@ function SortableMediaGrid({ media, onChange, onRemove, readOnly = false, classN
     }
   }
 
+  function handleSortAlphabetically() {
+    const sorted = [...media]
+      .sort((a, b) => extractFilename(a.url).localeCompare(extractFilename(b.url), undefined, { numeric: true }))
+      .map((m, i) => ({ ...m, order: i }));
+    onChange(sorted);
+  }
+
   if (!media || media.length === 0) {
     return (
       <div className="flex items-center justify-center h-32 rounded-lg border border-dashed border-border text-muted-foreground text-sm">
@@ -131,21 +137,35 @@ function SortableMediaGrid({ media, onChange, onRemove, readOnly = false, classN
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={media.map((m) => m.url)} strategy={rectSortingStrategy}>
-        <div className={cn('grid grid-cols-3 gap-2', className)}>
-          {media.map((item, index) => (
-            <SortableItem
-              key={item.url}
-              item={item}
-              index={index}
-              onRemove={onRemove}
-              readOnly={readOnly}
-            />
-          ))}
+    <div>
+      {!readOnly && media.length > 1 && (
+        <div className="flex justify-end mb-1.5">
+          <button
+            type="button"
+            onClick={handleSortAlphabetically}
+            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            <ArrowDownAZ size={13} />
+            Ordenar A-Z
+          </button>
         </div>
-      </SortableContext>
-    </DndContext>
+      )}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={media.map((m) => m.url)} strategy={rectSortingStrategy}>
+          <div className={cn('grid grid-cols-3 gap-2', className)}>
+            {media.map((item, index) => (
+              <SortableItem
+                key={item.url}
+                item={item}
+                index={index}
+                onRemove={onRemove}
+                readOnly={readOnly}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
   );
 }
 
