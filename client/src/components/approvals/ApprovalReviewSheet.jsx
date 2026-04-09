@@ -78,7 +78,7 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
       toast.error('Adicione pelo menos uma midia');
       return;
     }
-    if (hasThumb && imageCount > 0 && !thumbnailUrl) {
+    if (hasThumb && (imageCount > 0 || thumbnailUrl) && !thumbnailUrl) {
       toast.error(postType === 'video' ? 'Selecione a thumbnail do YouTube' : 'Selecione a capa do Reel');
       return;
     }

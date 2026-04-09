@@ -9,6 +9,7 @@ const ASPECT_CLASSES = {
   '1:1': 'aspect-square',
   '4:5': 'aspect-[4/5]',
   '9:16': 'aspect-[9/16]',
+  '16:9': 'aspect-video',
 };
 
 function CarouselPreview({ media, className, aspectRatio = '1:1' }) {

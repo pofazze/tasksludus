@@ -242,7 +242,8 @@ export default function ScheduleCalendarPage() {
                   <div className="mt-1 space-y-1">
                     {dayPosts.slice(0, 3).map((p) => {
                       const colors = STATUS_COLORS[p.status] || STATUS_COLORS.draft;
-                      const firstMedia = (typeof p.media_urls === 'string' ? JSON.parse(p.media_urls) : p.media_urls || [])[0];
+                      const firstMediaItem = (typeof p.media_urls === 'string' ? JSON.parse(p.media_urls) : p.media_urls || [])[0];
+                      const firstMedia = firstMediaItem?.url || firstMediaItem;
                       return (
                         <div
                           key={p.id}
@@ -292,7 +293,8 @@ export default function ScheduleCalendarPage() {
                     ? new Date(p.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
                     : null;
                   const mediaUrls = typeof p.media_urls === 'string' ? JSON.parse(p.media_urls) : p.media_urls || [];
-                  const firstMedia = mediaUrls[0];
+                  const firstMediaItem = mediaUrls[0];
+                  const firstMedia = firstMediaItem?.url || firstMediaItem;
 
                   return (
                     <div key={p.id} className="flex items-start gap-4 px-5 py-4 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors">

@@ -11,7 +11,7 @@ const POST_TYPE_LABELS = {
 };
 
 const POST_TYPE_ASPECT = {
-  reel: '9:16', story: '9:16', video: '9:16',
+  reel: '9:16', story: '9:16', video: '16:9',
   feed: '1:1', image: '1:1',
   carrossel: '1:1', carousel: '1:1',
 };
@@ -162,7 +162,16 @@ function PostPreview({ item, client, readOnly, onApprove, onReject, onMediaChang
 
       {/* Media */}
       <div className="bg-card">
-        {media.length > 0 ? (
+        {item.thumbnail_url && item.post_type === 'video' ? (
+          <>
+            <img src={proxyMediaUrl(item.thumbnail_url)} alt="Thumbnail" className="w-full aspect-video object-cover" />
+            {media.length > 0 && (
+              <div className="px-4 py-2">
+                <CarouselPreview media={media.map((m) => ({ ...m, url: proxyMediaUrl(m.url) }))} aspectRatio="16:9" />
+              </div>
+            )}
+          </>
+        ) : media.length > 0 ? (
           <CarouselPreview media={media.map((m) => ({ ...m, url: proxyMediaUrl(m.url) }))} aspectRatio={aspectRatio} />
         ) : (
           <div className="aspect-square flex items-center justify-center text-muted-foreground text-sm">
