@@ -8,7 +8,7 @@ export const CONTENT_TYPE_LABELS = {
   carrossel: 'Carrossel',
   analise: 'Análise',
   pdf: 'PDF',
-  video: 'Vídeo',
+  video: 'YouTube',
   mockup: 'Mockup',
   apresentacao: 'Apresentação',
 };

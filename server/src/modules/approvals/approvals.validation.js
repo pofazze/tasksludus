@@ -9,7 +9,7 @@ const smApproveSchema = Joi.object({
     order: Joi.number().integer().min(0).optional(),
   })).min(1).required(),
   thumbnail_url: Joi.string().allow(null, '').optional(),
-  post_type: Joi.string().valid('reel', 'feed', 'carrossel', 'story', 'image', 'carousel').required(),
+  post_type: Joi.string().valid('reel', 'feed', 'carrossel', 'story', 'image', 'carousel', 'video').required(),
 });
 
 const sendToClientSchema = Joi.object({
@@ -23,7 +23,7 @@ const sendToClientSchema = Joi.object({
       order: Joi.number().integer().min(0).optional(),
     })).optional(),
     thumbnail_url: Joi.string().allow(null, '').optional(),
-    post_type: Joi.string().valid('reel', 'feed', 'carrossel', 'story', 'image', 'carousel').optional(),
+    post_type: Joi.string().valid('reel', 'feed', 'carrossel', 'story', 'image', 'carousel', 'video').optional(),
   })).min(1).required(),
 });
 

@@ -61,7 +61,7 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
     if (!open) lastFetchedId.current = null;
   }, [open]);
 
-  const isReel = ['reel', 'video'].includes(postType);
+  const isReel = postType === 'reel';
   const imageCount = media.filter((m) => m.type === 'image').length;
 
   const buildPayload = () => ({
