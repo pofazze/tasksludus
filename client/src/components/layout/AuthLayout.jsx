@@ -29,12 +29,7 @@ export default function AuthLayout() {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMobileOpen(true)}>
             <Menu size={18} />
           </Button>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-white font-display text-[10px] font-bold">T</span>
-            </div>
-            <span className="font-display font-semibold text-sm text-foreground tracking-tight">TasksLudus</span>
-          </div>
+          <img src="/logo.svg" alt="Ludus" className="h-5" />
         </div>
 
         <main className="flex-1 overflow-y-auto p-4 pb-20 md:p-6 md:pb-6">

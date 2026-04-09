@@ -39,9 +39,7 @@ export default function InviteAcceptPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold font-display text-[#9A48EA]">
-            TasksLudus
-          </CardTitle>
+          <img src="/logo.svg" alt="Ludus" className="h-6 mx-auto" />
           <p className="text-sm text-muted-foreground mt-1">Crie sua conta</p>
         </CardHeader>
         <CardContent>

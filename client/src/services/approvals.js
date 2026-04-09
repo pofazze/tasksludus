@@ -3,6 +3,9 @@ import api from './api';
 export const listSmPending = () =>
   api.get('/approvals/pending').then((r) => r.data);
 
+export const listSmApproved = () =>
+  api.get('/approvals/approved').then((r) => r.data);
+
 export const listSmRejected = () =>
   api.get('/approvals/corrections').then((r) => r.data);
 
@@ -14,6 +17,9 @@ export const getDeliveryMedia = (deliveryId) =>
 
 export const smApprove = (data) =>
   api.post('/approvals/sm-approve', data).then((r) => r.data);
+
+export const smRevert = (data) =>
+  api.post('/approvals/sm-revert', data).then((r) => r.data);
 
 export const sendToClient = (data) =>
   api.post('/approvals/send-to-client', data).then((r) => r.data);

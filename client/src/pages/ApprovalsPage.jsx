@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import { listSmPending, listSmRejected, smApprove } from '@/services/approvals';
+import { listSmPending, listSmApproved, listSmRejected, smApprove, smRevert } from '@/services/approvals';
 import { APPROVAL_STATUS_LABELS, APPROVAL_STATUS_COLORS, CONTENT_TYPE_LABELS } from '@/lib/constants';
 import useServerEvent from '@/hooks/useServerEvent';
 import { Badge } from '@/components/ui/badge';
@@ -10,27 +10,31 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import ApprovalReviewSheet from '@/components/approvals/ApprovalReviewSheet';
-import { ClipboardCheck, AlertTriangle, RotateCcw } from 'lucide-react';
+import { ClipboardCheck, AlertTriangle, RotateCcw, CheckCircle2, Undo2 } from 'lucide-react';
 
 const SSE_EVENTS = ['approval:updated', 'delivery:updated'];
 
 export default function ApprovalsPage() {
   const [deliveries, setDeliveries] = useState([]);
+  const [approved, setApproved] = useState([]);
   const [corrections, setCorrections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [clientFilter, setClientFilter] = useState('all');
-  const [tab, setTab] = useState('pending'); // 'pending' | 'corrections'
+  const [tab, setTab] = useState('pending'); // 'pending' | 'approved' | 'corrections'
+  const [revertingId, setRevertingId] = useState(null);
 
   const [reviewDelivery, setReviewDelivery] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const fetchDeliveries = useCallback(async () => {
     try {
-      const [pending, rejected] = await Promise.all([
+      const [pending, smApprovedList, rejected] = await Promise.all([
         listSmPending(),
+        listSmApproved(),
         listSmRejected(),
       ]);
       setDeliveries(pending);
+      setApproved(smApprovedList);
       setCorrections(rejected);
     } catch {
       toast.error('Erro ao carregar aprovacoes');
@@ -72,6 +76,19 @@ export default function ApprovalsPage() {
   const handleResubmit = async (data) => {
     await smApprove(data);
     await fetchDeliveries();
+  };
+
+  const handleRevert = async (deliveryId) => {
+    setRevertingId(deliveryId);
+    try {
+      await smRevert({ delivery_id: deliveryId });
+      toast.success('Tarefa voltou para pendente');
+      await fetchDeliveries();
+    } catch {
+      toast.error('Erro ao voltar tarefa');
+    } finally {
+      setRevertingId(null);
+    }
   };
 
   if (loading) {
@@ -129,6 +146,20 @@ export default function ApprovalsPage() {
           )}
         </button>
         <button
+          onClick={() => setTab('approved')}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+            tab === 'approved' ? 'bg-muted text-white' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <CheckCircle2 size={13} />
+          Aprovados
+          {approved.length > 0 && (
+            <span className="bg-emerald-500/15 text-emerald-400 text-xs rounded-full px-1.5 py-0.5 leading-none">
+              {approved.length}
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => setTab('corrections')}
           className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
             tab === 'corrections' ? 'bg-muted text-white' : 'text-muted-foreground hover:text-foreground'
@@ -181,6 +212,51 @@ export default function ApprovalsPage() {
                       onClick={() => handleRevisar(delivery)}
                     >
                       Revisar
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Approved tab */}
+      {tab === 'approved' && (
+        <>
+          {approved.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <CheckCircle2 size={40} className="mb-3 text-muted-foreground" />
+              <p className="text-sm font-medium">Nenhuma entrega aprovada</p>
+              <p className="text-xs mt-1">Entregas aprovadas por voce aparecerao aqui</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {approved.map((delivery) => (
+                <Card key={delivery.id} className="bg-card/60 border-border">
+                  <CardContent className="flex items-center gap-4 py-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {delivery.title}
+                      </p>
+                      {delivery.client_name && (
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          {delivery.client_name}
+                        </p>
+                      )}
+                    </div>
+                    <Badge className="text-xs shrink-0 bg-emerald-500/15 text-emerald-400">
+                      Aprovado (SM)
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 text-xs h-7 gap-1 border-border hover:bg-muted"
+                      disabled={revertingId === delivery.id}
+                      onClick={() => handleRevert(delivery.id)}
+                    >
+                      <Undo2 size={12} />
+                      Voltar
                     </Button>
                   </CardContent>
                 </Card>

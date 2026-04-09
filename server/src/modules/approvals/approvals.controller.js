@@ -21,6 +21,15 @@ class ApprovalsController {
     }
   }
 
+  async listSmApproved(req, res, next) {
+    try {
+      const deliveries = await service.listSmApproved(req.user.id, req.user.role);
+      res.json(deliveries);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async listSmRejected(req, res, next) {
     try {
       const deliveries = await service.listSmRejected(req.user.id, req.user.role);
@@ -54,6 +63,18 @@ class ApprovalsController {
       if (error) return res.status(400).json({ error: error.details[0].message });
 
       const result = await service.smApprove(value.delivery_id, value, req.user.id);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async smRevert(req, res, next) {
+    try {
+      const { delivery_id } = req.body;
+      if (!delivery_id) return res.status(400).json({ error: 'delivery_id is required' });
+
+      const result = await service.smRevert(delivery_id, req.user.id);
       res.json(result);
     } catch (err) {
       next(err);
@@ -145,6 +166,7 @@ class ApprovalsController {
         req.params.itemId,
         value.status,
         value.rejection_reason,
+        value.media_urls,
       );
       res.json(result);
     } catch (err) {

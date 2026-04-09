@@ -12,6 +12,7 @@ export default function PublicApprovalPage() {
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [mediaChanges, setMediaChanges] = useState({}); // { itemId: updatedMedia[] }
 
   useEffect(() => {
     fetchBatch();
@@ -41,10 +42,26 @@ export default function PublicApprovalPage() {
     });
   };
 
+  const handleMediaChange = (itemId, newMedia) => {
+    setMediaChanges((prev) => ({ ...prev, [itemId]: newMedia }));
+    // Also update local data so CarouselPreview reflects the new order
+    setData((prev) => {
+      if (!prev) return prev;
+      const updatedItems = prev.items.map((item) =>
+        item.id === itemId ? { ...item, media_urls: newMedia } : item
+      );
+      return { ...prev, items: updatedItems };
+    });
+  };
+
   const handleApprove = async (itemId) => {
     setSubmitting(true);
     try {
-      const result = await clientRespond(token, itemId, { status: 'approved' });
+      const body = { status: 'approved' };
+      if (mediaChanges[itemId]) {
+        body.media_urls = mediaChanges[itemId];
+      }
+      const result = await clientRespond(token, itemId, body);
       updateItemLocally(itemId, 'approved');
       if (!result.allResponded) {
         await fetchBatch();
@@ -115,9 +132,7 @@ export default function PublicApprovalPage() {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-[480px] mx-auto">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#9A48EA] flex items-center justify-center text-white text-xs font-bold">
-              L
-            </div>
+            <img src="/logo-icon.svg" alt="Ludus" className="w-8 h-8" />
             <div className="flex-1">
               <h1 className="text-sm font-semibold">{client?.name}</h1>
               <p className="text-xs text-muted-foreground">
@@ -176,6 +191,7 @@ export default function PublicApprovalPage() {
               readOnly={readOnly || submitting}
               onApprove={handleApprove}
               onReject={handleRejectStart}
+              onMediaChange={handleMediaChange}
             />
 
             {/* Rejection modal inline */}

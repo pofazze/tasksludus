@@ -34,6 +34,11 @@ const clientRespondSchema = Joi.object({
     then: Joi.required(),
     otherwise: Joi.allow(null, '').optional(),
   }),
+  media_urls: Joi.array().items(Joi.object({
+    url: Joi.string().required(),
+    type: Joi.string().valid('image', 'video').required(),
+    order: Joi.number().integer().min(0).optional(),
+  })).optional(),
 });
 
 module.exports = {

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { CarouselPreview } from '@/components/instagram/CarouselPreview';
+import { SortableMediaGrid } from '@/components/instagram/SortableMediaGrid';
 import { proxyMediaUrl } from '@/lib/utils';
-import { Heart, MessageCircle, Send, Bookmark, ArrowRight, Undo2, CheckCircle2, XCircle } from 'lucide-react';
+import { Heart, MessageCircle, Send, Bookmark, ArrowRight, Undo2, CheckCircle2, XCircle, ArrowUpDown } from 'lucide-react';
 
 const POST_TYPE_LABELS = {
   reel: 'Reel', feed: 'Feed', carrossel: 'Carrossel', carousel: 'Carrossel',
@@ -15,14 +16,14 @@ const POST_TYPE_ASPECT = {
   carrossel: '1:1', carousel: '1:1',
 };
 
-export default function InstagramPostPreview({ item, client, readOnly = false, onApprove, onReject }) {
+export default function InstagramPostPreview({ item, client, readOnly = false, onApprove, onReject, onMediaChange }) {
   const isStory = item.post_type === 'story';
 
   if (isStory) {
     return <StoryPreview item={item} client={client} readOnly={readOnly} onApprove={onApprove} onReject={onReject} />;
   }
 
-  return <PostPreview item={item} client={client} readOnly={readOnly} onApprove={onApprove} onReject={onReject} />;
+  return <PostPreview item={item} client={client} readOnly={readOnly} onApprove={onApprove} onReject={onReject} onMediaChange={onMediaChange} />;
 }
 
 // ─── Story Layout ──────────────────────────────────────────
@@ -124,9 +125,11 @@ function StoryPreview({ item, client, readOnly, onApprove, onReject }) {
 
 // ─── Post Layout (Feed / Reel / Carrossel) ─────────────────
 
-function PostPreview({ item, client, readOnly, onApprove, onReject }) {
+function PostPreview({ item, client, readOnly, onApprove, onReject, onMediaChange }) {
   const [expanded, setExpanded] = useState(false);
+  const [reordering, setReordering] = useState(false);
   const media = typeof item.media_urls === 'string' ? JSON.parse(item.media_urls) : (item.media_urls || []);
+  const isCarousel = media.length > 1;
   const caption = item.caption || '';
   const aspectRatio = POST_TYPE_ASPECT[item.post_type] || '1:1';
   const isLong = caption.length > 125;
@@ -167,6 +170,29 @@ function PostPreview({ item, client, readOnly, onApprove, onReject }) {
           </div>
         )}
       </div>
+
+      {/* Reorder toggle for carousels */}
+      {isCarousel && !readOnly && item.status === 'pending' && onMediaChange && (
+        <>
+          <div className="px-4 pt-2">
+            <button
+              onClick={() => setReordering((v) => !v)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              <ArrowUpDown size={13} />
+              {reordering ? 'Ocultar ordem' : 'Alterar ordem'}
+            </button>
+          </div>
+          {reordering && (
+            <div className="px-4 pt-2">
+              <SortableMediaGrid
+                media={media}
+                onChange={(newMedia) => onMediaChange(item.id, newMedia)}
+              />
+            </div>
+          )}
+        </>
+      )}
 
       {/* Instagram Actions Bar */}
       <div className="flex items-center justify-between px-4 py-2.5">

@@ -37,11 +37,9 @@ export default function LoginPage() {
       <div className="relative w-full max-w-sm px-6">
         {/* Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary mb-4">
-            <span className="text-white font-display text-lg font-bold">T</span>
-          </div>
-          <h1 className="font-display text-xl font-semibold text-foreground">TasksLudus</h1>
-          <p className="text-sm text-muted-foreground mt-1">Entre na sua conta</p>
+          <img src="/logo-icon.svg" alt="Ludus" className="w-12 h-12 mx-auto mb-4" />
+          <img src="/logo.svg" alt="Ludus" className="h-6 mx-auto" />
+          <p className="text-sm text-muted-foreground mt-2">Entre na sua conta</p>
         </div>
 
         {/* Form */}

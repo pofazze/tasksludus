@@ -179,6 +179,37 @@ class ApprovalsService {
     return { media_urls: mediaUrls, thumbnail_url: thumbnailUrl, caption, post_type: postType };
   }
 
+  // ─── SM Approved List ─────────────────────────────────────────
+
+  /**
+   * Get deliveries with approval_status 'sm_approved' for clients
+   * where social_media_id = userId
+   */
+  async listSmApproved(userId, role) {
+    const query = db('deliveries')
+      .join('clients', 'deliveries.client_id', 'clients.id')
+      .leftJoin('scheduled_posts', 'scheduled_posts.delivery_id', 'deliveries.id')
+      .leftJoin(
+        db.raw(`LATERAL (SELECT * FROM approval_items ai WHERE ai.delivery_id = deliveries.id ORDER BY ai.created_at DESC LIMIT 1) AS approval_items ON true`)
+      )
+      .select(
+        'deliveries.*',
+        'clients.name as client_name',
+        'clients.instagram_account',
+        db.raw('COALESCE(scheduled_posts.media_urls, approval_items.media_urls) as media_urls'),
+        db.raw('COALESCE(scheduled_posts.caption, approval_items.caption) as caption'),
+        db.raw('COALESCE(scheduled_posts.thumbnail_url, approval_items.thumbnail_url) as thumbnail_url'),
+        db.raw('COALESCE(scheduled_posts.post_type, approval_items.post_type) as post_type')
+      )
+      .where('deliveries.approval_status', 'sm_approved')
+      .orderBy('deliveries.updated_at', 'desc');
+
+    if (!['ceo', 'dev', 'admin'].includes(role)) {
+      query.where('clients.social_media_id', userId);
+    }
+    return query;
+  }
+
   // ─── SM Approve ───────────────────────────────────────────────
 
   /**
@@ -202,6 +233,34 @@ class ApprovalsService {
       .returning('*');
 
     logger.info('SM approved delivery', { deliveryId, userId });
+    eventBus.emit('sse', { type: 'approval:updated', payload: { deliveryId, clientId: updated.client_id } });
+
+    return updated;
+  }
+
+  // ─── SM Revert ────────────────────────────────────────────────
+
+  /**
+   * SM reverts a delivery: move sm_approved back to sm_pending
+   */
+  async smRevert(deliveryId, userId) {
+    const delivery = await db('deliveries').where({ id: deliveryId }).first();
+    if (!delivery) {
+      throw Object.assign(new Error('Delivery not found'), { status: 404 });
+    }
+    if (delivery.approval_status !== 'sm_approved') {
+      throw Object.assign(
+        new Error(`Delivery is not in sm_approved status (current: ${delivery.approval_status})`),
+        { status: 400 }
+      );
+    }
+
+    const [updated] = await db('deliveries')
+      .where({ id: deliveryId })
+      .update({ approval_status: 'sm_pending', updated_at: new Date() })
+      .returning('*');
+
+    logger.info('SM reverted delivery', { deliveryId, userId });
     eventBus.emit('sse', { type: 'approval:updated', payload: { deliveryId, clientId: updated.client_id } });
 
     return updated;
@@ -369,7 +428,7 @@ class ApprovalsService {
   /**
    * Public endpoint: client approves or rejects an item in the batch
    */
-  async clientRespond(token, itemId, status, rejectionReason) {
+  async clientRespond(token, itemId, status, rejectionReason, mediaUrls) {
     // Verify batch is pending
     const batch = await db('approval_batches')
       .join('clients', 'approval_batches.client_id', 'clients.id')
@@ -401,14 +460,19 @@ class ApprovalsService {
     const deliveryApprovalStatus = status === 'approved' ? 'client_approved' : 'client_rejected';
 
     // Update item
+    const itemUpdate = {
+      status: itemStatus,
+      rejection_reason: rejectionReason || null,
+      responded_at: new Date(),
+      updated_at: new Date(),
+    };
+    if (mediaUrls) {
+      itemUpdate.media_urls = JSON.stringify(mediaUrls);
+    }
+
     const [updatedItem] = await db('approval_items')
       .where({ id: itemId })
-      .update({
-        status: itemStatus,
-        rejection_reason: rejectionReason || null,
-        responded_at: new Date(),
-        updated_at: new Date(),
-      })
+      .update(itemUpdate)
       .returning('*');
 
     // Update delivery approval_status
