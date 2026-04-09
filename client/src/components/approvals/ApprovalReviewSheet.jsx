@@ -196,7 +196,7 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
               </div>
 
               {/* Thumbnail / Cover */}
-              {hasThumb && imageCount > 0 && (
+              {hasThumb && (imageCount > 0 || thumbnailUrl) && (
                 <div className="mb-4 p-3 rounded-lg bg-card border border-border">
                   <span className="text-xs text-muted-foreground font-medium mb-2 block">
                     {postType === 'video' ? 'Thumbnail do YouTube' : 'Capa do Reel'}
@@ -206,13 +206,13 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
                       <img
                         src={proxyMediaUrl(thumbnailUrl)}
                         alt="cover"
-                        className="w-12 h-12 rounded object-cover"
+                        className="w-20 h-12 rounded object-cover"
                       />
                       <Button variant="ghost" size="sm" onClick={() => setThumbnailUrl('')}>
                         Alterar
                       </Button>
                     </div>
-                  ) : (
+                  ) : imageCount > 0 ? (
                     <div className="grid grid-cols-4 gap-2">
                       {media
                         .filter((m) => m.type === 'image')
@@ -226,6 +226,8 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
                           </button>
                         ))}
                     </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Nenhuma imagem disponivel. Adicione uma midia de imagem acima.</p>
                   )}
                 </div>
               )}
