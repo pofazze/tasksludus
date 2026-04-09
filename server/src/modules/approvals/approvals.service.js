@@ -143,17 +143,25 @@ class ApprovalsService {
       return { media_urls: [], thumbnail_url: null, caption: null, post_type: null };
     }
 
+    const VIDEO_EXT = /\.(mp4|mov|avi|wmv|flv|mkv|webm|m4v)(\?|$)/i;
+    const IMAGE_EXT = /\.(jpg|jpeg|png|gif|webp|bmp|svg|tiff)(\?|$)/i;
+
     const attachments = task.attachments || [];
     const allMedia = attachments
-      .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
-      .map((a, i) => ({
-        url: a.url,
-        type: a.mimetype?.startsWith('video/') ? 'video' : 'image',
-        order: i,
-      }));
+      .filter((a) => {
+        if (!a.url) return false;
+        if (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')) return true;
+        // Fallback: detect by file extension when mimetype is missing
+        if (VIDEO_EXT.test(a.url) || IMAGE_EXT.test(a.url)) return true;
+        return false;
+      })
+      .map((a, i) => {
+        const isVideo = a.mimetype?.startsWith('video/') || (!a.mimetype?.startsWith('image/') && VIDEO_EXT.test(a.url));
+        return { url: a.url, type: isVideo ? 'video' : 'image', order: i };
+      });
 
     const postTypeMap = {
-      reel: 'reel', video: 'reel', carrossel: 'carousel', feed: 'image', story: 'story',
+      reel: 'reel', video: 'video', carrossel: 'carousel', feed: 'image', story: 'story',
     };
     const postType = delivery.content_type
       ? (postTypeMap[delivery.content_type] || 'image')
@@ -171,7 +179,7 @@ class ApprovalsService {
 
     let mediaUrls = allMedia;
     let thumbnailUrl = null;
-    if (['reel', 'video'].includes(postType)) {
+    if (postType === 'reel') {
       const videos = allMedia.filter((m) => m.type === 'video');
       const images = allMedia.filter((m) => m.type === 'image');
       if (videos.length > 0 && images.length > 0) {

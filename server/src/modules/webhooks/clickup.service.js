@@ -7,8 +7,24 @@ const clickupOAuth = require('./clickup-oauth.service');
 const eventBus = require('../../utils/event-bus');
 
 const PUBLISHABLE_FORMATS = new Set([
-  'reel', 'feed', 'story', 'carrossel',
+  'reel', 'feed', 'story', 'carrossel', 'video',
 ]);
+
+const VIDEO_EXT = /\.(mp4|mov|avi|wmv|flv|mkv|webm|m4v)(\?|$)/i;
+const IMAGE_EXT = /\.(jpg|jpeg|png|gif|webp|bmp|svg|tiff)(\?|$)/i;
+
+function isMediaAttachment(a) {
+  if (!a.url) return false;
+  if (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')) return true;
+  if (VIDEO_EXT.test(a.url) || IMAGE_EXT.test(a.url)) return true;
+  return false;
+}
+
+function getMediaType(a) {
+  if (a.mimetype?.startsWith('video/')) return 'video';
+  if (a.mimetype?.startsWith('image/')) return 'image';
+  return VIDEO_EXT.test(a.url) ? 'video' : 'image';
+}
 
 class ClickUpWebhookService {
   /**
@@ -293,12 +309,8 @@ class ClickUpWebhookService {
       if (!task?.attachments) return;
 
       const allMedia = task.attachments
-        .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
-        .map((a, i) => ({
-          url: a.url,
-          type: a.mimetype?.startsWith('video/') ? 'video' : 'image',
-          order: i,
-        }));
+        .filter(isMediaAttachment)
+        .map((a, i) => ({ url: a.url, type: getMediaType(a), order: i }));
 
       // Derive correct post_type from delivery (may differ from stale post.post_type)
       const postTypeMap = {
@@ -350,12 +362,8 @@ class ClickUpWebhookService {
       if (!task?.attachments) return;
 
       const allMedia = task.attachments
-        .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
-        .map((a, i) => ({
-          url: a.url,
-          type: a.mimetype?.startsWith('video/') ? 'video' : 'image',
-          order: i,
-        }));
+        .filter(isMediaAttachment)
+        .map((a, i) => ({ url: a.url, type: getMediaType(a), order: i }));
 
       const postTypeMap = {
         reel: 'reel', video: 'reel', carrossel: 'carousel', feed: 'image', story: 'story',
@@ -576,12 +584,8 @@ class ClickUpWebhookService {
       // Extract media URLs from attachments
       const attachments = taskWithAttachments.attachments || [];
       const allMedia = attachments
-        .filter((a) => a.url && (a.mimetype?.startsWith('image/') || a.mimetype?.startsWith('video/')))
-        .map((a, i) => ({
-          url: a.url,
-          type: a.mimetype?.startsWith('video/') ? 'video' : 'image',
-          order: i,
-        }));
+        .filter(isMediaAttachment)
+        .map((a, i) => ({ url: a.url, type: getMediaType(a), order: i }));
 
       // Map delivery content_type to post_type
       const postTypeMap = {

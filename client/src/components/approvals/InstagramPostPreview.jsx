@@ -7,7 +7,7 @@ import { Heart, MessageCircle, Send, Bookmark, ArrowRight, Undo2, CheckCircle2, 
 
 const POST_TYPE_LABELS = {
   reel: 'Reel', feed: 'Feed', carrossel: 'Carrossel', carousel: 'Carrossel',
-  story: 'Story', image: 'Feed',
+  story: 'Story', image: 'Feed', video: 'Vídeo',
 };
 
 const POST_TYPE_ASPECT = {
