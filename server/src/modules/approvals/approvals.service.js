@@ -179,7 +179,7 @@ class ApprovalsService {
 
     let mediaUrls = allMedia;
     let thumbnailUrl = null;
-    if (postType === 'reel') {
+    if (['reel', 'video'].includes(postType)) {
       const videos = allMedia.filter((m) => m.type === 'video');
       const images = allMedia.filter((m) => m.type === 'image');
       if (videos.length > 0 && images.length > 0) {

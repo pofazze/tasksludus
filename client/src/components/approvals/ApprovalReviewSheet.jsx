@@ -62,13 +62,14 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
   }, [open]);
 
   const isReel = postType === 'reel';
+  const hasThumb = ['reel', 'video'].includes(postType);
   const imageCount = media.filter((m) => m.type === 'image').length;
 
   const buildPayload = () => ({
     delivery_id: delivery.id,
     caption,
     media_urls: media,
-    thumbnail_url: isReel ? (thumbnailUrl || null) : null,
+    thumbnail_url: hasThumb ? (thumbnailUrl || null) : null,
     post_type: postType || delivery.content_type || 'feed',
   });
 
@@ -77,8 +78,8 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
       toast.error('Adicione pelo menos uma midia');
       return;
     }
-    if (isReel && imageCount > 1 && !thumbnailUrl) {
-      toast.error('Selecione a capa do Reel');
+    if (hasThumb && imageCount > 0 && !thumbnailUrl) {
+      toast.error(postType === 'video' ? 'Selecione a thumbnail do YouTube' : 'Selecione a capa do Reel');
       return;
     }
 
@@ -194,10 +195,12 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
                 />
               </div>
 
-              {/* Reel Cover */}
-              {isReel && imageCount > 0 && (
+              {/* Thumbnail / Cover */}
+              {hasThumb && imageCount > 0 && (
                 <div className="mb-4 p-3 rounded-lg bg-card border border-border">
-                  <span className="text-xs text-muted-foreground font-medium mb-2 block">Capa do Reel</span>
+                  <span className="text-xs text-muted-foreground font-medium mb-2 block">
+                    {postType === 'video' ? 'Thumbnail do YouTube' : 'Capa do Reel'}
+                  </span>
                   {thumbnailUrl ? (
                     <div className="flex items-center gap-2">
                       <img
