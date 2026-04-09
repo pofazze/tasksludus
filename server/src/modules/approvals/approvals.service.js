@@ -220,11 +220,40 @@ class ApprovalsService {
     if (!delivery) {
       throw Object.assign(new Error('Delivery not found'), { status: 404 });
     }
-    if (delivery.approval_status !== 'sm_pending') {
+    const allowedStatuses = ['sm_pending', 'client_rejected'];
+    if (!allowedStatuses.includes(delivery.approval_status)) {
       throw Object.assign(
-        new Error(`Delivery is not in sm_pending status (current: ${delivery.approval_status})`),
+        new Error(`Delivery must be in sm_pending or client_rejected status (current: ${delivery.approval_status})`),
         { status: 400 }
       );
+    }
+
+    // Persist SM-edited data (caption, media order, thumbnail, post_type) into scheduled_posts
+    const postData = {
+      caption: data.caption ?? null,
+      media_urls: data.media_urls ? JSON.stringify(data.media_urls) : '[]',
+      thumbnail_url: data.thumbnail_url ?? null,
+      post_type: data.post_type || delivery.content_type || 'feed',
+      updated_at: new Date(),
+    };
+
+    const existingPost = await db('scheduled_posts')
+      .where({ delivery_id: deliveryId })
+      .first();
+
+    if (existingPost) {
+      await db('scheduled_posts')
+        .where({ id: existingPost.id })
+        .update(postData);
+    } else {
+      await db('scheduled_posts').insert({
+        client_id: delivery.client_id,
+        delivery_id: deliveryId,
+        clickup_task_id: delivery.clickup_task_id || null,
+        status: 'draft',
+        created_by: userId,
+        ...postData,
+      });
     }
 
     const [updated] = await db('deliveries')
