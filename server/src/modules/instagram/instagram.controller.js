@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const db = require('../../config/db');
 const env = require('../../config/env');
 const oauthService = require('./instagram-oauth.service');
@@ -114,22 +115,46 @@ class InstagramController {
       const { error, value } = createScheduledPostSchema.validate(req.body);
       if (error) return res.status(400).json({ error: error.details[0].message });
 
-      const postData = {
-        ...value,
-        media_urls: JSON.stringify(value.media_urls),
-        status: value.scheduled_at ? 'scheduled' : 'draft',
-        created_by: req.user.id,
-      };
+      const platforms = value.platforms || [value.platform || 'instagram'];
+      const overrides = value.platform_overrides || {};
+      const post_group_id = platforms.length > 1 ? crypto.randomUUID() : null;
 
-      const [post] = await db('scheduled_posts').insert(postData).returning('*');
+      const createdPosts = [];
 
-      // If scheduled, add to BullMQ queue and move ClickUp task to "agendado"
-      if (post.status === 'scheduled' && post.scheduled_at) {
-        await schedulePost(post.id, post.scheduled_at);
-        this._moveToAgendado(post);
+      for (const platform of platforms) {
+        // Stories are Instagram-only
+        if (platform === 'tiktok' && value.post_type === 'story') continue;
+
+        const platformOverride = overrides[platform] || {};
+        const caption = platformOverride.caption !== undefined ? platformOverride.caption : value.caption;
+        const scheduled_at = platformOverride.scheduled_at !== undefined ? platformOverride.scheduled_at : value.scheduled_at;
+
+        const postData = {
+          client_id: value.client_id,
+          delivery_id: value.delivery_id,
+          clickup_task_id: value.clickup_task_id,
+          caption,
+          post_type: value.post_type,
+          media_urls: JSON.stringify(value.media_urls),
+          thumbnail_url: value.thumbnail_url,
+          scheduled_at,
+          platform,
+          post_group_id,
+          status: scheduled_at ? 'scheduled' : 'draft',
+          created_by: req.user.id,
+        };
+
+        const [post] = await db('scheduled_posts').insert(postData).returning('*');
+
+        if (post.status === 'scheduled' && post.scheduled_at) {
+          await schedulePost(post.id, post.scheduled_at, platform);
+          this._moveToAgendado(post);
+        }
+
+        createdPosts.push(post);
       }
 
-      res.status(201).json(post);
+      res.status(201).json(createdPosts.length === 1 ? createdPosts[0] : createdPosts);
     } catch (err) {
       next(err);
     }
@@ -148,6 +173,9 @@ class InstagramController {
       }
 
       const updateData = { ...value, updated_at: new Date() };
+      delete updateData.platforms;
+      delete updateData.platform_overrides;
+      delete updateData.platform;
       if (value.media_urls) updateData.media_urls = JSON.stringify(value.media_urls);
 
       // Determine new status
@@ -164,7 +192,7 @@ class InstagramController {
 
       // Update queue job and move ClickUp task to "agendado"
       if (updated.status === 'scheduled' && updated.scheduled_at) {
-        await reschedulePost(updated.id, updated.scheduled_at);
+        await reschedulePost(updated.id, updated.scheduled_at, updated.platform);
         this._moveToAgendado(updated);
       } else if (updated.status === 'draft') {
         await cancelScheduledPost(updated.id);

@@ -13,6 +13,15 @@ const createScheduledPostSchema = Joi.object({
   })).min(1).required(),
   thumbnail_url: Joi.string().uri().allow(null, '').optional(),
   scheduled_at: Joi.date().iso().allow(null).optional(),
+  platform: Joi.string().valid('instagram', 'tiktok').default('instagram'),
+  platforms: Joi.array().items(Joi.string().valid('instagram', 'tiktok')).optional(),
+  platform_overrides: Joi.object().pattern(
+    Joi.string().valid('instagram', 'tiktok'),
+    Joi.object({
+      caption: Joi.string().max(2200).optional(),
+      scheduled_at: Joi.date().iso().optional(),
+    })
+  ).optional(),
 });
 
 const updateScheduledPostSchema = Joi.object({
