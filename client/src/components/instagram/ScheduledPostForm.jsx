@@ -31,6 +31,11 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
     media_urls: [],
     thumbnail_url: '',
     scheduled_at: '',
+    platforms: ['instagram'],
+    tiktok_caption: '',
+    tiktok_scheduled_at: '',
+    customize_caption: false,
+    customize_schedule: false,
   });
   const [saving, setSaving] = useState(false);
   const [newMediaUrl, setNewMediaUrl] = useState('');
@@ -50,6 +55,11 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
           scheduled_at: post.scheduled_at
             ? new Date(post.scheduled_at).toISOString().slice(0, 16)
             : '',
+          platforms: post.platform ? [post.platform] : ['instagram'],
+          tiktok_caption: '',
+          tiktok_scheduled_at: '',
+          customize_caption: false,
+          customize_schedule: false,
         });
       } else {
         setForm({
@@ -59,6 +69,11 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
           media_urls: [],
           thumbnail_url: '',
           scheduled_at: '',
+          platforms: ['instagram'],
+          tiktok_caption: '',
+          tiktok_scheduled_at: '',
+          customize_caption: false,
+          customize_schedule: false,
         });
       }
       setNewMediaUrl('');
@@ -95,7 +110,24 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
         status: asDraft ? 'draft' : 'scheduled',
         thumbnail_url: form.post_type === 'reel' ? (form.thumbnail_url || null) : null,
         media_urls: JSON.stringify(form.media_urls),
+        platforms: form.platforms,
       };
+      if (form.platforms.length > 1) {
+        const overrides = {};
+        if (form.customize_caption && form.tiktok_caption) {
+          overrides.tiktok = { caption: form.tiktok_caption };
+        }
+        if (form.customize_schedule && form.tiktok_scheduled_at) {
+          overrides.tiktok = { ...overrides.tiktok, scheduled_at: form.tiktok_scheduled_at };
+        }
+        if (Object.keys(overrides).length > 0) {
+          payload.platform_overrides = overrides;
+        }
+      }
+      delete payload.tiktok_caption;
+      delete payload.tiktok_scheduled_at;
+      delete payload.customize_caption;
+      delete payload.customize_schedule;
       if (isEdit) {
         await updateScheduledPost(post.id, payload);
         toast.success('Post atualizado');
@@ -134,6 +166,37 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Platforms */}
+            <div className="space-y-1.5">
+              <Label>Plataformas</Label>
+              <div className="flex gap-1.5">
+                {[
+                  { value: 'instagram', label: 'Instagram' },
+                  { value: 'tiktok', label: 'TikTok' },
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setForm((f) => {
+                        const has = f.platforms.includes(value);
+                        const next = has ? f.platforms.filter((p) => p !== value) : [...f.platforms, value];
+                        return { ...f, platforms: next.length > 0 ? next : f.platforms };
+                      });
+                    }}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer',
+                      form.platforms.includes(value)
+                        ? 'bg-[#9A48EA]/15 text-[#C084FC] ring-1 ring-[#9A48EA]/30'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-surface-3/50'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Post type */}
@@ -195,6 +258,46 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
                 placeholder="Escreva a legenda do post..."
               />
             </div>
+
+            {/* TikTok overrides */}
+            {form.platforms.length > 1 && form.platforms.includes('tiktok') && (
+              <div className="space-y-3 p-3 rounded-lg bg-card border border-border">
+                <span className="text-xs font-medium text-muted-foreground">Personalizar TikTok</span>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.customize_caption}
+                    onChange={(e) => setForm((f) => ({ ...f, customize_caption: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-xs text-muted-foreground">Legenda diferente</span>
+                </label>
+                {form.customize_caption && (
+                  <textarea
+                    value={form.tiktok_caption}
+                    onChange={(e) => setForm((f) => ({ ...f, tiktok_caption: e.target.value.slice(0, 2200) }))}
+                    rows={3}
+                    className="w-full rounded-lg border border-border bg-transparent px-2.5 py-2 text-sm text-foreground resize-none focus:border-primary focus:ring-3 focus:ring-primary/50 outline-none"
+                    placeholder="Legenda do TikTok..."
+                  />
+                )}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.customize_schedule}
+                    onChange={(e) => setForm((f) => ({ ...f, customize_schedule: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-xs text-muted-foreground">Horario diferente</span>
+                </label>
+                {form.customize_schedule && (
+                  <DateTimePicker
+                    value={form.tiktok_scheduled_at}
+                    onChange={(v) => setForm((f) => ({ ...f, tiktok_scheduled_at: v }))}
+                  />
+                )}
+              </div>
+            )}
 
             {/* Reel thumbnail */}
             {form.post_type === 'reel' && (
