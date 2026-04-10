@@ -1,6 +1,7 @@
 const { Worker } = require('bullmq');
 const logger = require('../utils/logger');
 const oauthService = require('../modules/instagram/instagram-oauth.service');
+const tiktokOauthService = require('../modules/tiktok/tiktok-oauth.service');
 const { connection } = require('./index');
 
 const worker = new Worker('token-refresh', async () => {
@@ -16,6 +17,22 @@ const worker = new Worker('token-refresh', async () => {
     } catch (err) {
       logger.error('Token validation failed', { clientId: token.client_id, error: err.message });
     }
+  }
+
+  try {
+    const tiktokTokens = await tiktokOauthService.getTokensExpiringWithin(1);
+    logger.info(`Found ${tiktokTokens.length} TikTok tokens expiring within 1 day`);
+
+    for (const token of tiktokTokens) {
+      try {
+        await tiktokOauthService.refreshToken(token.client_id);
+        logger.info('TikTok token refreshed', { clientId: token.client_id });
+      } catch (err) {
+        logger.error('TikTok token refresh failed', { clientId: token.client_id, error: err.message });
+      }
+    }
+  } catch (err) {
+    logger.error('TikTok token refresh block failed', { error: err.message });
   }
 }, {
   connection,

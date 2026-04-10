@@ -8,47 +8,52 @@ const connection = {
 };
 
 const instagramPublishQueue = new Queue('instagram-publish', { connection });
+const tiktokPublishQueue = new Queue('tiktok-publish', { connection });
 const tokenRefreshQueue = new Queue('token-refresh', { connection });
 const deliverySyncQueue = new Queue('delivery-sync', { connection });
 const approvalReminderQueue = new Queue('approval-reminder', { connection });
 
-async function schedulePost(postId, scheduledAt) {
+async function schedulePost(postId, scheduledAt, platform = 'instagram') {
   const delay = new Date(scheduledAt).getTime() - Date.now();
   // Use unique jobId per attempt to avoid BullMQ deduplication with stale failed/completed jobs
   const jobId = `post-${postId}-${Date.now()}`;
+  const queue = platform === 'tiktok' ? tiktokPublishQueue : instagramPublishQueue;
   if (delay <= 0) {
-    await instagramPublishQueue.add('publish', { postId }, { jobId });
+    await queue.add('publish', { postId }, { jobId });
   } else {
-    await instagramPublishQueue.add('publish', { postId }, { delay, jobId });
+    await queue.add('publish', { postId }, { delay, jobId });
   }
-  logger.info('Post scheduled in queue', { postId, delay: Math.round(delay / 1000) + 's' });
+  logger.info('Post scheduled in queue', { postId, platform, delay: Math.round(delay / 1000) + 's' });
 }
 
 async function cancelScheduledPost(postId) {
-  try {
-    // Find all jobs for this post (jobId format: post-{postId}-{timestamp})
-    const states = ['delayed', 'waiting', 'active'];
-    for (const state of states) {
-      const jobs = await instagramPublishQueue.getJobs([state]);
-      for (const job of jobs) {
-        if (job.data?.postId === postId) {
-          try {
-            await job.remove();
-            logger.info('Scheduled post removed from queue', { postId, jobId: job.id, state });
-          } catch {
-            // Job may be locked by active worker
+  const queues = [instagramPublishQueue, tiktokPublishQueue];
+  for (const queue of queues) {
+    try {
+      // Find all jobs for this post (jobId format: post-{postId}-{timestamp})
+      const states = ['delayed', 'waiting', 'active'];
+      for (const state of states) {
+        const jobs = await queue.getJobs([state]);
+        for (const job of jobs) {
+          if (job.data?.postId === postId) {
+            try {
+              await job.remove();
+              logger.info('Scheduled post removed from queue', { postId, jobId: job.id, state, queue: queue.name });
+            } catch {
+              // Job may be locked by active worker
+            }
           }
         }
       }
+    } catch (err) {
+      logger.warn('Could not remove scheduled job', { postId, queue: queue.name, error: err.message });
     }
-  } catch (err) {
-    logger.warn('Could not remove scheduled job', { postId, error: err.message });
   }
 }
 
-async function reschedulePost(postId, newScheduledAt) {
+async function reschedulePost(postId, newScheduledAt, platform = 'instagram') {
   await cancelScheduledPost(postId);
-  await schedulePost(postId, newScheduledAt);
+  await schedulePost(postId, newScheduledAt, platform);
 }
 
 async function setupRepeatable() {
@@ -81,6 +86,7 @@ async function setupRepeatable() {
 
 module.exports = {
   instagramPublishQueue,
+  tiktokPublishQueue,
   tokenRefreshQueue,
   deliverySyncQueue,
   approvalReminderQueue,
