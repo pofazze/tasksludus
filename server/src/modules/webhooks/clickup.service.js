@@ -10,6 +10,23 @@ const PUBLISHABLE_FORMATS = new Set([
   'reel', 'feed', 'story', 'carrossel', 'video',
 ]);
 
+const PLATFORM_TAGS = {
+  'instagram': 'instagram', 'insta': 'instagram', 'ig': 'instagram',
+  'tiktok': 'tiktok', 'tik tok': 'tiktok', 'tt': 'tiktok',
+};
+
+function extractPlatformsFromTags(tags) {
+  if (!tags || !Array.isArray(tags)) return ['instagram'];
+  const platforms = new Set();
+  for (const tag of tags) {
+    const name = (tag.name || tag).toLowerCase().trim();
+    if (PLATFORM_TAGS[name]) {
+      platforms.add(PLATFORM_TAGS[name]);
+    }
+  }
+  return platforms.size > 0 ? [...platforms] : ['instagram'];
+}
+
 const VIDEO_EXT = /\.(mp4|mov|avi|wmv|flv|mkv|webm|m4v)(\?|$)/i;
 const IMAGE_EXT = /\.(jpg|jpeg|png|gif|webp|bmp|svg|tiff)(\?|$)/i;
 
@@ -245,6 +262,11 @@ class ClickUpWebhookService {
       }
       if (item.field === 'attachment' || item.field === 'attachments') {
         hasAttachmentChange = true;
+      }
+      if (item.field === 'tag' || item.field === 'tags') {
+        const task = await this.fetchTask(clickupTaskId);
+        const platforms = extractPlatformsFromTags(task?.tags);
+        updates.target_platforms = JSON.stringify(platforms);
       }
     }
 
@@ -523,6 +545,7 @@ class ClickUpWebhookService {
         content_type: contentType,
         status: this.mapClickUpStatus(task.status?.status) || 'planejamento',
         month,
+        target_platforms: JSON.stringify(extractPlatformsFromTags(task.tags)),
       });
 
       logger.info(`Auto-created delivery for ClickUp task ${clickupTaskId}: "${task.name}"`);
@@ -548,15 +571,6 @@ class ClickUpWebhookService {
       // Filter non-publishable formats (PDF, Mockup, Banner, etc.) — null content_type is allowed (user selects in app)
       if (delivery.content_type && !PUBLISHABLE_FORMATS.has(delivery.content_type)) {
         logger.info(`Skipping auto-draft: format "${delivery.content_type}" not publishable`);
-        return;
-      }
-
-      // Check client has Instagram connected
-      const igToken = await db('client_instagram_tokens')
-        .where({ client_id: delivery.client_id, is_active: true })
-        .first();
-      if (!igToken) {
-        logger.info(`Client ${delivery.client_id} has no Instagram connected — skipping auto-draft`);
         return;
       }
 
@@ -613,53 +627,88 @@ class ClickUpWebhookService {
       // Always create as draft — user must review and schedule manually
       const postStatus = 'draft';
 
-      // Check if a scheduled_post already exists for this task
-      const existing = await db('scheduled_posts')
-        .where({ clickup_task_id: clickupTaskId })
-        .first();
+      // Determine target platforms from delivery
+      const rawPlatforms = delivery.target_platforms;
+      const platforms = Array.isArray(rawPlatforms)
+        ? rawPlatforms
+        : (typeof rawPlatforms === 'string' ? JSON.parse(rawPlatforms) : ['instagram']);
 
-      if (existing) {
-        // Reset published/failed posts back to draft when task returns to agendamento
-        const updates = {
+      // Generate a shared post_group_id when posting to multiple platforms
+      const postGroupId = platforms.length > 1 ? crypto.randomUUID() : null;
+
+      const { cancelScheduledPost } = require('../../queues');
+      let anyEmitted = false;
+
+      for (const platform of platforms) {
+        // TikTok does not support stories
+        if (platform === 'tiktok' && postType === 'story') {
+          logger.info(`Skipping auto-draft for TikTok: stories not supported`, { clickupTaskId });
+          continue;
+        }
+
+        // Check platform token exists
+        const tokenTable = platform === 'tiktok' ? 'client_tiktok_tokens' : 'client_instagram_tokens';
+        const token = await db(tokenTable)
+          .where({ client_id: delivery.client_id, is_active: true })
+          .first();
+        if (!token) {
+          logger.info(`Client ${delivery.client_id} has no ${platform} connected — skipping auto-draft`);
+          continue;
+        }
+
+        // Check if a scheduled_post already exists for this delivery + platform
+        const existing = await db('scheduled_posts')
+          .where({ clickup_task_id: clickupTaskId, platform })
+          .whereIn('status', ['draft', 'scheduled'])
+          .first();
+
+        if (existing) {
+          // Reset published/failed posts back to draft when task returns to agendamento
+          const updates = {
+            caption,
+            post_type: postType,
+            media_urls: JSON.stringify(mediaUrls),
+            thumbnail_url: thumbnailUrl,
+            status: postStatus,
+            scheduled_at: scheduledAt || null,
+            error_message: null,
+            retry_count: 0,
+            ig_container_id: existing.status === 'published' ? null : existing.ig_container_id,
+            ig_media_id: existing.status === 'published' ? null : existing.ig_media_id,
+            ig_permalink: existing.status === 'published' ? null : existing.ig_permalink,
+            published_at: existing.status === 'published' ? null : existing.published_at,
+            updated_at: new Date(),
+          };
+          await db('scheduled_posts').where({ id: existing.id }).update(updates);
+          logger.info(`Reset scheduled post for task ${clickupTaskId} [${platform}] to draft (${postType}, ${mediaUrls.length} media)`);
+
+          // Cancel any existing BullMQ job
+          await cancelScheduledPost(existing.id);
+          anyEmitted = true;
+          continue;
+        }
+
+        await db('scheduled_posts').insert({
+          client_id: delivery.client_id,
+          delivery_id: delivery.id,
+          clickup_task_id: clickupTaskId,
           caption,
           post_type: postType,
           media_urls: JSON.stringify(mediaUrls),
           thumbnail_url: thumbnailUrl,
           status: postStatus,
           scheduled_at: scheduledAt || null,
-          error_message: null,
-          retry_count: 0,
-          ig_container_id: existing.status === 'published' ? null : existing.ig_container_id,
-          ig_media_id: existing.status === 'published' ? null : existing.ig_media_id,
-          ig_permalink: existing.status === 'published' ? null : existing.ig_permalink,
-          published_at: existing.status === 'published' ? null : existing.published_at,
-          updated_at: new Date(),
-        };
-        await db('scheduled_posts').where({ id: existing.id }).update(updates);
-        logger.info(`Reset scheduled post for task ${clickupTaskId} to draft (${postType}, ${mediaUrls.length} media)`);
+          platform,
+          post_group_id: postGroupId,
+        });
 
-        // Cancel any existing BullMQ job
-        const { cancelScheduledPost } = require('../../queues');
-        await cancelScheduledPost(existing.id);
-
-        eventBus.emit('sse', { type: 'post:updated', payload: { clickup_task_id: clickupTaskId } });
-        return;
+        logger.info(`Auto-created ${platform} draft for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media, scheduled_at: ${scheduledAt || 'none'})`);
+        anyEmitted = true;
       }
 
-      const [post] = await db('scheduled_posts').insert({
-        client_id: delivery.client_id,
-        delivery_id: delivery.id,
-        clickup_task_id: clickupTaskId,
-        caption,
-        post_type: postType,
-        media_urls: JSON.stringify(mediaUrls),
-        thumbnail_url: thumbnailUrl,
-        status: postStatus,
-        scheduled_at: scheduledAt || null,
-      }).returning('*');
-
-      logger.info(`Auto-created Instagram draft for task ${clickupTaskId} (${postType}, ${mediaUrls.length} media, scheduled_at: ${scheduledAt || 'none'})`);
-      eventBus.emit('sse', { type: 'post:updated', payload: { clickup_task_id: clickupTaskId } });
+      if (anyEmitted) {
+        eventBus.emit('sse', { type: 'post:updated', payload: { clickup_task_id: clickupTaskId } });
+      }
     } catch (err) {
       logger.error(`Failed to auto-create scheduled post for ${clickupTaskId}: ${err.message}`);
     }
@@ -969,4 +1018,6 @@ class ClickUpWebhookService {
   }
 }
 
-module.exports = new ClickUpWebhookService();
+const clickUpWebhookService = new ClickUpWebhookService();
+module.exports = clickUpWebhookService;
+module.exports.extractPlatformsFromTags = extractPlatformsFromTags;

@@ -1,6 +1,7 @@
 const db = require('../../config/db');
 const logger = require('../../utils/logger');
 const clickupService = require('./clickup.service');
+const { extractPlatformsFromTags } = require('./clickup.service');
 const clickupOAuth = require('./clickup-oauth.service');
 
 const TEAM_ID = '9011736576';
@@ -256,6 +257,7 @@ class ClickUpSyncService {
         month,
         started_at: startedAt,
         completed_at: completedAt,
+        target_platforms: JSON.stringify(extractPlatformsFromTags(task.tags)),
       }).returning('*');
       stats.deliveries.created++;
 
