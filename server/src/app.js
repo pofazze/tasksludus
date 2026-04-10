@@ -20,6 +20,7 @@ const rankingRoutes = require('./modules/ranking/ranking.routes');
 const simulatorRoutes = require('./modules/simulator/simulator.routes');
 const webhooksRoutes = require('./modules/webhooks/webhooks.routes');
 const instagramRoutes = require('./modules/instagram/instagram.routes');
+const tiktokRoutes = require('./modules/tiktok/tiktok.routes');
 const eventsRoutes = require('./modules/events/events.routes');
 const approvalsRoutes = require('./modules/approvals/approvals.routes');
 
@@ -93,6 +94,7 @@ app.use('/api/ranking', rankingRoutes);
 app.use('/api/simulator', simulatorRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/instagram', instagramRoutes);
+app.use('/api/tiktok', tiktokRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/approvals', approvalsRoutes);
 
