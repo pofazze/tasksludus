@@ -50,6 +50,12 @@ module.exports = {
     encryptionKey: process.env.TOKEN_ENCRYPTION_KEY,
   },
 
+  tiktok: {
+    clientKey: process.env.TIKTOK_CLIENT_KEY,
+    clientSecret: process.env.TIKTOK_CLIENT_SECRET,
+    redirectUri: process.env.TIKTOK_REDIRECT_URI || 'https://server-production-bea3.up.railway.app/api/tiktok/oauth/callback',
+  },
+
   evolution: {
     apiUrl: process.env.EVOLUTION_API_URL,
     apiKey: process.env.EVOLUTION_API_KEY,
