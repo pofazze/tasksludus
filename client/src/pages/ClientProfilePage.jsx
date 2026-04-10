@@ -427,7 +427,7 @@ export default function ClientProfilePage() {
               <Calendar size={14} /> Agendamento
               {draftCount > 0 && <CountBadge count={draftCount} />}
             </TabsTrigger>
-            <TabsTrigger value="instagram"><Instagram size={14} /> Instagram</TabsTrigger>
+            <TabsTrigger value="instagram"><Instagram size={14} /> Redes Sociais</TabsTrigger>
           </TabsList>
 
           {activeTab === 'entregas' && (
