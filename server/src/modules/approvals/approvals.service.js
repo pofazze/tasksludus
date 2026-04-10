@@ -26,7 +26,8 @@ class ApprovalsService {
         db.raw('COALESCE(scheduled_posts.media_urls, approval_items.media_urls) as media_urls'),
         db.raw('COALESCE(scheduled_posts.caption, approval_items.caption) as caption'),
         db.raw('COALESCE(scheduled_posts.thumbnail_url, approval_items.thumbnail_url) as thumbnail_url'),
-        db.raw('COALESCE(scheduled_posts.post_type, approval_items.post_type) as post_type')
+        db.raw('COALESCE(scheduled_posts.post_type, approval_items.post_type) as post_type'),
+        'deliveries.target_platforms'
       )
       .where('deliveries.approval_status', 'sm_pending')
       .orderBy('deliveries.created_at', 'desc');
@@ -112,7 +113,8 @@ class ApprovalsService {
         db.raw('COALESCE(scheduled_posts.media_urls, approval_items.media_urls) as media_urls'),
         db.raw('COALESCE(scheduled_posts.caption, approval_items.caption) as caption'),
         db.raw('COALESCE(scheduled_posts.thumbnail_url, approval_items.thumbnail_url) as thumbnail_url'),
-        db.raw('COALESCE(scheduled_posts.post_type, approval_items.post_type) as post_type')
+        db.raw('COALESCE(scheduled_posts.post_type, approval_items.post_type) as post_type'),
+        'deliveries.target_platforms'
       )
       .where('deliveries.approval_status', 'client_rejected')
       .orderBy('approval_items.responded_at', 'desc');
@@ -217,7 +219,8 @@ class ApprovalsService {
         db.raw('COALESCE(scheduled_posts.media_urls, approval_items.media_urls) as media_urls'),
         db.raw('COALESCE(scheduled_posts.caption, approval_items.caption) as caption'),
         db.raw('COALESCE(scheduled_posts.thumbnail_url, approval_items.thumbnail_url) as thumbnail_url'),
-        db.raw('COALESCE(scheduled_posts.post_type, approval_items.post_type) as post_type')
+        db.raw('COALESCE(scheduled_posts.post_type, approval_items.post_type) as post_type'),
+        'deliveries.target_platforms'
       )
       .where('deliveries.approval_status', 'sm_approved')
       .orderBy('deliveries.updated_at', 'desc');
@@ -255,23 +258,34 @@ class ApprovalsService {
       updated_at: new Date(),
     };
 
-    const existingPost = await db('scheduled_posts')
-      .where({ delivery_id: deliveryId })
-      .first();
+    const platforms = delivery.target_platforms
+      ? (typeof delivery.target_platforms === 'string' ? JSON.parse(delivery.target_platforms) : delivery.target_platforms)
+      : ['instagram'];
+    const postGroupId = platforms.length > 1 ? require('crypto').randomUUID() : null;
 
-    if (existingPost) {
-      await db('scheduled_posts')
-        .where({ id: existingPost.id })
-        .update(postData);
-    } else {
-      await db('scheduled_posts').insert({
-        client_id: delivery.client_id,
-        delivery_id: deliveryId,
-        clickup_task_id: delivery.clickup_task_id || null,
-        status: 'draft',
-        created_by: userId,
-        ...postData,
-      });
+    for (const platform of platforms) {
+      if (platform === 'tiktok' && postData.post_type === 'story') continue;
+
+      const existingPost = await db('scheduled_posts')
+        .where({ delivery_id: deliveryId, platform })
+        .first();
+
+      if (existingPost) {
+        await db('scheduled_posts')
+          .where({ id: existingPost.id })
+          .update({ ...postData, platform, post_group_id: postGroupId });
+      } else {
+        await db('scheduled_posts').insert({
+          client_id: delivery.client_id,
+          delivery_id: deliveryId,
+          clickup_task_id: delivery.clickup_task_id || null,
+          status: 'draft',
+          created_by: userId,
+          platform,
+          post_group_id: postGroupId,
+          ...postData,
+        });
+      }
     }
 
     const [updated] = await db('deliveries')

@@ -156,6 +156,14 @@ export default function ApprovalReviewSheet({ open, onOpenChange, delivery, onAp
                 {CONTENT_TYPE_LABELS[postType] || postType}
               </span>
             )}
+            {delivery?.target_platforms && (
+              <span className="ml-2 text-xs text-muted-foreground">
+                {(typeof delivery.target_platforms === 'string'
+                  ? JSON.parse(delivery.target_platforms)
+                  : delivery.target_platforms
+                ).map((p) => p === 'tiktok' ? 'TikTok' : 'Instagram').join(' + ')}
+              </span>
+            )}
           </SheetDescription>
         </SheetHeader>
 
