@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import { getConnectionStatus, getOAuthUrl, disconnectInstagram, listScheduledPosts } from '@/services/instagram';
+import { getOAuthUrl as getTikTokOAuthUrl, getConnectionStatus as getTikTokConnectionStatus, disconnectTikTok } from '@/services/tiktok';
 import useAuthStore from '@/stores/authStore';
 import { isManagement } from '@/lib/roles';
 import {
@@ -85,6 +86,8 @@ export default function ClientProfilePage() {
   const [igSyncing, setIgSyncing] = useState(false);
   const [igConnection, setIgConnection] = useState(null);
   const [igConnecting, setIgConnecting] = useState(false);
+  const [tkConnection, setTkConnection] = useState(null);
+  const [tkConnecting, setTkConnecting] = useState(false);
   const [kanbanMonth, setKanbanMonth] = useState(getCurrentMonth());
 
   const fetchProfile = async () => {
@@ -114,10 +117,16 @@ export default function ClientProfilePage() {
 
   useEffect(() => {
     getConnectionStatus(id).then(setIgConnection).catch(() => setIgConnection(null));
+    getTikTokConnectionStatus(id).then(setTkConnection).catch(() => setTkConnection(null));
     const params = new URLSearchParams(window.location.search);
     if (params.get('instagram_connected') === 'true') {
       toast.success('Instagram conectado com sucesso!');
       getConnectionStatus(id).then(setIgConnection);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (params.get('tiktok_connected') === 'true') {
+      toast.success('TikTok conectado com sucesso!');
+      getTikTokConnectionStatus(id).then(setTkConnection);
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, [id]);
@@ -500,6 +509,10 @@ export default function ClientProfilePage() {
             igSyncing={igSyncing}
             syncInstagram={syncInstagram}
             igPosts={igPosts}
+            tkConnection={tkConnection}
+            setTkConnection={setTkConnection}
+            tkConnecting={tkConnecting}
+            setTkConnecting={setTkConnecting}
           />
         </TabsContent>
       </Tabs>
@@ -544,85 +557,157 @@ function MonthPill({ active, onClick, children }) {
 }
 
 // ─── Instagram Section ────────────────────────────────────
-function InstagramSection({ clientId, canManage, igConnection, setIgConnection, igConnecting, setIgConnecting, igSyncing, syncInstagram, igPosts }) {
+function InstagramSection({ clientId, canManage, igConnection, setIgConnection, igConnecting, setIgConnecting, igSyncing, syncInstagram, igPosts, tkConnection, setTkConnection, tkConnecting, setTkConnecting }) {
   return (
     <div className="space-y-5">
       {canManage && (
-        <Card>
-          <CardContent className="py-4 px-5">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
-                  igConnection?.connected ? 'bg-emerald-500/15' : 'bg-muted'
-                }`}>
-                  <Instagram size={18} className={igConnection?.connected ? 'text-emerald-500' : 'text-muted-foreground'} />
+        <>
+          <Card>
+            <CardContent className="py-4 px-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                    igConnection?.connected ? 'bg-emerald-500/15' : 'bg-muted'
+                  }`}>
+                    <Instagram size={18} className={igConnection?.connected ? 'text-emerald-500' : 'text-muted-foreground'} />
+                  </div>
+                  <div>
+                    {igConnection?.connected ? (
+                      <>
+                        <p className="text-sm font-medium text-emerald-500">Conectado</p>
+                        <p className="text-xs text-muted-foreground">@{igConnection.username}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium">Instagram Business</p>
+                        <p className="text-xs text-muted-foreground">Conecte para publicar automaticamente</p>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div>
+                <div className="flex gap-2">
                   {igConnection?.connected ? (
                     <>
-                      <p className="text-sm font-medium text-emerald-500">Conectado</p>
-                      <p className="text-xs text-muted-foreground">@{igConnection.username}</p>
+                      <Button size="sm" variant="outline" onClick={syncInstagram} disabled={igSyncing}>
+                        {igSyncing ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <RefreshCw size={14} className="mr-1.5" />}
+                        {igSyncing ? 'Sincronizando...' : 'Sincronizar'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                        disabled={igConnecting}
+                        onClick={async () => {
+                          if (!confirm('Desconectar o Instagram deste cliente?')) return;
+                          setIgConnecting(true);
+                          try {
+                            await disconnectInstagram(clientId);
+                            setIgConnection({ connected: false });
+                            toast.success('Instagram desconectado');
+                          } catch {
+                            toast.error('Erro ao desconectar');
+                          } finally {
+                            setIgConnecting(false);
+                          }
+                        }}
+                      >
+                        Desconectar
+                      </Button>
                     </>
                   ) : (
-                    <>
-                      <p className="text-sm font-medium">Instagram Business</p>
-                      <p className="text-xs text-muted-foreground">Conecte para publicar automaticamente</p>
-                    </>
+                    <Button
+                      size="sm"
+                      disabled={igConnecting}
+                      onClick={async () => {
+                        setIgConnecting(true);
+                        try {
+                          const { url } = await getOAuthUrl(clientId);
+                          window.location.href = url;
+                        } catch {
+                          toast.error('Erro ao iniciar conexão');
+                          setIgConnecting(false);
+                        }
+                      }}
+                    >
+                      {igConnecting ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Instagram size={14} className="mr-1.5" />}
+                      Conectar Instagram
+                    </Button>
                   )}
                 </div>
               </div>
-              <div className="flex gap-2">
-                {igConnection?.connected ? (
-                  <>
-                    <Button size="sm" variant="outline" onClick={syncInstagram} disabled={igSyncing}>
-                      {igSyncing ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <RefreshCw size={14} className="mr-1.5" />}
-                      {igSyncing ? 'Sincronizando...' : 'Sincronizar'}
-                    </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="py-4 px-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                    tkConnection?.connected ? 'bg-emerald-500/15' : 'bg-muted'
+                  }`}>
+                    <span className={`text-sm font-black ${tkConnection?.connected ? 'text-emerald-500' : 'text-muted-foreground'}`}>TK</span>
+                  </div>
+                  <div>
+                    {tkConnection?.connected ? (
+                      <>
+                        <p className="text-sm font-medium text-emerald-500">Conectado</p>
+                        <p className="text-xs text-muted-foreground">@{tkConnection.username}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium">TikTok</p>
+                        <p className="text-xs text-muted-foreground">Conecte para publicar automaticamente</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {tkConnection?.connected ? (
                     <Button
                       variant="outline"
                       size="sm"
                       className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                      disabled={igConnecting}
+                      disabled={tkConnecting}
                       onClick={async () => {
-                        if (!confirm('Desconectar o Instagram deste cliente?')) return;
-                        setIgConnecting(true);
+                        if (!confirm('Desconectar o TikTok deste cliente?')) return;
+                        setTkConnecting(true);
                         try {
-                          await disconnectInstagram(clientId);
-                          setIgConnection({ connected: false });
-                          toast.success('Instagram desconectado');
+                          await disconnectTikTok(clientId);
+                          setTkConnection({ connected: false });
+                          toast.success('TikTok desconectado');
                         } catch {
                           toast.error('Erro ao desconectar');
                         } finally {
-                          setIgConnecting(false);
+                          setTkConnecting(false);
                         }
                       }}
                     >
                       Desconectar
                     </Button>
-                  </>
-                ) : (
-                  <Button
-                    size="sm"
-                    disabled={igConnecting}
-                    onClick={async () => {
-                      setIgConnecting(true);
-                      try {
-                        const { url } = await getOAuthUrl(clientId);
-                        window.location.href = url;
-                      } catch {
-                        toast.error('Erro ao iniciar conexão');
-                        setIgConnecting(false);
-                      }
-                    }}
-                  >
-                    {igConnecting ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Instagram size={14} className="mr-1.5" />}
-                    Conectar Instagram
-                  </Button>
-                )}
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled={tkConnecting}
+                      onClick={async () => {
+                        setTkConnecting(true);
+                        try {
+                          const { url } = await getTikTokOAuthUrl(clientId);
+                          window.location.href = url;
+                        } catch {
+                          toast.error('Erro ao iniciar conexão');
+                          setTkConnecting(false);
+                        }
+                      }}
+                    >
+                      {tkConnecting ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <span className="mr-1.5 text-xs font-black">TK</span>}
+                      Conectar TikTok
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {igPosts.length > 0 ? (

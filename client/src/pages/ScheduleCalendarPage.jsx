@@ -74,6 +74,7 @@ export default function ScheduleCalendarPage() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterClient, setFilterClient] = useState('');
+  const [platformFilter, setPlatformFilter] = useState('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
 
@@ -106,14 +107,14 @@ export default function ScheduleCalendarPage() {
 
   const postsByDate = useMemo(() => {
     const map = {};
-    for (const p of posts) {
+    for (const p of filteredByPlatform) {
       const d = p.scheduled_at ? new Date(p.scheduled_at) : new Date(p.created_at);
       const key = dateKey(d);
       if (!map[key]) map[key] = [];
       map[key].push(p);
     }
     return map;
-  }, [posts]);
+  }, [filteredByPlatform]);
 
   const selectedDayPosts = useMemo(() => {
     if (!selectedDate) return [];
@@ -137,11 +138,13 @@ export default function ScheduleCalendarPage() {
     catch { toast.error('Erro ao publicar'); }
   };
 
+  const filteredByPlatform = platformFilter === 'all' ? posts : posts.filter((p) => p.platform === platformFilter);
+
   // Stats
-  const totalPosts = posts.length;
-  const scheduledCount = posts.filter(p => p.status === 'scheduled').length;
-  const publishedCount = posts.filter(p => p.status === 'published').length;
-  const draftCount = posts.filter(p => p.status === 'draft').length;
+  const totalPosts = filteredByPlatform.length;
+  const scheduledCount = filteredByPlatform.filter(p => p.status === 'scheduled').length;
+  const publishedCount = filteredByPlatform.filter(p => p.status === 'published').length;
+  const draftCount = filteredByPlatform.filter(p => p.status === 'draft').length;
 
   if (loading) return <PageLoading />;
 
@@ -164,6 +167,15 @@ export default function ScheduleCalendarPage() {
             >
               <option value="">Todos os clientes</option>
               {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <select
+              value={platformFilter}
+              onChange={(e) => setPlatformFilter(e.target.value)}
+              className="h-8 rounded-lg border border-border bg-transparent px-2.5 text-xs text-foreground cursor-pointer focus:border-primary outline-none"
+            >
+              <option value="all">Todas plataformas</option>
+              <option value="instagram">Instagram</option>
+              <option value="tiktok">TikTok</option>
             </select>
             {canManage && (
               <button
@@ -254,6 +266,9 @@ export default function ScheduleCalendarPage() {
                           ) : (
                             <div className={`w-1.5 h-1.5 rounded-full ${colors.dot} shrink-0`} />
                           )}
+                          {p.platform === 'tiktok' && (
+                            <span className="text-[8px] font-bold text-muted-foreground shrink-0">TK</span>
+                          )}
                           <span className="truncate hidden sm:inline">{p.client_name || 'Post'}</span>
                         </div>
                       );
@@ -315,6 +330,11 @@ export default function ScheduleCalendarPage() {
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${colors.bg} ${colors.text}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
                             {STATUS_LABELS[p.status] || p.status}
+                          </span>
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                            p.platform === 'tiktok' ? 'bg-pink-500/15 text-pink-400' : 'bg-purple-500/15 text-purple-400'
+                          }`}>
+                            {p.platform === 'tiktok' ? 'TikTok' : 'Instagram'}
                           </span>
                           {time && <span className="text-xs text-zinc-400 dark:text-zinc-500 tabular-nums">{time}</span>}
                           {mediaUrls.length > 1 && (
