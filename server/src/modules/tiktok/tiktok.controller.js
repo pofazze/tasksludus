@@ -1,4 +1,6 @@
 const oauthService = require('./tiktok-oauth.service');
+const webhookService = require('./tiktok-webhook.service');
+const logger = require('../../utils/logger');
 const { clientUrl } = require('../../config/env');
 
 class TikTokController {
@@ -47,6 +49,23 @@ class TikTokController {
     } catch (err) {
       next(err);
     }
+  }
+
+  async webhook(req, res) {
+    const signature = req.headers['tiktok-signature'];
+    const rawBody = req.rawBody;
+
+    const valid = webhookService.verifySignature(rawBody, signature);
+    if (!valid) {
+      logger.warn('TikTok webhook signature verification failed');
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
+
+    res.status(200).json({ ok: true });
+
+    Promise.resolve(webhookService.processEvent(req.body)).catch((err) => {
+      logger.error('TikTok webhook processing error (post-response)', { error: err.message });
+    });
   }
 }
 

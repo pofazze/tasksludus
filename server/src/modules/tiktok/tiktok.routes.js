@@ -4,8 +4,9 @@ const controller = require('./tiktok.controller');
 
 const router = express.Router();
 
-// OAuth callback is public (TikTok redirects here)
+// Public endpoints (TikTok calls these directly)
 router.get('/oauth/callback', controller.oauthCallback.bind(controller));
+router.post('/webhook', controller.webhook.bind(controller));
 
 // Authenticated endpoints
 router.use(authenticate);
