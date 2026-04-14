@@ -34,7 +34,7 @@ function buildApp() {
   const app = express();
   app.use(express.json({
     verify: (req, _res, buf) => {
-      if (req.url === '/api/tiktok/webhook') req.rawBody = buf.toString();
+      if (req.path === '/api/tiktok/webhook') req.rawBody = buf.toString();
     },
   }));
   app.use('/api/tiktok', require('./tiktok.routes'));
@@ -51,11 +51,13 @@ describe('POST /api/tiktok/webhook', () => {
   test('returns 200 and dispatches when signature is valid', async () => {
     webhookService.verifySignature.mockReturnValue(true);
     const body = { client_key: 'k', event: 'authorization.removed', create_time: 1, user_openid: 'o', content: '{}' };
+    const sigHeader = 't=1,s=deadbeef';
     const res = await request(buildApp())
       .post('/api/tiktok/webhook')
-      .set('Tiktok-Signature', 't=1,s=deadbeef')
+      .set('Tiktok-Signature', sigHeader)
       .send(body);
     expect(res.status).toBe(200);
+    expect(webhookService.verifySignature).toHaveBeenCalledWith(JSON.stringify(body), sigHeader);
     expect(webhookService.processEvent).toHaveBeenCalledWith(body);
   });
 
