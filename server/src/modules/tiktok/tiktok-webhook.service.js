@@ -1,5 +1,8 @@
 const crypto = require('crypto');
 const env = require('../../config/env');
+const db = require('../../config/db');
+const logger = require('../../utils/logger');
+const eventBus = require('../../utils/event-bus');
 
 const TIMESTAMP_TOLERANCE_SECONDS = 300;
 
@@ -42,16 +45,6 @@ function verifySignature(rawBody, header, opts = {}) {
     return false;
   }
 }
-
-module.exports = {
-  parseSignatureHeader,
-  verifySignature,
-  TIMESTAMP_TOLERANCE_SECONDS,
-};
-
-const db = require('../../config/db');
-const logger = require('../../utils/logger');
-const eventBus = require('../../utils/event-bus');
 
 function parseContent(raw) {
   if (!raw) return {};
@@ -124,9 +117,13 @@ async function handlePublishPubliclyAvailable(event) {
     logger.warn('TikTok publicly_available: scheduled_post not found', { publishId: content.publish_id });
     return;
   }
-  const username = post.tiktok_username || null;
-  const permalink = content.post_id
-    ? `https://www.tiktok.com/${username ? `@${username}` : ''}/video/${content.post_id}`
+  const tokenRow = await db('client_tiktok_tokens')
+    .where({ client_id: post.client_id })
+    .select('tiktok_username')
+    .first();
+  const username = tokenRow?.tiktok_username || null;
+  const permalink = (content.post_id && username)
+    ? `https://www.tiktok.com/@${username}/video/${content.post_id}`
     : null;
   await db('scheduled_posts')
     .where({ tiktok_publish_id: content.publish_id })
@@ -171,9 +168,14 @@ async function processEvent(event) {
   }
 }
 
-module.exports.logEvent = logEvent;
-module.exports.processEvent = processEvent;
-module.exports.handleAuthorizationRemoved = handleAuthorizationRemoved;
-module.exports.handlePublishComplete = handlePublishComplete;
-module.exports.handlePublishPubliclyAvailable = handlePublishPubliclyAvailable;
-module.exports.handlePublishFailed = handlePublishFailed;
+module.exports = {
+  parseSignatureHeader,
+  verifySignature,
+  TIMESTAMP_TOLERANCE_SECONDS,
+  logEvent,
+  processEvent,
+  handleAuthorizationRemoved,
+  handlePublishComplete,
+  handlePublishPubliclyAvailable,
+  handlePublishFailed,
+};

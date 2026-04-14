@@ -100,6 +100,8 @@ describe('verifySignature', () => {
 const mockDb = {
   inserts: [],
   updates: [],
+  firstResults: {},
+  firstThrowsOn: null,
 };
 
 jest.mock('../../config/db', () => {
@@ -108,7 +110,13 @@ jest.mock('../../config/db', () => {
       _table: table,
       _where: null,
       where(conditions) { this._where = conditions; return this; },
-      first() { return Promise.resolve(mockDb.firstResult || null); },
+      select() { return this; },
+      first() {
+        if (mockDb.firstThrowsOn === this._table) {
+          return Promise.reject(new Error(`mock db failure on ${this._table}`));
+        }
+        return Promise.resolve(mockDb.firstResults[this._table] || null);
+      },
       insert(row) {
         mockDb.inserts.push({ table: this._table, row });
         return {
@@ -136,12 +144,17 @@ jest.mock('../../utils/event-bus', () => ({
 
 const service = require('./tiktok-webhook.service');
 const eventBus = require('../../utils/event-bus');
+const logger = require('../../utils/logger');
 
 beforeEach(() => {
   mockDb.inserts.length = 0;
   mockDb.updates.length = 0;
-  mockDb.firstResult = null;
+  mockDb.firstResults = {};
+  mockDb.firstThrowsOn = null;
   eventBus.emit.mockClear();
+  logger.info.mockClear();
+  logger.warn.mockClear();
+  logger.error.mockClear();
 });
 
 describe('processEvent', () => {
@@ -158,8 +171,8 @@ describe('processEvent', () => {
     });
   });
 
-  test('authorization.removed marks client tokens inactive', async () => {
-    mockDb.firstResult = { id: 'tok-1', client_id: 'client-123' };
+  test('authorization.removed marks client tokens inactive and emits disconnect', async () => {
+    mockDb.firstResults = { client_tiktok_tokens: { id: 'tok-1', client_id: 'client-123' } };
     const event = {
       client_key: 'k', event: 'authorization.removed', create_time: 1,
       user_openid: 'open-abc', content: JSON.stringify({ reason: 1 }),
@@ -169,10 +182,18 @@ describe('processEvent', () => {
     expect(tokUpdate).toBeTruthy();
     expect(tokUpdate.where).toEqual({ tiktok_open_id: 'open-abc' });
     expect(tokUpdate.row).toMatchObject({ is_active: false });
+    expect(eventBus.emit).toHaveBeenCalledWith('tiktok:disconnected', { clientId: 'client-123' });
+  });
+
+  test('authorization.removed with missing user_openid is a no-op', async () => {
+    const event = { client_key: 'k', event: 'authorization.removed', create_time: 1, content: '{}' };
+    await service.processEvent(event);
+    expect(mockDb.updates.filter((u) => u.table === 'client_tiktok_tokens')).toHaveLength(0);
+    expect(eventBus.emit).not.toHaveBeenCalledWith('tiktok:disconnected', expect.anything());
   });
 
   test('post.publish.complete marks scheduled_post published and emits SSE', async () => {
-    mockDb.firstResult = { id: 'post-1', client_id: 'client-1', delivery_id: null };
+    mockDb.firstResults = { scheduled_posts: { id: 'post-1', client_id: 'client-1', delivery_id: null } };
     const event = {
       client_key: 'k', event: 'post.publish.complete', create_time: 1, user_openid: 'o',
       content: JSON.stringify({ publish_id: 'pub-1', publish_type: 'DIRECT_POST' }),
@@ -185,19 +206,33 @@ describe('processEvent', () => {
     expect(eventBus.emit).toHaveBeenCalledWith('post:updated', expect.objectContaining({ id: 'post-1' }));
   });
 
-  test('post.publish.publicly_available saves tiktok post_id in permalink', async () => {
-    mockDb.firstResult = { id: 'post-1', client_id: 'client-1', tiktok_username: 'johndoe' };
+  test('post.publish.publicly_available builds permalink from client_tiktok_tokens.tiktok_username', async () => {
+    mockDb.firstResults = {
+      scheduled_posts: { id: 'post-1', client_id: 'client-1' },
+      client_tiktok_tokens: { tiktok_username: 'johndoe' },
+    };
     const event = {
       client_key: 'k', event: 'post.publish.publicly_available', create_time: 1, user_openid: 'o',
       content: JSON.stringify({ publish_id: 'pub-1', post_id: '7300000000000000000', publish_type: 'DIRECT_POST' }),
     };
     await service.processEvent(event);
     const update = mockDb.updates.find((u) => u.table === 'scheduled_posts');
-    expect(update.row.tiktok_permalink).toContain('7300000000000000000');
+    expect(update.row.tiktok_permalink).toBe('https://www.tiktok.com/@johndoe/video/7300000000000000000');
+  });
+
+  test('post.publish.publicly_available stores null permalink when username unavailable', async () => {
+    mockDb.firstResults = { scheduled_posts: { id: 'post-1', client_id: 'client-1' } };
+    const event = {
+      client_key: 'k', event: 'post.publish.publicly_available', create_time: 1, user_openid: 'o',
+      content: JSON.stringify({ publish_id: 'pub-1', post_id: '7300000000000000000', publish_type: 'DIRECT_POST' }),
+    };
+    await service.processEvent(event);
+    const update = mockDb.updates.find((u) => u.table === 'scheduled_posts');
+    expect(update.row.tiktok_permalink).toBeNull();
   });
 
   test('post.publish.failed marks scheduled_post failed with error_message', async () => {
-    mockDb.firstResult = { id: 'post-1', client_id: 'client-1' };
+    mockDb.firstResults = { scheduled_posts: { id: 'post-1', client_id: 'client-1' } };
     const event = {
       client_key: 'k', event: 'post.publish.failed', create_time: 1, user_openid: 'o',
       content: JSON.stringify({ publish_id: 'pub-1', reason: 'video_too_long', publish_type: 'DIRECT_POST' }),
@@ -217,5 +252,18 @@ describe('processEvent', () => {
   test('malformed content string does not throw', async () => {
     const event = { client_key: 'k', event: 'post.publish.complete', create_time: 1, user_openid: 'o', content: 'not-json' };
     await expect(service.processEvent(event)).resolves.toBeUndefined();
+  });
+
+  test('handler rejection is swallowed and logged by processEvent', async () => {
+    mockDb.firstThrowsOn = 'client_tiktok_tokens';
+    const event = {
+      client_key: 'k', event: 'authorization.removed', create_time: 1,
+      user_openid: 'open-abc', content: JSON.stringify({ reason: 1 }),
+    };
+    await expect(service.processEvent(event)).resolves.toBeUndefined();
+    expect(logger.error).toHaveBeenCalledWith(
+      'TikTok webhook processEvent failed',
+      expect.objectContaining({ event: 'authorization.removed' }),
+    );
   });
 });
