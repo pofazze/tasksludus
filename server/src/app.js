@@ -55,7 +55,7 @@ app.use('/api/', limiter);
 // Body parsing — capture raw body for webhook signature verification
 app.use(express.json({
   verify: (req, _res, buf) => {
-    if (req.url.startsWith('/api/webhooks/')) {
+    if (req.url.startsWith('/api/webhooks/') || req.url === '/api/tiktok/webhook') {
       req.rawBody = buf.toString();
     }
   },
