@@ -13,10 +13,12 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const POST_TYPES = [
-  { value: 'image', label: 'Imagem', icon: Image },
-  { value: 'reel', label: 'Reel', icon: Film },
-  { value: 'story', label: 'Story', icon: MessageCircle },
-  { value: 'carousel', label: 'Carrossel', icon: Layers },
+  { value: 'image', label: 'Imagem', icon: Image, platforms: ['instagram'] },
+  { value: 'reel', label: 'Reel', icon: Film, platforms: ['instagram'] },
+  { value: 'story', label: 'Story', icon: MessageCircle, platforms: ['instagram'] },
+  { value: 'carousel', label: 'Carrossel', icon: Layers, platforms: ['instagram', 'tiktok'] },
+  { value: 'tiktok_video', label: 'Vídeo TikTok', icon: Film, platforms: ['tiktok'] },
+  { value: 'tiktok_photo', label: 'Foto TikTok', icon: Image, platforms: ['tiktok'] },
 ];
 
 const VIDEO_EXT = /\.(mp4|mov|avi|wmv|flv|mkv|webm|m4v)(\?|$)/i;
@@ -170,7 +172,7 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
 
             {/* Platforms */}
             <div className="space-y-1.5">
-              <Label>Plataformas</Label>
+              <Label>Selecionar redes para publicar</Label>
               <div className="flex gap-1.5">
                 {[
                   { value: 'instagram', label: 'Instagram' },
@@ -183,7 +185,11 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
                       setForm((f) => {
                         const has = f.platforms.includes(value);
                         const next = has ? f.platforms.filter((p) => p !== value) : [...f.platforms, value];
-                        return { ...f, platforms: next.length > 0 ? next : f.platforms };
+                        if (next.length === 0) return f;
+                        // Reset post_type if incompatible with new platforms
+                        const currentType = POST_TYPES.find((t) => t.value === f.post_type);
+                        const typeOk = currentType && currentType.platforms.some((p) => next.includes(p));
+                        return { ...f, platforms: next, post_type: typeOk ? f.post_type : '' };
                       });
                     }}
                     className={cn(
@@ -202,8 +208,8 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
             {/* Post type */}
             <div className="space-y-1.5">
               <Label>Tipo</Label>
-              <div className="flex gap-1.5">
-                {POST_TYPES.map(({ value, label, icon: Icon }) => (
+              <div className="flex gap-1.5 flex-wrap">
+                {POST_TYPES.filter((t) => t.platforms.some((p) => form.platforms.includes(p))).map(({ value, label, icon: Icon }) => (
                   <button
                     key={value}
                     type="button"

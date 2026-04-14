@@ -27,10 +27,17 @@ const STATUS_CONFIG = {
 };
 
 const POST_TYPE_OPTIONS = [
-  { value: 'reel', label: 'Reel' },
-  { value: 'image', label: 'Feed' },
-  { value: 'story', label: 'Story' },
-  { value: 'carousel', label: 'Carrossel' },
+  { value: 'reel', label: 'Reel', platforms: ['instagram'] },
+  { value: 'image', label: 'Feed', platforms: ['instagram'] },
+  { value: 'story', label: 'Story', platforms: ['instagram'] },
+  { value: 'carousel', label: 'Carrossel', platforms: ['instagram', 'tiktok'] },
+  { value: 'tiktok_video', label: 'Vídeo TikTok', platforms: ['tiktok'] },
+  { value: 'tiktok_photo', label: 'Foto TikTok', platforms: ['tiktok'] },
+];
+
+const PLATFORM_OPTIONS = [
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'tiktok', label: 'TikTok' },
 ];
 
 function extractFilename(url) {
@@ -69,6 +76,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
   const [previewAnchor, setPreviewAnchor] = useState(null);
   const [newMediaUrl, setNewMediaUrl] = useState('');
   const [coverMode, setCoverMode] = useState(null);
+  const [selectedPlatforms, setSelectedPlatforms] = useState(['instagram']);
   const fileInputRef = useRef(null);
   const coverFileRef = useRef(null);
 
@@ -86,6 +94,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
     setCoverConfirmed(!!post.thumbnail_url);
     setCoverMode(null);
     setSelectedPostType(post.post_type || null);
+    setSelectedPlatforms(post.platform ? [post.platform] : ['instagram']);
   }
 
   const readOnly = post && ['published', 'publishing'].includes(post.status);
@@ -164,6 +173,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
       media_urls: media,
       thumbnail_url: isReel ? (thumbnailUrl || null) : null,
       post_type: effectivePostType,
+      platforms: selectedPlatforms,
       ...extra,
     };
   }
@@ -271,6 +281,45 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
         </SheetHeader>
 
         <SheetBody>
+          {/* Platform selector */}
+          {!readOnly && (
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Selecionar redes para publicar</label>
+              <div className="flex gap-1.5">
+                {PLATFORM_OPTIONS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPlatforms((prev) => {
+                        const has = prev.includes(value);
+                        const next = has ? prev.filter((p) => p !== value) : [...prev, value];
+                        return next.length > 0 ? next : prev;
+                      });
+                      // Reset format if incompatible with new platform selection
+                      if (selectedPostType) {
+                        const opt = POST_TYPE_OPTIONS.find((o) => o.value === selectedPostType);
+                        const nextPlatforms = selectedPlatforms.includes(value)
+                          ? selectedPlatforms.filter((p) => p !== value)
+                          : [...selectedPlatforms, value];
+                        if (opt && !opt.platforms.some((p) => nextPlatforms.includes(p))) {
+                          setSelectedPostType(null);
+                        }
+                      }
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                      selectedPlatforms.includes(value)
+                        ? 'bg-[#9A48EA]/15 text-[#C084FC] ring-1 ring-[#9A48EA]/30'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-surface-3/50'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Format selector — required when post_type is not set */}
           {!readOnly && !hasFormat && (
             <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
@@ -282,7 +331,9 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
                 Selecione o formato para poder agendar ou publicar.
               </p>
               <div className="flex gap-1.5 flex-wrap">
-                {POST_TYPE_OPTIONS.map((opt) => (
+                {POST_TYPE_OPTIONS
+                  .filter((opt) => opt.platforms.some((p) => selectedPlatforms.includes(p)))
+                  .map((opt) => (
                   <Button
                     key={opt.value}
                     size="sm"
