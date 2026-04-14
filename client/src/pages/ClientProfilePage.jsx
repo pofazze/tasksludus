@@ -117,8 +117,13 @@ export default function ClientProfilePage() {
 
   useEffect(() => {
     getConnectionStatus(id).then(setIgConnection).catch(() => setIgConnection(null));
-    getTikTokConnectionStatus(id).then(setTkConnection).catch(() => setTkConnection(null));
     const params = new URLSearchParams(window.location.search);
+    // Demo mode: simulate TikTok connected for video recording
+    if (params.get('demo') === 'true') {
+      setTkConnection({ connected: true, username: 'ludus.social' });
+    } else {
+      getTikTokConnectionStatus(id).then(setTkConnection).catch(() => setTkConnection(null));
+    }
     if (params.get('instagram_connected') === 'true') {
       toast.success('Instagram conectado com sucesso!');
       getConnectionStatus(id).then(setIgConnection);
