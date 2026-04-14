@@ -70,6 +70,16 @@ app.get('/robots.txt', (_req, res) => {
   res.type('text/plain').send('User-agent: *\nAllow: /\n');
 });
 
+// TikTok domain verification file (env-driven, served at the exact path
+// TikTok generates when you click "Verify" in the Developer Portal)
+if (process.env.TIKTOK_DOMAIN_VERIFICATION_FILENAME && process.env.TIKTOK_DOMAIN_VERIFICATION_CONTENT) {
+  const verificationPath = '/' + process.env.TIKTOK_DOMAIN_VERIFICATION_FILENAME.replace(/^\/+/, '');
+  app.get(verificationPath, (_req, res) => {
+    res.type('text/plain').send(process.env.TIKTOK_DOMAIN_VERIFICATION_CONTENT);
+  });
+  logger.info('TikTok domain verification file registered', { path: verificationPath });
+}
+
 // Health check
 app.get('/api/health', async (req, res) => {
   const db = require('./config/db');

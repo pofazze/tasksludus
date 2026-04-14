@@ -1,10 +1,18 @@
 const db = require('../../config/db');
+const env = require('../../config/env');
 const logger = require('../../utils/logger');
 const tiktokOAuth = require('./tiktok-oauth.service');
 const clickupOAuth = require('../webhooks/clickup-oauth.service');
 const eventBus = require('../../utils/event-bus');
 
 const TIKTOK_API_BASE = 'https://open.tiktokapis.com/v2';
+
+function getServerBaseUrl() {
+  if (env.tiktok?.redirectUri) {
+    try { return new URL(env.tiktok.redirectUri).origin; } catch {}
+  }
+  throw new Error('TIKTOK_REDIRECT_URI must be configured so the media proxy URL can be built');
+}
 
 // Escalating delays: 5s, 10s, 20s, 30s, 60s
 const POLL_INTERVALS = [5000, 10000, 20000, 30000, 60000];
@@ -33,17 +41,27 @@ class TikTokPublishService {
       // Determine publish path: video vs photo/carousel
       const isVideoPostType = ['reel', 'video', 'tiktok_video'].includes(post.post_type);
       const allMediaAreVideo = mediaUrls.length > 0 && mediaUrls.every((m) => m.type === 'video');
-      const videoMedia = mediaUrls.find((m) => m.type === 'video');
+      const videoIdx = mediaUrls.findIndex((m) => m.type === 'video');
+
+      // TikTok PULL_FROM_URL requires URLs on a verified domain. Route every
+      // media URL through our own server so the prefix we verify
+      // (https://server-production-bea3.up.railway.app/api/tiktok/media/) is
+      // the one TikTok fetches, regardless of where the media actually lives.
+      const proxyBase = `${getServerBaseUrl()}/api/tiktok/media/${postId}`;
 
       let publishId;
       if (isVideoPostType || allMediaAreVideo) {
-        const videoUrl = videoMedia?.url || mediaUrls[0]?.url;
-        if (!videoUrl) throw new Error('No video URL found for video post');
-        logger.info('Publishing TikTok video', { postId, videoUrl: videoUrl.slice(0, 120) });
+        const effectiveIdx = videoIdx >= 0 ? videoIdx : (mediaUrls.length > 0 ? 0 : -1);
+        if (effectiveIdx < 0) throw new Error('No video URL found for video post');
+        const videoUrl = `${proxyBase}/${effectiveIdx}`;
+        const sourceUrl = mediaUrls[effectiveIdx].url;
+        logger.info('Publishing TikTok video', { postId, videoUrl, sourcePrefix: sourceUrl?.slice(0, 80) });
         const result = await this.publishVideo(accessToken, videoUrl, post.caption);
         publishId = result.publish_id;
       } else {
-        const photoUrls = mediaUrls.map((m) => m.url).filter(Boolean);
+        const photoUrls = mediaUrls
+          .map((m, i) => (m.url ? `${proxyBase}/${i}` : null))
+          .filter(Boolean);
         if (!photoUrls.length) throw new Error('No photo URLs found for photo post');
         logger.info('Publishing TikTok photo/carousel', { postId, count: photoUrls.length });
         const result = await this.publishPhoto(accessToken, photoUrls, post.caption);
