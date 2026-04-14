@@ -80,4 +80,17 @@ describe('verifySignature', () => {
     const header = `t=${t},s=abc`;
     expect(verifySignature(BODY, header, { now })).toBe(false);
   });
+
+  test('rejects non-hex signature characters', () => {
+    const t = now;
+    const header = `t=${t},s=${'z'.repeat(64)}`;
+    expect(verifySignature(BODY, header, { now })).toBe(false);
+  });
+
+  test('rejects null rawBody', () => {
+    const t = now;
+    const header = `t=${t},s=${sign(BODY, t)}`;
+    expect(verifySignature(null, header, { now })).toBe(false);
+    expect(verifySignature(undefined, header, { now })).toBe(false);
+  });
 });

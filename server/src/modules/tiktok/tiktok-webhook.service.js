@@ -23,6 +23,7 @@ function verifySignature(rawBody, header, opts = {}) {
 
   const parsed = parseSignatureHeader(header);
   if (!parsed) return false;
+  if (!/^[0-9a-f]+$/i.test(parsed.signature)) return false;
 
   const timestamp = Number(parsed.timestamp);
   if (!Number.isFinite(timestamp)) return false;

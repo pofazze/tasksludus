@@ -218,7 +218,7 @@ module.exports = {
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `cd server && npx jest src/modules/tiktok/tiktok-webhook.service.test.js`
-Expected: all 10 tests PASS.
+Expected: all 13 tests PASS.
 
 - [ ] **Step 5: Commit**
 
