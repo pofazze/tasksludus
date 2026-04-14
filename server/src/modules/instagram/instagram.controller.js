@@ -238,7 +238,7 @@ class InstagramController {
         updated_at: new Date(),
       });
       await cancelScheduledPost(post.id);
-      await schedulePost(post.id, new Date());
+      await schedulePost(post.id, new Date(), post.platform);
 
       res.json({ message: 'Publishing started' });
     } catch (err) {
