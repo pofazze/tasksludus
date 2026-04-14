@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import useAuthStore from '@/stores/authStore';
+import LudusLogo from '@/components/ui/LudusLogo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -37,7 +38,7 @@ export default function LoginPage() {
       <div className="relative w-full max-w-sm px-6">
         {/* Brand */}
         <div className="text-center mb-8">
-          <img src="/logo.svg" alt="Ludus" className="h-8 mx-auto" />
+          <LudusLogo className="h-8 mx-auto text-white" />
           <p className="text-sm text-muted-foreground mt-2">Entre na sua conta</p>
         </div>
 

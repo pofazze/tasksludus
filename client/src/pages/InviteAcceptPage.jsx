@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import api from '@/services/api';
 import useAuthStore from '@/stores/authStore';
+import LudusLogo from '@/components/ui/LudusLogo';
 
 export default function InviteAcceptPage() {
   const { token } = useParams();
@@ -39,7 +40,7 @@ export default function InviteAcceptPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <img src="/logo.svg" alt="Ludus" className="h-6 mx-auto" />
+          <LudusLogo className="h-6 mx-auto text-foreground" />
           <p className="text-sm text-muted-foreground mt-1">Crie sua conta</p>
         </CardHeader>
         <CardContent>

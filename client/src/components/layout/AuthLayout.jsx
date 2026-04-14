@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import { Menu, Package, CalendarDays, BarChart3, ClipboardCheck } from 'lucide-react';
+import LudusLogo from '@/components/ui/LudusLogo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import Sidebar from './Sidebar';
@@ -29,7 +30,7 @@ export default function AuthLayout() {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMobileOpen(true)}>
             <Menu size={18} />
           </Button>
-          <img src="/logo.svg" alt="Ludus" className="h-5" />
+          <LudusLogo className="h-5 text-foreground" />
         </div>
 
         <main className="flex-1 overflow-y-auto p-4 pb-20 md:p-6 md:pb-6">

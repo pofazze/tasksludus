@@ -6,6 +6,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import useAuthStore from '@/stores/authStore';
+import LudusLogo from '@/components/ui/LudusLogo';
 
 const navItems = {
   dev: [
@@ -97,7 +98,7 @@ export default function Sidebar({ onNavigate }) {
     <aside className="w-56 h-full bg-white dark:bg-[#0C0C0F] border-r border-border flex flex-col">
       {/* Brand */}
       <div className="px-5 pt-5 pb-4">
-        <img src="/logo.svg" alt="Ludus" className="h-6" />
+        <LudusLogo className="h-6 text-foreground" />
       </div>
 
       {/* Navigation */}
