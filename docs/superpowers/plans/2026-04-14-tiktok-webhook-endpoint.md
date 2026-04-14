@@ -352,7 +352,7 @@ describe('processEvent', () => {
     await service.processEvent(event);
     const update = mockDb.updates.find((u) => u.table === 'scheduled_posts');
     expect(update.row).toMatchObject({ status: 'failed' });
-    expect(update.row.last_error).toContain('video_too_long');
+    expect(update.row.error_message).toContain('video_too_long');
   });
 
   test('unknown events are logged but not fatal', async () => {
@@ -472,7 +472,7 @@ async function handlePublishFailed(event) {
   if (!content.publish_id) return;
   await updateScheduledPostByPublishId(content.publish_id, {
     status: 'failed',
-    last_error: `TikTok webhook: ${content.reason || 'unknown reason'}`,
+    error_message: `TikTok webhook: ${content.reason || 'unknown reason'}`,
   });
 }
 
@@ -508,50 +508,20 @@ module.exports.handlePublishPubliclyAvailable = handlePublishPubliclyAvailable;
 module.exports.handlePublishFailed = handlePublishFailed;
 ```
 
-Note: `scheduled_posts` already has columns `status`, `tiktok_publish_id`, `tiktok_permalink`, `published_at`, `updated_at`, `client_id` (migration 028). If `last_error` does not exist on `scheduled_posts`, drop it from the `failed` handler — the test expects it in the update row, but if the column is missing, Knex will throw at runtime. Verify with:
+- [ ] **Step 4: No new migration needed**
 
-```bash
-psql "$DATABASE_URL" -c "\d scheduled_posts" | grep -i error
-```
-
-If the column is missing, either (a) add it via a new migration (`029_scheduled_posts_last_error.js` adding `table.text('last_error').nullable()`) **or** (b) remove `last_error` from the failed handler and the matching assertion in the test. Pick (a) if you want an audit trail of publish errors, (b) otherwise.
-
-- [ ] **Step 4: Decide and apply one of (a) or (b) from the note above**
-
-If (a), add the migration:
-
-```javascript
-// server/src/database/migrations/029_scheduled_posts_last_error.js
-exports.up = async function (knex) {
-  await knex.schema.alterTable('scheduled_posts', (table) => {
-    table.text('last_error').nullable();
-  });
-};
-
-exports.down = async function (knex) {
-  await knex.schema.alterTable('scheduled_posts', (table) => {
-    table.dropColumn('last_error');
-  });
-};
-```
-
-Run: `cd server && npx knex migrate:latest`
-Expected: output `Batch N run: 1 migrations` including `029_scheduled_posts_last_error.js`.
-
-If (b), delete the `last_error` key from `handlePublishFailed` and remove the `last_error` assertion from the test.
+Since `scheduled_posts.error_message` already exists (migration 019, `text`, nullable), no new migration is needed. The `handlePublishFailed` handler and its test assertion both use `error_message` as-is.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `cd server && npx jest src/modules/tiktok/tiktok-webhook.service.test.js`
-Expected: all ~17 tests PASS.
+Expected: 20 tests total PASS (13 from Task 2 + 7 new).
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add server/src/modules/tiktok/tiktok-webhook.service.js server/src/modules/tiktok/tiktok-webhook.service.test.js
-# Include the migration if (a) was chosen:
-git add server/src/database/migrations/029_scheduled_posts_last_error.js 2>/dev/null || true
-git commit -m "feat(tiktok): process webhook events (auth removed, publish lifecycle)"
+HOME=/tmp/git-home git add server/src/modules/tiktok/tiktok-webhook.service.js server/src/modules/tiktok/tiktok-webhook.service.test.js docs/superpowers/plans/2026-04-14-tiktok-webhook-endpoint.md
+HOME=/tmp/git-home git commit -m "feat(tiktok): process webhook events (auth removed, publish lifecycle)"
 ```
 
 ---
@@ -874,10 +844,8 @@ If the TikTok app's Sandbox client_key/secret differ from what's in memory (`mem
 
 **Type consistency:**
 - Service exports `parseSignatureHeader`, `verifySignature`, `processEvent`, `handleAuthorizationRemoved`, `handlePublishComplete`, `handlePublishPubliclyAvailable`, `handlePublishFailed`, `logEvent`, `TIMESTAMP_TOLERANCE_SECONDS` — consistent across Tasks 2–4.
-- Column names used in updates (`is_active`, `status`, `tiktok_publish_id`, `tiktok_permalink`, `published_at`, `updated_at`, `last_error`) match migration 028 and the conditional migration 029 in Task 3 Step 4.
+- Column names used in updates (`is_active`, `status`, `tiktok_publish_id`, `tiktok_permalink`, `published_at`, `updated_at`, `error_message`) match existing migrations (019 for `error_message`, 028 for the rest). No migration 029 is needed.
 - Event names match the verified list from TikTok docs exactly (including the docs' spelling `no_longer_publicaly_available`).
-
-**Open decision:** Task 3 Step 4 forks on whether to add a `last_error` column (migration 029) or drop the field. The plan lets the implementer pick and is internally consistent either way.
 
 ---
 
