@@ -35,7 +35,7 @@ Replace the existing middleware block:
 // Body parsing — capture raw body for webhook signature verification
 app.use(express.json({
   verify: (req, _res, buf) => {
-    if (req.url.startsWith('/api/webhooks/') || req.url === '/api/tiktok/webhook') {
+    if (req.url.startsWith('/api/webhooks/') || req.path === '/api/tiktok/webhook') {
       req.rawBody = buf.toString();
     }
   },
@@ -590,7 +590,7 @@ function buildApp() {
   const app = express();
   app.use(express.json({
     verify: (req, _res, buf) => {
-      if (req.url === '/api/tiktok/webhook') req.rawBody = buf.toString();
+      if (req.path === '/api/tiktok/webhook') req.rawBody = buf.toString();
     },
   }));
   app.use('/api/tiktok', require('./tiktok.routes'));
