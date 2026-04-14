@@ -31,7 +31,7 @@ class TikTokPublishService {
       if (!Array.isArray(mediaUrls)) mediaUrls = [];
 
       // Determine publish path: video vs photo/carousel
-      const isVideoPostType = ['reel', 'video'].includes(post.post_type);
+      const isVideoPostType = ['reel', 'video', 'tiktok_video'].includes(post.post_type);
       const allMediaAreVideo = mediaUrls.length > 0 && mediaUrls.every((m) => m.type === 'video');
       const videoMedia = mediaUrls.find((m) => m.type === 'video');
 

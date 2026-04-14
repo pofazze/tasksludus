@@ -1,11 +1,13 @@
 const Joi = require('joi');
 
+const POST_TYPES = ['image', 'video', 'reel', 'story', 'carousel', 'tiktok_video', 'tiktok_photo'];
+
 const createScheduledPostSchema = Joi.object({
   client_id: Joi.string().uuid().required(),
   delivery_id: Joi.string().uuid().allow(null).optional(),
   clickup_task_id: Joi.string().max(50).allow(null, '').optional(),
   caption: Joi.string().max(2200).allow(null, '').optional(),
-  post_type: Joi.string().valid('image', 'video', 'reel', 'story', 'carousel').allow(null).required(),
+  post_type: Joi.string().valid(...POST_TYPES).allow(null).required(),
   media_urls: Joi.array().items(Joi.object({
     url: Joi.string().uri().required(),
     type: Joi.string().valid('image', 'video').required(),
@@ -26,7 +28,7 @@ const createScheduledPostSchema = Joi.object({
 
 const updateScheduledPostSchema = Joi.object({
   caption: Joi.string().max(2200).allow(null, '').optional(),
-  post_type: Joi.string().valid('image', 'video', 'reel', 'story', 'carousel').allow(null).optional(),
+  post_type: Joi.string().valid(...POST_TYPES).allow(null).optional(),
   media_urls: Joi.array().items(Joi.object({
     url: Joi.string().uri().required(),
     type: Joi.string().valid('image', 'video').required(),
@@ -34,6 +36,14 @@ const updateScheduledPostSchema = Joi.object({
   })).min(1).optional(),
   thumbnail_url: Joi.string().uri().allow(null, '').optional(),
   scheduled_at: Joi.date().iso().allow(null).optional(),
+  id: Joi.string().uuid().strip(),
+  client_id: Joi.string().uuid().strip(),
+  delivery_id: Joi.string().uuid().allow(null).strip(),
+  clickup_task_id: Joi.string().max(50).allow(null, '').strip(),
+  status: Joi.string().strip(),
+  platform: Joi.string().valid('instagram', 'tiktok').strip(),
+  platforms: Joi.array().items(Joi.string().valid('instagram', 'tiktok')).strip(),
+  platform_overrides: Joi.object().strip(),
 }).min(1);
 
 module.exports = {
