@@ -115,13 +115,6 @@ export default function ClientProfilePage() {
       .catch(() => {});
   }, [id]);
 
-  // Auto-enable demo mode for Dr Wander Fran
-  useEffect(() => {
-    if (profile?.client?.name?.toLowerCase().includes('wander fran')) {
-      setTkConnection({ connected: true, username: 'dr.wanderfran' });
-    }
-  }, [profile]);
-
   useEffect(() => {
     getConnectionStatus(id).then(setIgConnection).catch(() => setIgConnection(null));
     const params = new URLSearchParams(window.location.search);
