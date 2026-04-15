@@ -300,17 +300,18 @@ class ClickUpWebhookService {
    */
   async cleanupScheduledPost(clickupTaskId) {
     try {
-      const post = await db('scheduled_posts')
+      const posts = await db('scheduled_posts')
         .where({ clickup_task_id: clickupTaskId })
-        .whereIn('status', ['draft', 'scheduled'])
-        .first();
-      if (!post) return;
+        .whereIn('status', ['draft', 'scheduled']);
+      if (posts.length === 0) return;
 
       const { cancelScheduledPost } = require('../../queues');
-      await cancelScheduledPost(post.id);
-      await db('scheduled_posts').where({ id: post.id }).del();
+      for (const post of posts) {
+        await cancelScheduledPost(post.id);
+        await db('scheduled_posts').where({ id: post.id }).del();
+      }
       eventBus.emit('sse', { type: 'post:updated', payload: { clickup_task_id: clickupTaskId } });
-      logger.info(`Scheduled post deleted: task ${clickupTaskId} moved out of agendamento`);
+      logger.info(`Scheduled posts deleted: task ${clickupTaskId} moved out of agendamento`, { count: posts.length });
     } catch (err) {
       logger.error(`cleanupScheduledPost error: ${err.message}`);
     }
