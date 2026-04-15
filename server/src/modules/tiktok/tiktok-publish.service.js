@@ -185,6 +185,7 @@ class TikTokPublishService {
         privacy_level: privacyLevel,
       },
       source_info: {
+        source: 'PULL_FROM_URL',
         photo_images: photoUrls,
         photo_cover_index: coverIndex,
       },
