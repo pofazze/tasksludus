@@ -352,21 +352,29 @@ class InstagramController {
       const post = await db('scheduled_posts').where({ id: req.params.id }).first();
       if (!post) return res.status(404).json({ error: 'Post not found' });
 
-      if (post.status === 'published') {
+      // If this post is part of a platform group, publish every unpublished sibling
+      // so a multi-platform delivery fires jobs for IG + TikTok together.
+      const group = post.post_group_id
+        ? await db('scheduled_posts').where({ post_group_id: post.post_group_id })
+        : [post];
+
+      const toPublish = group.filter((p) => !['published', 'publishing'].includes(p.status));
+      if (toPublish.length === 0) {
         return res.status(400).json({ error: 'Post already published' });
       }
 
-      // Reset retry count and status, remove delayed job, publish immediately
-      await db('scheduled_posts').where({ id: post.id }).update({
-        status: 'scheduled',
-        retry_count: 0,
-        error_message: null,
-        updated_at: new Date(),
-      });
-      await cancelScheduledPost(post.id);
-      await schedulePost(post.id, new Date(), post.platform);
+      for (const row of toPublish) {
+        await db('scheduled_posts').where({ id: row.id }).update({
+          status: 'scheduled',
+          retry_count: 0,
+          error_message: null,
+          updated_at: new Date(),
+        });
+        await cancelScheduledPost(row.id);
+        await schedulePost(row.id, new Date(), row.platform);
+      }
 
-      res.json({ message: 'Publishing started' });
+      res.json({ message: 'Publishing started', count: toPublish.length });
     } catch (err) {
       next(err);
     }

@@ -83,20 +83,23 @@ class TikTokPublishService {
 
       logger.info('TikTok post published', { postId, publishId });
 
-      // Move ClickUp task to publicação
-      if (post.clickup_task_id) {
-        await this._moveToPublicacao(post.clickup_task_id);
-      }
-
-      // Update delivery status
-      if (post.delivery_id) {
-        await db('deliveries')
-          .where({ id: post.delivery_id })
-          .update({ status: 'publicacao', completed_at: new Date(), updated_at: new Date() });
-      } else if (post.clickup_task_id) {
-        await db('deliveries')
-          .where({ clickup_task_id: post.clickup_task_id })
-          .update({ status: 'publicacao', completed_at: new Date(), updated_at: new Date() });
+      // Only advance the delivery/ClickUp status once every platform in the group
+      // has published — otherwise the premature ClickUp move fires a cleanup
+      // webhook that deletes still-queued sibling drafts.
+      const groupReady = await this._isGroupFullyPublished(post);
+      if (groupReady) {
+        if (post.clickup_task_id) {
+          await this._moveToPublicacao(post.clickup_task_id);
+        }
+        if (post.delivery_id) {
+          await db('deliveries')
+            .where({ id: post.delivery_id })
+            .update({ status: 'publicacao', completed_at: new Date(), updated_at: new Date() });
+        } else if (post.clickup_task_id) {
+          await db('deliveries')
+            .where({ clickup_task_id: post.clickup_task_id })
+            .update({ status: 'publicacao', completed_at: new Date(), updated_at: new Date() });
+        }
       }
 
       eventBus.emit('sse', { type: 'post:updated', payload: { id: postId, status: 'published' } });
@@ -286,6 +289,12 @@ class TikTokPublishService {
     }
 
     throw new Error(`TikTok publish status timed out after ${maxAttempts} attempts for publish_id=${publishId}`);
+  }
+
+  async _isGroupFullyPublished(post) {
+    if (!post.post_group_id) return true;
+    const siblings = await db('scheduled_posts').where({ post_group_id: post.post_group_id });
+    return siblings.every((s) => s.status === 'published');
   }
 
   async _moveToPublicacao(clickupTaskId) {
