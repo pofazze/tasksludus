@@ -69,10 +69,10 @@ export default function AgendamentoTab({ clientId }) {
     setSheetOpen(true);
   }
 
-  const drafts = useMemo(() => posts.filter((p) => p.status === 'draft'), [posts]);
-  const scheduled = useMemo(() => posts.filter((p) => p.status === 'scheduled'), [posts]);
+  const drafts = useMemo(() => dedupeByGroup(posts.filter((p) => p.status === 'draft')), [posts]);
+  const scheduled = useMemo(() => dedupeByGroup(posts.filter((p) => p.status === 'scheduled')), [posts]);
   const published = useMemo(
-    () => posts.filter((p) => ['published', 'publishing', 'failed'].includes(p.status)),
+    () => dedupeByGroup(posts.filter((p) => ['published', 'publishing', 'failed'].includes(p.status))),
     [posts]
   );
 
@@ -159,6 +159,25 @@ export default function AgendamentoTab({ clientId }) {
   );
 }
 
+// Collapse multi-platform groups into a single card so a delivery published to
+// Instagram + TikTok (one scheduled_posts row per platform sharing a
+// post_group_id) does not look like a duplicate in the agendamento list.
+function dedupeByGroup(posts) {
+  const map = new Map();
+  for (const p of posts) {
+    const key = p.post_group_id || p.id;
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, { ...p, platforms: [p.platform] });
+    } else if (!existing.platforms.includes(p.platform)) {
+      existing.platforms.push(p.platform);
+    }
+  }
+  return [...map.values()];
+}
+
+const PLATFORM_LABELS = { instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube' };
+
 // ─── PostCard ───────────────────────────────────────────────
 
 function PostCard({ post, onReview, readOnly }) {
@@ -181,6 +200,14 @@ function PostCard({ post, onReview, readOnly }) {
               <Badge variant="secondary" className={status.color + ' text-xs'}>
                 {status.label}
               </Badge>
+              {(post.platforms || [post.platform]).map((p) => (
+                <span
+                  key={p}
+                  className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400"
+                >
+                  {PLATFORM_LABELS[p] || p}
+                </span>
+              ))}
               {formatLabel && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
                   {formatLabel}
