@@ -42,8 +42,14 @@ const updateScheduledPostSchema = Joi.object({
   clickup_task_id: Joi.string().max(50).allow(null, '').strip(),
   status: Joi.string().strip(),
   platform: Joi.string().valid('instagram', 'tiktok').strip(),
-  platforms: Joi.array().items(Joi.string().valid('instagram', 'tiktok')).strip(),
-  platform_overrides: Joi.object().strip(),
+  platforms: Joi.array().items(Joi.string().valid('instagram', 'tiktok')).min(1).optional(),
+  platform_overrides: Joi.object().pattern(
+    Joi.string().valid('instagram', 'tiktok'),
+    Joi.object({
+      caption: Joi.string().max(2200).optional(),
+      scheduled_at: Joi.date().iso().optional(),
+    })
+  ).optional(),
 }).min(1);
 
 module.exports = {
