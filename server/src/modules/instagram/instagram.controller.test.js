@@ -24,6 +24,19 @@ jest.mock('../../config/db', () => {
       // NOTE: whereIn is a no-op pass-through; controller must use per-row .where({id}).del()
       whereIn() { return this; },
       select() { return this; },
+      // Allow `await db(table).where(cond)` to return matching rows as an array
+      then(resolve, reject) {
+        try {
+          if (this._table !== 'scheduled_posts') return resolve([]);
+          const cond = this._where || {};
+          const results = store.rows.filter((r) =>
+            Object.entries(cond).every(([k, v]) => r[k] === v),
+          );
+          resolve(results);
+        } catch (e) {
+          reject(e);
+        }
+      },
       first() {
         if (this._table !== 'scheduled_posts') return Promise.resolve(null);
         const row = store.rows.find((r) => r.id === (this._where && this._where.id));

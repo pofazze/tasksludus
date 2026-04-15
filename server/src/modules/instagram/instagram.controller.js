@@ -172,33 +172,159 @@ class InstagramController {
         return res.status(400).json({ error: 'Cannot edit a published or publishing post' });
       }
 
-      const updateData = { ...value, updated_at: new Date() };
-      delete updateData.platforms;
-      delete updateData.platform_overrides;
-      delete updateData.platform;
-      if (value.media_urls) updateData.media_urls = JSON.stringify(value.media_urls);
+      // Is the client asking us to change the platform set?
+      const reconcilePlatforms = Array.isArray(value.platforms);
+      const desiredPlatforms = reconcilePlatforms ? [...new Set(value.platforms)] : null;
+      const overrides = value.platform_overrides || {};
 
-      // Determine new status
-      if (value.scheduled_at) {
-        updateData.status = 'scheduled';
-      } else if (value.scheduled_at === null) {
-        updateData.status = 'draft';
+      // Fields that apply to every surviving row in the group
+      const sharedFields = { ...value };
+      delete sharedFields.platforms;
+      delete sharedFields.platform_overrides;
+      delete sharedFields.platform;
+      if (sharedFields.media_urls) sharedFields.media_urls = JSON.stringify(sharedFields.media_urls);
+
+      // Derive new status from scheduled_at if the client touched it
+      let derivedStatus = null;
+      if (value.scheduled_at) derivedStatus = 'scheduled';
+      else if (value.scheduled_at === null) derivedStatus = 'draft';
+
+      // --- Single-post path (no platforms field) ---
+      if (!reconcilePlatforms) {
+        const updateData = { ...sharedFields, updated_at: new Date() };
+        if (derivedStatus) updateData.status = derivedStatus;
+
+        const [updated] = await db('scheduled_posts')
+          .where({ id: req.params.id })
+          .update(updateData)
+          .returning('*');
+
+        if (updated.status === 'scheduled' && updated.scheduled_at) {
+          await reschedulePost(updated.id, updated.scheduled_at, updated.platform);
+          this._moveToAgendado(updated);
+        } else if (updated.status === 'draft') {
+          await cancelScheduledPost(updated.id);
+        }
+
+        return res.json(updated);
       }
 
-      const [updated] = await db('scheduled_posts')
-        .where({ id: req.params.id })
-        .update(updateData)
-        .returning('*');
+      // --- Multi-platform reconcile path ---
+      // Group = all rows that share this delivery. Fall back to post_group_id or
+      // just the edited row if the delivery key is missing.
+      const siblingsFilter = existing.clickup_task_id
+        ? { clickup_task_id: existing.clickup_task_id }
+        : existing.post_group_id
+          ? { post_group_id: existing.post_group_id }
+          : { id: existing.id };
+      const siblings = await db('scheduled_posts').where(siblingsFilter);
 
-      // Update queue job and move ClickUp task to "agendado"
-      if (updated.status === 'scheduled' && updated.scheduled_at) {
-        await reschedulePost(updated.id, updated.scheduled_at, updated.platform);
-        this._moveToAgendado(updated);
-      } else if (updated.status === 'draft') {
-        await cancelScheduledPost(updated.id);
+      // Published/publishing siblings are frozen — if the user tried to remove their
+      // platform, that's a conflict. We never delete or mutate those rows.
+      const frozen = siblings.filter((s) => ['published', 'publishing'].includes(s.status));
+      const toRemove = siblings.filter(
+        (s) => !desiredPlatforms.includes(s.platform) && !frozen.includes(s),
+      );
+      const frozenBeingRemoved = frozen.filter((s) => !desiredPlatforms.includes(s.platform));
+      if (frozenBeingRemoved.length > 0) {
+        return res.status(409).json({
+          error: 'Cannot remove a platform whose post is already published or publishing',
+          platforms: frozenBeingRemoved.map((s) => s.platform),
+        });
       }
 
-      res.json(updated);
+      // After reconcile, how many rows will share this delivery? This drives post_group_id.
+      const survivingPlatforms = new Set([
+        ...frozen.map((s) => s.platform),
+        ...desiredPlatforms.filter((p) => !(p === 'tiktok' && (sharedFields.post_type || existing.post_type) === 'story')),
+      ]);
+      const groupCount = survivingPlatforms.size;
+      const groupId = groupCount > 1
+        ? (siblings.find((s) => s.post_group_id)?.post_group_id || crypto.randomUUID())
+        : null;
+
+      // 1. Delete unwanted draft/scheduled/failed siblings
+      for (const row of toRemove) {
+        await cancelScheduledPost(row.id);
+        await db('scheduled_posts').where({ id: row.id }).del();
+      }
+
+      // 2. Upsert each desired platform
+      const results = [];
+      for (const platform of desiredPlatforms) {
+        const effectivePostType = sharedFields.post_type || existing.post_type;
+        if (platform === 'tiktok' && effectivePostType === 'story') continue;
+
+        const platformOverride = overrides[platform] || {};
+        const platformCaption = platformOverride.caption !== undefined
+          ? platformOverride.caption
+          : (sharedFields.caption !== undefined ? sharedFields.caption : undefined);
+        const platformScheduledAt = platformOverride.scheduled_at !== undefined
+          ? platformOverride.scheduled_at
+          : (sharedFields.scheduled_at !== undefined ? sharedFields.scheduled_at : undefined);
+
+        const sibling = siblings.find((s) => s.platform === platform);
+
+        if (sibling) {
+          // Skip frozen siblings — they stay as-is
+          if (frozen.includes(sibling)) {
+            results.push(sibling);
+            continue;
+          }
+          const patch = { ...sharedFields, updated_at: new Date() };
+          if (platformCaption !== undefined) patch.caption = platformCaption;
+          if (platformScheduledAt !== undefined) patch.scheduled_at = platformScheduledAt;
+          patch.post_group_id = groupId;
+          if (derivedStatus) patch.status = derivedStatus;
+
+          const [updated] = await db('scheduled_posts')
+            .where({ id: sibling.id })
+            .update(patch)
+            .returning('*');
+
+          if (updated.status === 'scheduled' && updated.scheduled_at) {
+            await reschedulePost(updated.id, updated.scheduled_at, updated.platform);
+            this._moveToAgendado(updated);
+          } else if (updated.status === 'draft') {
+            await cancelScheduledPost(updated.id);
+          }
+          results.push(updated);
+        } else {
+          // Create a new row for this platform
+          const newRow = {
+            client_id: existing.client_id,
+            delivery_id: existing.delivery_id,
+            clickup_task_id: existing.clickup_task_id,
+            caption: platformCaption !== undefined ? platformCaption : existing.caption,
+            post_type: effectivePostType,
+            media_urls: sharedFields.media_urls || existing.media_urls,
+            thumbnail_url: sharedFields.thumbnail_url !== undefined ? sharedFields.thumbnail_url : existing.thumbnail_url,
+            scheduled_at: platformScheduledAt !== undefined ? platformScheduledAt : existing.scheduled_at,
+            platform,
+            post_group_id: groupId,
+            status: derivedStatus || (platformScheduledAt ? 'scheduled' : 'draft'),
+            created_by: req.user.id,
+          };
+          const [inserted] = await db('scheduled_posts').insert(newRow).returning('*');
+          if (inserted.status === 'scheduled' && inserted.scheduled_at) {
+            await schedulePost(inserted.id, inserted.scheduled_at, platform);
+            this._moveToAgendado(inserted);
+          }
+          results.push(inserted);
+        }
+      }
+
+      // 3. Normalize post_group_id on any frozen siblings we kept
+      for (const row of frozen) {
+        if (row.post_group_id !== groupId) {
+          await db('scheduled_posts').where({ id: row.id }).update({ post_group_id: groupId });
+        }
+      }
+
+      // Return the row the client originally patched first, siblings after
+      const primary = results.find((r) => r.id === existing.id) || results[0];
+      const ordered = [primary, ...results.filter((r) => r.id !== primary.id)];
+      return res.json(ordered.length === 1 ? ordered[0] : ordered);
     } catch (err) {
       next(err);
     }
