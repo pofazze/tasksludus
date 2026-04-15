@@ -27,12 +27,13 @@ const STATUS_CONFIG = {
 };
 
 const POST_TYPE_OPTIONS = [
-  { value: 'reel', label: 'Reel', platforms: ['instagram'] },
+  { value: 'reel', label: 'Reel', platforms: ['instagram', 'tiktok'] },
   { value: 'image', label: 'Feed', platforms: ['instagram'] },
   { value: 'story', label: 'Story', platforms: ['instagram'] },
   { value: 'carousel', label: 'Carrossel', platforms: ['instagram', 'tiktok'] },
   { value: 'tiktok_video', label: 'Vídeo TikTok', platforms: ['tiktok'] },
   { value: 'tiktok_photo', label: 'Foto TikTok', platforms: ['tiktok'] },
+  { value: 'yt_shorts', label: 'YouTube Shorts', platforms: ['youtube'] },
 ];
 
 const PLATFORM_OPTIONS = [

@@ -1,6 +1,6 @@
 const Joi = require('joi');
 
-const POST_TYPES = ['image', 'video', 'reel', 'story', 'carousel', 'tiktok_video', 'tiktok_photo'];
+const POST_TYPES = ['image', 'video', 'reel', 'story', 'carousel', 'tiktok_video', 'tiktok_photo', 'yt_shorts'];
 
 const createScheduledPostSchema = Joi.object({
   client_id: Joi.string().uuid().required(),

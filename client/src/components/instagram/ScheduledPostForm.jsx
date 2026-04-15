@@ -14,11 +14,12 @@ import { cn } from '@/lib/utils';
 
 const POST_TYPES = [
   { value: 'image', label: 'Imagem', icon: Image, platforms: ['instagram'] },
-  { value: 'reel', label: 'Reel', icon: Film, platforms: ['instagram'] },
+  { value: 'reel', label: 'Reel', icon: Film, platforms: ['instagram', 'tiktok'] },
   { value: 'story', label: 'Story', icon: MessageCircle, platforms: ['instagram'] },
   { value: 'carousel', label: 'Carrossel', icon: Layers, platforms: ['instagram', 'tiktok'] },
   { value: 'tiktok_video', label: 'Vídeo TikTok', icon: Film, platforms: ['tiktok'] },
   { value: 'tiktok_photo', label: 'Foto TikTok', icon: Image, platforms: ['tiktok'] },
+  { value: 'yt_shorts', label: 'YouTube Shorts', icon: Film, platforms: ['youtube'] },
 ];
 
 const VIDEO_EXT = /\.(mp4|mov|avi|wmv|flv|mkv|webm|m4v)(\?|$)/i;
