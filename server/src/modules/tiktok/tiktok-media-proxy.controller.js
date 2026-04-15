@@ -1,4 +1,5 @@
 const { Readable } = require('stream');
+const sharp = require('sharp');
 const db = require('../../config/db');
 const logger = require('../../utils/logger');
 
@@ -11,6 +12,18 @@ const FORWARD_HEADERS = [
   'last-modified',
   'etag',
 ];
+
+// TikTok accepts only JPEG and WebP for carousel photos. Any other image format
+// (notably PNG, which ClickUp generates as video-snapshot thumbnails) trips
+// file_format_check_failed on the TikTok side, so the proxy transcodes on the
+// fly. Non-image content and JPEG/WebP pass through untouched.
+function shouldTranscodeToJpeg(contentType, url) {
+  const ct = (contentType || '').toLowerCase();
+  if (ct.includes('image/jpeg') || ct.includes('image/webp')) return false;
+  if (ct.startsWith('image/')) return true;
+  // ClickUp sometimes serves with a generic content-type; fall back to extension.
+  return /\.(png|gif|bmp|tiff|heic|heif)(\?|$)/i.test(url);
+}
 
 function parseMediaUrls(raw) {
   if (!raw) return [];
@@ -59,6 +72,22 @@ async function serveMedia(req, res) {
   if (!upstream.ok && upstream.status !== 206) {
     logger.warn('TikTok media proxy upstream non-OK', { postId, idx, status: upstream.status });
     return res.status(upstream.status).send('upstream error');
+  }
+
+  const upstreamContentType = upstream.headers.get('content-type') || '';
+  if (shouldTranscodeToJpeg(upstreamContentType, media.url)) {
+    try {
+      const input = Buffer.from(await upstream.arrayBuffer());
+      const output = await sharp(input).jpeg({ quality: 90 }).toBuffer();
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.setHeader('Content-Length', output.length);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      return res.status(200).end(output);
+    } catch (err) {
+      logger.error('TikTok media proxy transcode failed', { postId, idx, url: media.url, error: err.message });
+      return res.status(502).send('transcode error');
+    }
   }
 
   for (const name of FORWARD_HEADERS) {
