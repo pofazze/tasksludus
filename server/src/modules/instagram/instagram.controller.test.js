@@ -21,6 +21,7 @@ jest.mock('../../config/db', () => {
       _table: table,
       _where: null,
       where(c) { this._where = c; return this; },
+      // NOTE: whereIn is a no-op pass-through; controller must use per-row .where({id}).del()
       whereIn() { return this; },
       select() { return this; },
       first() {
@@ -118,7 +119,13 @@ function seedInstagramPost(overrides = {}) {
   return row;
 }
 
-beforeEach(() => store.reset());
+beforeEach(() => {
+  store.reset();
+  const queues = require('../../queues');
+  for (const fn of Object.values(queues)) {
+    if (typeof fn === 'function' && typeof fn.mockClear === 'function') fn.mockClear();
+  }
+});
 
 describe('PUT /api/instagram/scheduled/:id — platform reconciliation', () => {
   test('adding tiktok to an instagram-only post creates a sibling tiktok row and shares post_group_id', async () => {
@@ -184,6 +191,8 @@ describe('PUT /api/instagram/scheduled/:id — platform reconciliation', () => {
     expect(res.status).toBe(200);
     const ig = store.rows.find((r) => r.platform === 'instagram');
     const tt = store.rows.find((r) => r.platform === 'tiktok');
+    expect(ig).toBeTruthy();
+    expect(tt).toBeTruthy();
     expect(ig.caption).toBe('ig caption');
     expect(tt.caption).toBe('tiktok caption');
   });
