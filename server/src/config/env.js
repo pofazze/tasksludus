@@ -54,6 +54,7 @@ module.exports = {
     clientKey: process.env.TIKTOK_CLIENT_KEY,
     clientSecret: process.env.TIKTOK_CLIENT_SECRET,
     redirectUri: process.env.TIKTOK_REDIRECT_URI || 'https://server-production-bea3.up.railway.app/api/tiktok/oauth/callback',
+    defaultPrivacyLevel: process.env.TIKTOK_DEFAULT_PRIVACY || 'SELF_ONLY',
   },
 
   evolution: {

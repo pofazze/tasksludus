@@ -56,7 +56,7 @@ class TikTokPublishService {
         const videoUrl = `${proxyBase}/${effectiveIdx}`;
         const sourceUrl = mediaUrls[effectiveIdx].url;
         logger.info('Publishing TikTok video', { postId, videoUrl, sourcePrefix: sourceUrl?.slice(0, 80) });
-        const result = await this.publishVideo(accessToken, videoUrl, post.caption);
+        const result = await this.publishVideo(accessToken, videoUrl, post.caption, env.tiktok.defaultPrivacyLevel);
         publishId = result.publish_id;
       } else {
         const photoUrls = mediaUrls
@@ -64,7 +64,7 @@ class TikTokPublishService {
           .filter(Boolean);
         if (!photoUrls.length) throw new Error('No photo URLs found for photo post');
         logger.info('Publishing TikTok photo/carousel', { postId, count: photoUrls.length });
-        const result = await this.publishPhoto(accessToken, photoUrls, post.caption);
+        const result = await this.publishPhoto(accessToken, photoUrls, post.caption, 0, env.tiktok.defaultPrivacyLevel);
         publishId = result.publish_id;
       }
 
@@ -120,7 +120,7 @@ class TikTokPublishService {
     }
   }
 
-  async publishVideo(token, videoUrl, caption, privacyLevel = 'PUBLIC_TO_EVERYONE') {
+  async publishVideo(token, videoUrl, caption, privacyLevel = 'SELF_ONLY') {
     const url = `${TIKTOK_API_BASE}/post/publish/video/init/`;
     const body = {
       post_info: {
@@ -167,7 +167,7 @@ class TikTokPublishService {
     return { publish_id: data?.data?.publish_id };
   }
 
-  async publishPhoto(token, photoUrls, caption, coverIndex = 0, privacyLevel = 'PUBLIC_TO_EVERYONE') {
+  async publishPhoto(token, photoUrls, caption, coverIndex = 0, privacyLevel = 'SELF_ONLY') {
     const url = `${TIKTOK_API_BASE}/post/publish/content/init/`;
 
     const title = (caption || '').slice(0, 90);
