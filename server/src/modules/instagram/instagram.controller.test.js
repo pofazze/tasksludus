@@ -172,15 +172,18 @@ describe('PUT /api/instagram/scheduled/:id — platform reconciliation', () => {
     expect(cancelScheduledPost).toHaveBeenCalledWith('post-tt');
   });
 
-  test('removing a published platform is refused and leaves the row intact', async () => {
+  test('editing the unpublished leg of a group with a frozen sibling succeeds and keeps the frozen row intact', async () => {
     const gid = 'group-1';
     seedInstagramPost({ status: 'published', post_group_id: gid });
     seedInstagramPost({ id: 'post-tt', platform: 'tiktok', post_group_id: gid });
     const res = await request(buildApp())
       .put('/api/instagram/scheduled/post-tt')
       .send({ platforms: ['tiktok'] });
-    expect(res.status).toBe(409);
-    expect(store.rows.find((r) => r.id === 'post-ig').status).toBe('published');
+    expect(res.status).toBe(200);
+    const frozen = store.rows.find((r) => r.id === 'post-ig');
+    expect(frozen).toBeTruthy();
+    expect(frozen.status).toBe('published');
+    expect(store.rows.find((r) => r.id === 'post-tt')).toBeTruthy();
   });
 
   test('story post_type silently skips tiktok row creation', async () => {

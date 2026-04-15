@@ -219,19 +219,14 @@ class InstagramController {
           : { id: existing.id };
       const siblings = await db('scheduled_posts').where(siblingsFilter);
 
-      // Published/publishing siblings are frozen — if the user tried to remove their
-      // platform, that's a conflict. We never delete or mutate those rows.
+      // Published/publishing siblings are frozen and always survive regardless of
+      // the desired set — the UI only loads the current row's platform, so treating
+      // a missing frozen platform as "the user wants to remove it" produces a
+      // false 409 every time someone edits one leg of a partially-published group.
       const frozen = siblings.filter((s) => ['published', 'publishing'].includes(s.status));
       const toRemove = siblings.filter(
         (s) => !desiredPlatforms.includes(s.platform) && !frozen.includes(s),
       );
-      const frozenBeingRemoved = frozen.filter((s) => !desiredPlatforms.includes(s.platform));
-      if (frozenBeingRemoved.length > 0) {
-        return res.status(409).json({
-          error: 'Cannot remove a platform whose post is already published or publishing',
-          platforms: frozenBeingRemoved.map((s) => s.platform),
-        });
-      }
 
       // After reconcile, how many rows will share this delivery? This drives post_group_id.
       const survivingPlatforms = new Set([
