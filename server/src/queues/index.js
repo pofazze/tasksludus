@@ -12,6 +12,7 @@ const tiktokPublishQueue = new Queue('tiktok-publish', { connection });
 const tokenRefreshQueue = new Queue('token-refresh', { connection });
 const deliverySyncQueue = new Queue('delivery-sync', { connection });
 const approvalReminderQueue = new Queue('approval-reminder', { connection });
+const approvalReviewWindowQueue = new Queue('approval-review-window', { connection });
 
 async function schedulePost(postId, scheduledAt, platform = 'instagram') {
   const delay = new Date(scheduledAt).getTime() - Date.now();
@@ -84,12 +85,30 @@ async function setupRepeatable() {
   logger.info('Delivery sync repeatable job configured (every 5m)');
 }
 
+async function enqueueApprovalReviewWindow(batchId, delayMs = 8 * 60 * 1000) {
+  await approvalReviewWindowQueue.add(
+    'approval-window-fire',
+    { batchId },
+    { delay: delayMs, jobId: `window:${batchId}`, removeOnComplete: { count: 100 }, removeOnFail: { count: 100 } },
+  );
+}
+
+async function promoteApprovalReviewWindow(batchId) {
+  const job = await approvalReviewWindowQueue.getJob(`window:${batchId}`);
+  if (job) {
+    try { await job.promote(); } catch { /* already promoted or completed */ }
+  }
+}
+
 module.exports = {
   instagramPublishQueue,
   tiktokPublishQueue,
   tokenRefreshQueue,
   deliverySyncQueue,
   approvalReminderQueue,
+  approvalReviewWindowQueue,
+  enqueueApprovalReviewWindow,
+  promoteApprovalReviewWindow,
   schedulePost,
   cancelScheduledPost,
   reschedulePost,

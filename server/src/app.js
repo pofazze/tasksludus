@@ -124,6 +124,7 @@ try {
   require('./queues/token-refresh.worker');
   require('./queues/delivery-sync.worker');
   require('./queues/approval-reminder.worker');
+  require('./queues/approval-review-window.worker');
   setupRepeatable().catch((err) => logger.error('Failed to setup repeatable jobs', { error: err.message }));
   logger.info('BullMQ workers initialized');
 } catch (err) {
