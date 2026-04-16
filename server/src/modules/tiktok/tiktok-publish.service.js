@@ -4,6 +4,7 @@ const logger = require('../../utils/logger');
 const tiktokOAuth = require('./tiktok-oauth.service');
 const clickupOAuth = require('../webhooks/clickup-oauth.service');
 const eventBus = require('../../utils/event-bus');
+const notificationsService = require('../notifications/notifications.service');
 
 const TIKTOK_API_BASE = 'https://open.tiktokapis.com/v2';
 
@@ -91,15 +92,22 @@ class TikTokPublishService {
         if (post.clickup_task_id) {
           await this._moveToPublicacao(post.clickup_task_id);
         }
+        let deliveryRow = null;
         if (post.delivery_id) {
+          deliveryRow = await db('deliveries').where({ id: post.delivery_id }).first();
           await db('deliveries')
             .where({ id: post.delivery_id })
             .update({ status: 'publicacao', completed_at: new Date(), updated_at: new Date() });
         } else if (post.clickup_task_id) {
+          deliveryRow = await db('deliveries').where({ clickup_task_id: post.clickup_task_id }).first();
           await db('deliveries')
             .where({ clickup_task_id: post.clickup_task_id })
             .update({ status: 'publicacao', completed_at: new Date(), updated_at: new Date() });
         }
+        await notificationsService.notifyPublishSuccess({
+          ...post,
+          delivery_title: deliveryRow?.title || null,
+        });
       }
 
       eventBus.emit('sse', { type: 'post:updated', payload: { id: postId, status: 'published' } });
