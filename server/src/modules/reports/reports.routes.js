@@ -26,4 +26,13 @@ router.get('/capacity/phase-distribution', capacityGuard, controller.phaseDistri
 router.get('/capacity/weekly-heatmap', capacityGuard, controller.weeklyHeatmap);
 router.get('/capacity/avg-work-timeseries', capacityGuard, controller.avgWorkTimeseries);
 
+const clientGuard = reportsAuth('client');
+router.get('/client/:clientId/summary', clientGuard, controller.clientSummary);
+router.get('/client/:clientId/published-list', clientGuard, controller.publishedList);
+router.get('/client/:clientId/published-list.csv', clientGuard, controller.publishedListCsv);
+router.get('/client/:clientId/first-approval-rate', clientGuard, controller.clientFirstApprovalRate);
+router.get('/client/:clientId/rejection-volume', clientGuard, controller.clientRejectionVolume);
+router.get('/client/:clientId/avg-cycle-time', clientGuard, controller.clientAvgCycleTime);
+router.get('/client/:clientId/responsibility-history', clientGuard, controller.clientResponsibilityHistory);
+
 module.exports = router;

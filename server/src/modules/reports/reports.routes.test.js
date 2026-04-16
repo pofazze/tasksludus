@@ -23,7 +23,30 @@ jest.mock('./reports.service', () => ({
   phaseDistribution: jest.fn().mockResolvedValue([{ producerId: 'p1', phase: 'em_producao_design', count: 3 }]),
   weeklyHeatmap: jest.fn().mockResolvedValue([{ dayOfWeek: 1, hour: 10, seconds: 1800 }]),
   avgWorkTimeseries: jest.fn().mockResolvedValue([{ producerId: 'p1', bucket: '2026-04-10', avgSeconds: 5400 }]),
+  clientSummary: jest.fn().mockResolvedValue({ totalPublished: 3, byPlatform: { instagram: 2, tiktok: 1, youtube: 0 }, byPostType: { reel: 2, carousel: 1 } }),
+  publishedList: jest.fn().mockResolvedValue([{ deliveryId: 'd1', title: 'X', publishedAt: new Date().toISOString(), platform: 'instagram', permalink: 'https://instagram.com/p/1', postType: 'reel', producersByPhase: { design: 'Ana' }, firstApproval: true }]),
+  clientFirstApprovalRate: jest.fn().mockResolvedValue({ total: 2, firstApproved: 1, rate: 0.5 }),
+  clientRejectionVolume: jest.fn().mockResolvedValue({ total: 1, byCategory: [{ category: 'capa', count: 1 }] }),
+  clientAvgCycleTime: jest.fn().mockResolvedValue({ avgDaysStartToPublish: 4, medianDays: 3, byPostType: [{ postType: 'reel', avgDays: 5 }] }),
+  clientResponsibilityHistory: jest.fn().mockResolvedValue([{ producerId: 'u1', producerName: 'Ana', producerType: 'designer', taskCount: 2, phases: ['design'] }]),
+  publishedListToCsv: jest.fn().mockImplementation((rows) => `data_publicacao,titulo\n2026-04-10,X\n`),
 }));
+
+const mockClients = { c1: { id: 'c1', name: 'Dr X', account_manager_id: null }, c2: { id: 'c2', name: 'Dr Y', account_manager_id: 'otherManagerUser' } };
+jest.mock('../../config/db', () => {
+  return jest.fn((table) => ({
+    where(conditions) {
+      return {
+        first: () => {
+          if (table === 'clients' && conditions?.id) {
+            return Promise.resolve(mockClients[conditions.id] || null);
+          }
+          return Promise.resolve(null);
+        },
+      };
+    },
+  }));
+});
 
 jest.mock('../../utils/logger', () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() }));
 
@@ -133,6 +156,72 @@ describe('GET /api/reports/capacity — scoping', () => {
     userForRequest.role = 'account_manager';
     const res = await request(buildApp())
       .get('/api/reports/capacity/total-hours')
+      .query({ start: '2026-04-01', end: '2026-04-30' });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('GET /api/reports/client/:clientId — happy paths', () => {
+  beforeEach(() => { userForRequest.role = 'manager'; userForRequest.id = 'u1'; });
+
+  test('summary returns 200 with totals and breakdowns', async () => {
+    const res = await request(buildApp())
+      .get('/api/reports/client/c1/summary')
+      .query({ start: '2026-04-01', end: '2026-04-30' });
+    expect(res.status).toBe(200);
+    expect(res.body.totalPublished).toBe(3);
+    expect(res.body.byPlatform.instagram).toBe(2);
+  });
+
+  test('published-list returns 200 with detail rows', async () => {
+    const res = await request(buildApp())
+      .get('/api/reports/client/c1/published-list')
+      .query({ start: '2026-04-01', end: '2026-04-30' });
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toMatchObject({ platform: 'instagram', firstApproval: true });
+  });
+
+  test('published-list.csv returns 200 text/csv', async () => {
+    const res = await request(buildApp())
+      .get('/api/reports/client/c1/published-list.csv')
+      .query({ start: '2026-04-01', end: '2026-04-30' });
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/csv');
+    expect(res.headers['content-disposition']).toContain('attachment');
+    expect(res.text).toContain('data_publicacao');
+  });
+
+  test('rejection-volume returns byCategory', async () => {
+    const res = await request(buildApp())
+      .get('/api/reports/client/c1/rejection-volume')
+      .query({ start: '2026-04-01', end: '2026-04-30' });
+    expect(res.status).toBe(200);
+    expect(res.body.byCategory[0]).toMatchObject({ category: 'capa', count: 1 });
+  });
+});
+
+describe('GET /api/reports/client/:clientId — scoping', () => {
+  test('account_manager is blocked from a client not theirs (403)', async () => {
+    userForRequest.role = 'account_manager';
+    userForRequest.id = 'amUser';
+    const res = await request(buildApp())
+      .get('/api/reports/client/c2/summary')
+      .query({ start: '2026-04-01', end: '2026-04-30' });
+    expect(res.status).toBe(403);
+  });
+
+  test('producer gets 403 on client feature', async () => {
+    userForRequest.role = 'producer';
+    const res = await request(buildApp())
+      .get('/api/reports/client/c1/summary')
+      .query({ start: '2026-04-01', end: '2026-04-30' });
+    expect(res.status).toBe(403);
+  });
+
+  test('client role gets 403', async () => {
+    userForRequest.role = 'client';
+    const res = await request(buildApp())
+      .get('/api/reports/client/c1/summary')
       .query({ start: '2026-04-01', end: '2026-04-30' });
     expect(res.status).toBe(403);
   });
