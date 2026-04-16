@@ -87,6 +87,62 @@ async function volumeTimeseries(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function activeTasks(req, res, next) {
+  try {
+    const v = validate(req, res); if (!v) return;
+    const out = await service.activeTasks(v);
+    res.json(filterByProducer(out, v.producerId));
+  } catch (err) { next(err); }
+}
+
+async function avgPhaseDuration(req, res, next) {
+  try {
+    const v = validate(req, res); if (!v) return;
+    const out = await service.avgPhaseDuration(v);
+    res.json(filterByProducer(out, v.producerId));
+  } catch (err) { next(err); }
+}
+
+async function totalHours(req, res, next) {
+  try {
+    const v = validate(req, res); if (!v) return;
+    const out = await service.totalHours(v);
+    res.json(filterByProducer(out, v.producerId));
+  } catch (err) { next(err); }
+}
+
+async function overdue(req, res, next) {
+  try {
+    const v = validate(req, res); if (!v) return;
+    const out = await service.overdue(v);
+    res.json(filterByProducer(out, v.producerId));
+  } catch (err) { next(err); }
+}
+
+async function phaseDistribution(req, res, next) {
+  try {
+    const v = validate(req, res); if (!v) return;
+    const out = await service.phaseDistribution(v);
+    res.json(filterByProducer(out, v.producerId));
+  } catch (err) { next(err); }
+}
+
+async function weeklyHeatmap(req, res, next) {
+  try {
+    const v = validate(req, res); if (!v) return;
+    const out = await service.weeklyHeatmap(v);
+    res.json(out);
+  } catch (err) { next(err); }
+}
+
+async function avgWorkTimeseries(req, res, next) {
+  try {
+    const v = validate(req, res); if (!v) return;
+    const out = await service.avgWorkTimeseries(v);
+    res.json(v.producerId ? out.filter((r) => r.producerId === v.producerId) : out);
+  } catch (err) { next(err); }
+}
+
 module.exports = {
   firstApprovalRate,
   rejectionRate,
@@ -96,4 +152,11 @@ module.exports = {
   rejectionByTarget,
   ranking,
   volumeTimeseries,
+  activeTasks,
+  avgPhaseDuration,
+  totalHours,
+  overdue,
+  phaseDistribution,
+  weeklyHeatmap,
+  avgWorkTimeseries,
 };
