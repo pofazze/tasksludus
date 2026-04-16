@@ -14,4 +14,11 @@ export const reportsApi = {
   rejectionByTarget: (params) => api.get('/reports/quality/rejection-by-target', { params: qs(params) }).then((r) => r.data),
   ranking: (params) => api.get('/reports/quality/ranking', { params: qs(params) }).then((r) => r.data),
   volumeTimeseries: (params) => api.get('/reports/quality/volume-timeseries', { params: qs(params) }).then((r) => r.data),
+  activeTasks: (params) => api.get('/reports/capacity/active-tasks', { params: qs(params) }).then((r) => r.data),
+  avgPhaseDuration: (params) => api.get('/reports/capacity/avg-phase-duration', { params: qs(params) }).then((r) => r.data),
+  totalHours: (params) => api.get('/reports/capacity/total-hours', { params: qs(params) }).then((r) => r.data),
+  overdue: (params) => api.get('/reports/capacity/overdue', { params: qs(params) }).then((r) => r.data),
+  phaseDistribution: (params) => api.get('/reports/capacity/phase-distribution', { params: qs(params) }).then((r) => r.data),
+  weeklyHeatmap: (params) => api.get('/reports/capacity/weekly-heatmap', { params: qs(params) }).then((r) => r.data),
+  avgWorkTimeseries: (params) => api.get('/reports/capacity/avg-work-timeseries', { params: qs(params) }).then((r) => r.data),
 };
