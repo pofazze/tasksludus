@@ -77,8 +77,8 @@ class ClientsService {
 
     // Compute metrics
     const totalDeliveries = deliveries.length;
-    const publishedCount = deliveries.filter((d) => d.status === 'publicacao').length;
-    const inProduction = deliveries.filter((d) => d.status && d.status !== 'publicacao').length;
+    const publishedCount = deliveries.filter((d) => d.status === 'publicado').length;
+    const inProduction = deliveries.filter((d) => d.status && d.status !== 'publicado').length;
 
     const byStatus = {};
     const byContentType = {};

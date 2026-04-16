@@ -23,21 +23,27 @@ const VIDEO_EDITOR_BY_FOLDER = {
 
 // Phase mapping (everything except video editing — resolved by folder)
 const PHASE_ASSIGNEE_MAP = {
-  'planejamento':     '284598101',  // Aléxia Sâmella
-  'captação':         '284598399',  // Filipe Sabino
-  'captacao':         '284598399',  // Filipe Sabino
-  'estruturação':     '284598101',  // Aléxia Sâmella
-  'estruturacao':     '284598101',  // Aléxia Sâmella
-  'design':           '284596872',  // Pedro Torres
-  'aprovação':        null,  // Dynamic — resolved from client.social_media_id
-  'aprovacao':        null,  // Dynamic — resolved from client.social_media_id
-  'agendamento':      '284598101',  // Aléxia Sâmella
-  'agendado':         '284598101',  // Aléxia Sâmella
-  'publicação':       '284598101',  // Aléxia Sâmella
-  'publicacao':       '284598101',  // Aléxia Sâmella
+  'planejamento':          '284598101',  // Aléxia Sâmella
+  'captação':              '284598399',  // Filipe Sabino
+  'captacao':              '284598399',  // Filipe Sabino
+  'estruturação':          '284598101',  // Aléxia Sâmella
+  'estruturacao':          '284598101',  // Aléxia Sâmella
+  'design':                '284596872',  // Pedro Torres
+  'em produção - design':  '284596872',  // Pedro Torres
+  'em producao - design':  '284596872',  // Pedro Torres
+  'aprovação':             null,  // Dynamic — resolved from client.social_media_id
+  'aprovacao':             null,  // Dynamic — resolved from client.social_media_id
+  'agendamento':           '284598101',  // Aléxia Sâmella
+  'agendado':              '284598101',  // Aléxia Sâmella
+  'publicação':            '284598101',  // Aléxia Sâmella
+  'publicacao':            '284598101',  // Aléxia Sâmella
+  'publicado':             '284598101',  // Aléxia Sâmella
 };
 
-const VIDEO_EDITING_STATUSES = ['edição de vídeo', 'edicao de video'];
+const VIDEO_EDITING_STATUSES = [
+  'edição de vídeo', 'edicao de video',
+  'em produção - vídeo', 'em produção - video', 'em producao - vídeo', 'em producao - video',
+];
 
 const NAMES = {
   '284598101': 'Aléxia Sâmella',
@@ -47,7 +53,7 @@ const NAMES = {
   '61001382': 'Wander Fran',
 };
 
-const PUBLICACAO_STATUSES = ['publicação', 'publicacao'];
+const PUBLICACAO_STATUSES = ['publicação', 'publicacao', 'publicado'];
 
 /**
  * Run auto-assign automation

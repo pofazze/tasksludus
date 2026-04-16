@@ -30,8 +30,8 @@ export default function PortalPage() {
 
   if (loading) return <PageLoading />;
 
-  const published = deliveries.filter((d) => d.status === 'publicacao' || d.status === 'completed').length;
-  const inPipeline = deliveries.filter((d) => d.status !== 'publicacao' && d.status !== 'completed').length;
+  const published = deliveries.filter((d) => d.status === 'publicado' || d.status === 'completed').length;
+  const inPipeline = deliveries.filter((d) => d.status !== 'publicado' && d.status !== 'completed').length;
 
   return (
     <div>

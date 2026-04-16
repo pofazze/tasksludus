@@ -208,7 +208,7 @@ class ClickUpSyncService {
     }
 
     // Completed at
-    const completedAt = (status === 'publicacao') ? new Date() : null;
+    const completedAt = (status === 'publicado') ? new Date() : null;
 
     // Started at from date_created
     const startedAt = task.date_created ? new Date(Number(task.date_created)) : null;

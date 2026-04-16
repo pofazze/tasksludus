@@ -128,7 +128,7 @@ class CalculationsService {
       const [{ count: totalPublished }] = await db('deliveries')
         .where({ user_id: user.id })
         .where('month', month)
-        .whereIn('status', ['publicacao', 'completed'])
+        .whereIn('status', ['publicado', 'completed'])
         .count('id as count');
 
       // Get curve config

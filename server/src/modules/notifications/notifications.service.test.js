@@ -163,7 +163,7 @@ describe('notifyBatchReviewWindow', () => {
 });
 
 describe('notifyRejections — producer routing', () => {
-  test('rejection_target=cover routes to the design phase assignee', async () => {
+  test('rejection_target=cover routes to the design phase assignee (fallback when no em_producao_design)', async () => {
     mockDbState.deliveries.dl1 = { id: 'dl1', client_id: 'c1', clickup_task_id: 't1', title: 'Post X' };
     mockDbState.delivery_phases = [
       { delivery_id: 'dl1', phase: 'design', user_id: 'd1', entered_at: '2026-04-01T00:00:00Z' },
@@ -178,7 +178,7 @@ describe('notifyRejections — producer routing', () => {
     expect(designerJids).not.toContain('5511999000003@s.whatsapp.net');
   });
 
-  test('rejection_target=video routes to the edicao_de_video assignee', async () => {
+  test('rejection_target=video routes to the edicao_de_video assignee (fallback when no em_producao_video)', async () => {
     mockDbState.deliveries.dl1 = { id: 'dl1', client_id: 'c1', clickup_task_id: 't1', title: 'Post X' };
     mockDbState.delivery_phases = [
       { delivery_id: 'dl1', phase: 'design', user_id: 'd1', entered_at: '2026-04-01T00:00:00Z' },
@@ -216,6 +216,44 @@ describe('notifyRejections — producer routing', () => {
     );
     const designerCall = mockSendText.mock.calls.find((c) => c[0] === '5511999000002@s.whatsapp.net');
     expect(designerCall).toBeTruthy();
+  });
+
+  test('em_producao_design phase is preferred over design when both exist (cover rejection)', async () => {
+    // p2 is a second producer who was in em_producao_design (more recent entry)
+    mockDbState.users.p2 = { id: 'p2', clickup_id: 'cu-p2', whatsapp: '5511999000099' };
+    mockDbState.deliveries.dl1 = { id: 'dl1', client_id: 'c1', clickup_task_id: 't1', title: 'Post X' };
+    mockDbState.delivery_phases = [
+      { delivery_id: 'dl1', phase: 'design', user_id: 'd1', entered_at: '2026-04-01T00:00:00Z' },
+      { delivery_id: 'dl1', phase: 'em_producao_design', user_id: 'p2', entered_at: '2026-04-03T00:00:00Z' },
+    ];
+    await notifications.notifyRejections(
+      { id: 'b1', client_id: 'c1' },
+      [{ id: 'i1', delivery_id: 'dl1', delivery_title: 'Post X', clickup_task_id: 't1', rejection_reason: 'fix cover', rejection_target: 'cover', post_type: 'image' }],
+    );
+    // p2 (em_producao_design, more recent) should be notified, not d1 (design, older)
+    const p2Call = mockSendText.mock.calls.find((c) => c[0] === '5511999000099@s.whatsapp.net');
+    const d1Call = mockSendText.mock.calls.find((c) => c[0] === '5511999000002@s.whatsapp.net');
+    expect(p2Call).toBeTruthy();
+    expect(d1Call).toBeUndefined();
+  });
+
+  test('em_producao_video phase is preferred over edicao_de_video when both exist (video rejection)', async () => {
+    // p3 is a producer who was in em_producao_video (more recent entry)
+    mockDbState.users.p3 = { id: 'p3', clickup_id: 'cu-p3', whatsapp: '5511999000088' };
+    mockDbState.deliveries.dl1 = { id: 'dl1', client_id: 'c1', clickup_task_id: 't1', title: 'Post X' };
+    mockDbState.delivery_phases = [
+      { delivery_id: 'dl1', phase: 'edicao_de_video', user_id: 'e1', entered_at: '2026-04-01T00:00:00Z' },
+      { delivery_id: 'dl1', phase: 'em_producao_video', user_id: 'p3', entered_at: '2026-04-04T00:00:00Z' },
+    ];
+    await notifications.notifyRejections(
+      { id: 'b1', client_id: 'c1' },
+      [{ id: 'i1', delivery_id: 'dl1', delivery_title: 'Post X', clickup_task_id: 't1', rejection_reason: 'cut last second', rejection_target: 'video', post_type: 'reel' }],
+    );
+    // p3 (em_producao_video, more recent) should be notified, not e1 (edicao_de_video, older)
+    const p3Call = mockSendText.mock.calls.find((c) => c[0] === '5511999000088@s.whatsapp.net');
+    const e1Call = mockSendText.mock.calls.find((c) => c[0] === '5511999000003@s.whatsapp.net');
+    expect(p3Call).toBeTruthy();
+    expect(e1Call).toBeUndefined();
   });
 
   test('dedupes producers — same producer with three rejected items receives one message', async () => {

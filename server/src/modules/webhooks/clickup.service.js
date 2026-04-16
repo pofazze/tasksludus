@@ -148,14 +148,14 @@ class ClickUpWebhookService {
 
     if (delivery) {
       const updates = { status: newStatus, updated_at: new Date() };
-      if (newStatus === 'publicacao') {
+      if (newStatus === 'publicado') {
         updates.completed_at = new Date();
       }
       await db('deliveries')
         .where({ id: delivery.id })
         .update(updates);
       eventBus.emit('sse', { type: 'delivery:updated', payload: { id: delivery.id, status: newStatus } });
-      if (newStatus === 'publicacao') {
+      if (newStatus === 'publicado') {
         eventBus.emit('sse', { type: 'ranking:updated' });
       }
       logger.info(`Delivery ${delivery.id} status → ${newStatus}`);
@@ -824,14 +824,21 @@ class ClickUpWebhookService {
       'estruturação': 'estruturacao',
       'estruturacao': 'estruturacao',
       'design': 'design',
+      'em produção - vídeo': 'em_producao_video',
+      'em producao - video': 'em_producao_video',
+      'em produção - video': 'em_producao_video',
+      'em producao - vídeo': 'em_producao_video',
+      'em produção - design': 'em_producao_design',
+      'em producao - design': 'em_producao_design',
       'aprovação': 'aprovacao',
       'aprovacao': 'aprovacao',
       'correção': 'correcao',
       'correcao': 'correcao',
       'agendamento': 'agendamento',
       'agendado': 'agendado',
-      'publicação': 'publicacao',
-      'publicacao': 'publicacao',
+      'publicação': 'publicado',
+      'publicacao': 'publicado',
+      'publicado': 'publicado',
     };
     return map[normalized] || null;
   }
@@ -884,7 +891,7 @@ class ClickUpWebhookService {
 
         if (newStatus && newStatus !== delivery.status) {
           updates.status = newStatus;
-          if (newStatus === 'publicacao') updates.completed_at = new Date();
+          if (newStatus === 'publicado') updates.completed_at = new Date();
         }
 
         if (task.name && task.name !== delivery.title) {

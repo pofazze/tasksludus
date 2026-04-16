@@ -5,11 +5,11 @@ const logger = require('../../utils/logger');
 const PLATFORM_LABELS = { instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube' };
 const TARGET_LABELS = { cover: 'capa', video: 'vídeo' };
 
-const PRODUCER_PHASE_FOR_REJECTION = (postType, rejectionTarget) => {
-  if (rejectionTarget === 'cover') return 'design';
-  if (rejectionTarget === 'video') return 'edicao_de_video';
-  if (['reel', 'video', 'tiktok_video'].includes(postType)) return 'edicao_de_video';
-  return 'design';
+const PRODUCER_PHASES_FOR_REJECTION = (postType, rejectionTarget) => {
+  if (rejectionTarget === 'cover') return ['em_producao_design', 'design'];
+  if (rejectionTarget === 'video') return ['em_producao_video', 'edicao_de_video'];
+  if (['reel', 'video', 'tiktok_video'].includes(postType)) return ['em_producao_video', 'edicao_de_video'];
+  return ['em_producao_design', 'design'];
 };
 
 async function getCategoryGroup(category) {
@@ -34,9 +34,10 @@ async function safeSend(jid, text, context) {
   }
 }
 
-async function resolveProducer(deliveryId, phaseName) {
+async function resolveProducer(deliveryId, phaseNames) {
   const rows = await db('delivery_phases')
-    .where({ delivery_id: deliveryId, phase: phaseName })
+    .where({ delivery_id: deliveryId })
+    .whereIn('phase', phaseNames)
     .orderBy('entered_at', 'desc');
   for (const row of rows) {
     if (row.user_id) {
@@ -122,10 +123,10 @@ async function notifyRejections(batch, rejectedItems) {
 
   const itemsByProducer = new Map();
   for (const item of rejectedItems) {
-    const phase = PRODUCER_PHASE_FOR_REJECTION(item.post_type, item.rejection_target);
-    const producer = await resolveProducer(item.delivery_id, phase);
+    const phases = PRODUCER_PHASES_FOR_REJECTION(item.post_type, item.rejection_target);
+    const producer = await resolveProducer(item.delivery_id, phases);
     if (!producer) {
-      logger.warn('No producer found for rejection routing', { itemId: item.id, deliveryId: item.delivery_id, phase });
+      logger.warn('No producer found for rejection routing', { itemId: item.id, deliveryId: item.delivery_id, phases });
       continue;
     }
     if (!itemsByProducer.has(producer.id)) itemsByProducer.set(producer.id, { producer, items: [] });

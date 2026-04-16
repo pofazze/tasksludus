@@ -138,12 +138,12 @@ class InstagramPublishService {
           deliveryRow = await db('deliveries').where({ id: post.delivery_id }).first();
           await db('deliveries')
             .where({ id: post.delivery_id })
-            .update({ status: 'publicacao', completed_at: new Date(), updated_at: new Date() });
+            .update({ status: 'publicado', completed_at: new Date(), updated_at: new Date() });
         } else if (post.clickup_task_id) {
           deliveryRow = await db('deliveries').where({ clickup_task_id: post.clickup_task_id }).first();
           await db('deliveries')
             .where({ clickup_task_id: post.clickup_task_id })
-            .update({ status: 'publicacao', completed_at: new Date(), updated_at: new Date() });
+            .update({ status: 'publicado', completed_at: new Date(), updated_at: new Date() });
         }
         await notificationsService.notifyPublishSuccess({
           ...post,
@@ -505,15 +505,15 @@ class InstagramPublishService {
           Authorization: token,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: 'publicação' }),
+        body: JSON.stringify({ status: 'publicado' }),
       });
       if (res.ok) {
-        logger.info('Moved ClickUp task to publicação', { clickupTaskId });
+        logger.info('Moved ClickUp task to publicado', { clickupTaskId });
       } else {
-        logger.warn('Failed to move ClickUp task to publicação', { clickupTaskId, status: res.status });
+        logger.warn('Failed to move ClickUp task to publicado', { clickupTaskId, status: res.status });
       }
     } catch (err) {
-      logger.warn('Error moving ClickUp task to publicação', { clickupTaskId, error: err.message });
+      logger.warn('Error moving ClickUp task to publicado', { clickupTaskId, error: err.message });
     }
   }
 

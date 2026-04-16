@@ -18,10 +18,12 @@ const FORMAT_COLORS = {
 };
 
 const STATUS_DOT = {
-  triagem: 'bg-orange-400', planejamento: 'bg-muted-foreground', captacao: 'bg-sky-400',
-  edicao_de_video: 'bg-violet-400', estruturacao: 'bg-yellow-400', design: 'bg-blue-400',
+  planejamento: 'bg-muted-foreground', captacao: 'bg-sky-400',
+  edicao_de_video: 'bg-violet-400', em_producao_video: 'bg-indigo-400',
+  estruturacao: 'bg-yellow-400', design: 'bg-blue-400',
+  em_producao_design: 'bg-purple-400',
   aprovacao: 'bg-pink-400', correcao: 'bg-red-400', agendamento: 'bg-amber-400',
-  agendado: 'bg-teal-400', publicacao: 'bg-emerald-400',
+  agendado: 'bg-teal-400', publicado: 'bg-emerald-400',
 };
 
 export default function DeliveryCard({ delivery, showClient = false, onClick, isDragging = false }) {

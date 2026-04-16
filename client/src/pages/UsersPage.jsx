@@ -355,7 +355,7 @@ export default function UsersPage() {
                   </div>
                   <p className="text-xl font-bold">{detailData.deliveries.length}</p>
                   <p className="text-xs text-muted-foreground">
-                    {detailData.deliveries.filter((d) => d.status === 'publicacao' || d.status === 'completed').length} publicadas
+                    {detailData.deliveries.filter((d) => d.status === 'publicado' || d.status === 'completed').length} publicadas
                   </p>
                 </div>
                 <div className="rounded-lg border p-3">

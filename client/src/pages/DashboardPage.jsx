@@ -26,10 +26,10 @@ import {
 } from 'lucide-react';
 
 const STATUS_CHART_COLORS = {
-  triagem: '#F97316', planejamento: '#71717A', captacao: '#0EA5E9',
-  edicao_de_video: '#8B5CF6', estruturacao: '#EAB308', design: '#3B82F6',
-  aprovacao: '#EC4899', correcao: '#EF4444', agendamento: '#F59E0B',
-  agendado: '#14B8A6', publicacao: '#22C55E',
+  planejamento: '#71717A', captacao: '#0EA5E9',
+  edicao_de_video: '#8B5CF6', em_producao_video: '#6366F1', estruturacao: '#EAB308', design: '#3B82F6',
+  em_producao_design: '#A855F7', aprovacao: '#EC4899', correcao: '#EF4444', agendamento: '#F59E0B',
+  agendado: '#14B8A6', publicado: '#22C55E',
 };
 
 export default function DashboardPage() {
@@ -86,14 +86,14 @@ export default function DashboardPage() {
   if (loading) return <PageLoading />;
 
   const activeDeliveries = deliveries.filter((d) => d.status !== 'cancelado');
-  const totalPublished = activeDeliveries.filter((d) => d.status === 'publicacao' || d.status === 'completed').length;
-  const totalInPipeline = activeDeliveries.filter((d) => d.status !== 'publicacao' && d.status !== 'completed').length;
+  const totalPublished = activeDeliveries.filter((d) => d.status === 'publicado' || d.status === 'completed').length;
+  const totalInPipeline = activeDeliveries.filter((d) => d.status !== 'publicado' && d.status !== 'completed').length;
   const initials = (name) => name?.split(' ').map((n) => n[0]).join('').slice(0, 2) || '?';
 
   // For non-management (producers): personal view
   const myDeliveries = deliveries.filter((d) => d.user_id === user?.id);
-  const myPublished = myDeliveries.filter((d) => d.status === 'publicacao' || d.status === 'completed').length;
-  const myInPipeline = myDeliveries.filter((d) => d.status !== 'publicacao' && d.status !== 'completed').length;
+  const myPublished = myDeliveries.filter((d) => d.status === 'publicado' || d.status === 'completed').length;
+  const myInPipeline = myDeliveries.filter((d) => d.status !== 'publicado' && d.status !== 'completed').length;
   const myRank = ranking.find((r) => r.id === user?.id);
 
   // -- Management: build leaderboard data --
@@ -101,7 +101,7 @@ export default function DashboardPage() {
   const userDeliveryCounts = {};
   deliveries.forEach((d) => {
     if (!userDeliveryCounts[d.user_id]) userDeliveryCounts[d.user_id] = { published: 0, inProduction: 0 };
-    if (d.status === 'publicacao' || d.status === 'completed') {
+    if (d.status === 'publicado' || d.status === 'completed') {
       userDeliveryCounts[d.user_id].published++;
     } else if (d.status !== 'cancelado') {
       userDeliveryCounts[d.user_id].inProduction++;
@@ -335,7 +335,7 @@ export default function DashboardPage() {
                   {(() => {
                     const workload = {};
                     activeDeliveries.forEach((d) => {
-                      if (!d.user_id || d.status === 'publicacao' || d.status === 'completed') return;
+                      if (!d.user_id || d.status === 'publicado' || d.status === 'completed') return;
                       if (!workload[d.user_id]) workload[d.user_id] = { name: d.user_name || 'Sem responsável', count: 0 };
                       workload[d.user_id].count++;
                     });
