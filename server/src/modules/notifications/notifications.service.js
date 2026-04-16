@@ -88,7 +88,11 @@ function composePublishDigest(deliveryTitle, clientName, platformLinks) {
     .filter((l) => l.url)
     .map((l) => `• ${PLATFORM_LABELS[l.platform] || l.platform} → ${l.url}`)
     .join('\n');
-  return `✅ *Publicado*: ${deliveryTitle}\nCliente: ${clientName}\n${lines}`;
+  // clientName is omitted for the client-facing leg — the client obviously
+  // knows which client they are. Only the internal (category-group) leg
+  // needs the label so the MKT team knows which client the post belongs to.
+  const clientLine = clientName ? `\nCliente: ${clientName}` : '';
+  return `✅ *Publicado*: ${deliveryTitle}${clientLine}\n${lines}`;
 }
 
 async function notifyBatchReviewWindow(batch, items) {
@@ -162,15 +166,16 @@ async function notifyPublishSuccess(post) {
   }
 
   const title = post.delivery_title || post.caption?.slice(0, 80) || 'post';
-  const text = composePublishDigest(title, clientName, platformLinks);
+  const clientText = composePublishDigest(title, null, platformLinks);
+  const internalText = composePublishDigest(title, clientName, platformLinks);
 
   if (client?.whatsapp_group) {
-    await safeSend(client.whatsapp_group, text, { postId: post.id, role: 'client-group' });
+    await safeSend(client.whatsapp_group, clientText, { postId: post.id, role: 'client-group' });
   }
   if (client?.category) {
     const groupJid = await getCategoryGroup(client.category);
     if (groupJid) {
-      await safeSend(groupJid, text, { postId: post.id, role: 'category-group', category: client.category });
+      await safeSend(groupJid, internalText, { postId: post.id, role: 'category-group', category: client.category });
     }
   }
 }

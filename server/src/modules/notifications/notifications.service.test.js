@@ -298,7 +298,10 @@ describe('notifyPublishSuccess', () => {
     expect(clientGroupCall[1]).toContain('Post Y');
     expect(clientGroupCall[1]).toContain('Instagram');
     expect(clientGroupCall[1]).toContain('https://instagram.com/p/abc');
+    expect(clientGroupCall[1]).not.toContain('Cliente:');
+    expect(clientGroupCall[1]).not.toContain('Cliente Demo');
     expect(categoryCall).toBeTruthy();
+    expect(categoryCall[1]).toContain('Cliente: Cliente Demo');
   });
 
   test('multi-platform: lists every platform with its permalink', async () => {
