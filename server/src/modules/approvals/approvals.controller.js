@@ -161,13 +161,14 @@ class ApprovalsController {
       const { error, value } = clientRespondSchema.validate(req.body);
       if (error) return res.status(400).json({ error: error.details[0].message });
 
-      const result = await service.clientRespond(
-        req.params.token,
-        req.params.itemId,
-        value.status,
-        value.rejection_reason,
-        value.media_urls,
-      );
+      const result = await service.clientRespond({
+        token: req.params.token,
+        itemId: req.params.itemId,
+        status: value.status,
+        rejectionReason: value.rejection_reason,
+        rejectionTarget: value.rejection_target,
+        mediaUrls: value.media_urls,
+      });
       res.json(result);
     } catch (err) {
       next(err);

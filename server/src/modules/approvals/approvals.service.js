@@ -489,7 +489,7 @@ class ApprovalsService {
   /**
    * Public endpoint: client approves or rejects an item in the batch
    */
-  async clientRespond(token, itemId, status, rejectionReason, mediaUrls) {
+  async clientRespond({ token, itemId, status, rejectionReason, rejectionTarget, mediaUrls }) {
     // Verify batch is pending
     const batch = await db('approval_batches')
       .join('clients', 'approval_batches.client_id', 'clients.id')
@@ -524,6 +524,7 @@ class ApprovalsService {
     const itemUpdate = {
       status: itemStatus,
       rejection_reason: rejectionReason || null,
+      rejection_target: rejectionTarget || null,
       responded_at: new Date(),
       updated_at: new Date(),
     };
@@ -548,9 +549,16 @@ class ApprovalsService {
       await this._moveClickUpTask(delivery.clickup_task_id, clickupStatus);
     }
 
-    // If rejected, notify social media via WhatsApp
-    if (status === 'rejected') {
-      await this._notifySmRejection(batch, updatedItem, delivery, rejectionReason);
+    // Open a new review window if there is none, or if the previous one already fired.
+    const reloadedBatch = await db('approval_batches').where({ id: batch.id }).first();
+    if (!reloadedBatch.review_window_started_at || reloadedBatch.review_window_fired_at) {
+      await db('approval_batches').where({ id: batch.id }).update({
+        review_window_started_at: new Date(),
+        review_window_fired_at: null,
+        updated_at: new Date(),
+      });
+      const { enqueueApprovalReviewWindow } = require('../../queues');
+      await enqueueApprovalReviewWindow(batch.id);
     }
 
     // Check if all items have been responded to
@@ -562,6 +570,9 @@ class ApprovalsService {
     const allResponded = parseInt(pendingItems.count, 10) === 0;
 
     if (allResponded) {
+      const { promoteApprovalReviewWindow } = require('../../queues');
+      await promoteApprovalReviewWindow(batch.id);
+
       // Complete batch
       await db('approval_batches')
         .where({ id: batch.id })
@@ -789,9 +800,8 @@ class ApprovalsService {
     }
   }
 
-  /**
-   * Notify the social media professional of a rejection via WhatsApp
-   */
+  // Deprecated — replaced by the approval-review-window worker. Kept temporarily
+  // for safe rollback; remove on the next cleanup pass.
   async _notifySmRejection(batch, item, delivery, rejectionReason) {
     try {
       if (!batch.social_media_id) {

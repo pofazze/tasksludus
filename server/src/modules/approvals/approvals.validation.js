@@ -34,6 +34,7 @@ const clientRespondSchema = Joi.object({
     then: Joi.required(),
     otherwise: Joi.allow(null, '').optional(),
   }),
+  rejection_target: Joi.string().valid('cover', 'video').optional(),
   media_urls: Joi.array().items(Joi.object({
     url: Joi.string().required(),
     type: Joi.string().valid('image', 'video').required(),
