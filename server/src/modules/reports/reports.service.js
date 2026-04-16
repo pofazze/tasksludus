@@ -1,0 +1,229 @@
+const db = require('../../config/db');
+
+const PRODUCTION_PHASES = ['em_producao_video', 'em_producao_design', 'edicao_de_video', 'design'];
+
+function rangeFilter(table, column, { start, end }) {
+  if (!start || !end) return null;
+  return { column: `${table}.${column}`, start: new Date(start), end: new Date(end) };
+}
+
+async function producersWithDeliveriesIn(range) {
+  const phases = await db('delivery_phases').whereIn('phase', PRODUCTION_PHASES);
+  const filtered = phases.filter((p) => {
+    if (!p.entered_at) return false;
+    const t = new Date(p.entered_at).getTime();
+    return t >= new Date(range.start).getTime() && t <= new Date(range.end).getTime();
+  });
+  // Map producer → set of deliveryIds
+  const map = new Map();
+  for (const p of filtered) {
+    if (!p.user_id) continue;
+    if (!map.has(p.user_id)) map.set(p.user_id, new Set());
+    map.get(p.user_id).add(p.delivery_id);
+  }
+  return map;
+}
+
+async function loadUser(id) {
+  const user = await db('users').where({ id }).first();
+  return user || { id, name: 'Desconhecido', producer_type: null };
+}
+
+async function firstApprovalRate(range) {
+  const producerMap = await producersWithDeliveriesIn(range);
+  const items = await db('approval_items');
+  const results = [];
+
+  for (const [userId, deliveryIds] of producerMap.entries()) {
+    let total = 0;
+    let firstApproved = 0;
+    for (const deliveryId of deliveryIds) {
+      const itemsForDelivery = items.filter((i) => i.delivery_id === deliveryId);
+      if (itemsForDelivery.length === 0) continue;
+      total += 1;
+      const hasReject = itemsForDelivery.some((i) => i.status === 'rejected');
+      const hasApprove = itemsForDelivery.some((i) => i.status === 'approved');
+      if (hasApprove && !hasReject) firstApproved += 1;
+    }
+    if (total === 0) continue;
+    const user = await loadUser(userId);
+    results.push({
+      producerId: userId,
+      producerName: user.name,
+      producerType: user.producer_type,
+      total,
+      firstApproved,
+      rate: firstApproved / total,
+    });
+  }
+  results.sort((a, b) => b.rate - a.rate);
+  return results;
+}
+
+async function rejectionRate(range) {
+  const producerMap = await producersWithDeliveriesIn(range);
+  const items = await db('approval_items');
+  const results = [];
+
+  for (const [userId, deliveryIds] of producerMap.entries()) {
+    let total = 0;
+    let rejected = 0;
+    for (const i of items) {
+      if (!deliveryIds.has(i.delivery_id)) continue;
+      total += 1;
+      if (i.status === 'rejected') rejected += 1;
+    }
+    if (total === 0) continue;
+    const user = await loadUser(userId);
+    results.push({
+      producerId: userId,
+      producerName: user.name,
+      producerType: user.producer_type,
+      total,
+      rejected,
+      rate: rejected / total,
+    });
+  }
+  results.sort((a, b) => b.rate - a.rate);
+  return results;
+}
+
+async function reworkPerTask(range) {
+  const producerMap = await producersWithDeliveriesIn(range);
+  const phases = await db('delivery_phases');
+  const results = [];
+
+  for (const [userId, deliveryIds] of producerMap.entries()) {
+    let totalRework = 0;
+    for (const deliveryId of deliveryIds) {
+      totalRework += phases.filter((p) => p.delivery_id === deliveryId && p.phase === 'correcao').length;
+    }
+    const user = await loadUser(userId);
+    results.push({
+      producerId: userId,
+      producerName: user.name,
+      producerType: user.producer_type,
+      avgRework: deliveryIds.size ? totalRework / deliveryIds.size : 0,
+    });
+  }
+  results.sort((a, b) => b.avgRework - a.avgRework);
+  return results;
+}
+
+async function rejectionByCategory(range) {
+  const items = await db('approval_items');
+  const counts = new Map();
+  for (const i of items) {
+    if (i.status !== 'rejected') continue;
+    const t = i.responded_at ? new Date(i.responded_at).getTime() : null;
+    if (!t || t < new Date(range.start).getTime() || t > new Date(range.end).getTime()) continue;
+    const key = i.rejection_category || 'outro';
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return [...counts.entries()].map(([category, count]) => ({ category, count }));
+}
+
+async function rejectionByPostType(range) {
+  const items = await db('approval_items');
+  const deliveries = await db('deliveries');
+  const byDelivery = new Map(deliveries.map((d) => [d.id, d]));
+  const byType = new Map();
+  for (const i of items) {
+    const t = i.responded_at ? new Date(i.responded_at).getTime() : null;
+    if (!t || t < new Date(range.start).getTime() || t > new Date(range.end).getTime()) continue;
+    const d = byDelivery.get(i.delivery_id);
+    if (!d) continue;
+    const postType = d.content_type || 'outro';
+    if (!byType.has(postType)) byType.set(postType, { total: 0, rejected: 0 });
+    const bucket = byType.get(postType);
+    bucket.total += 1;
+    if (i.status === 'rejected') bucket.rejected += 1;
+  }
+  return [...byType.entries()].map(([postType, { total, rejected }]) => ({
+    postType, total, rejected, rate: total ? rejected / total : 0,
+  }));
+}
+
+async function rejectionByTarget(range) {
+  const items = await db('approval_items');
+  const counts = new Map();
+  for (const i of items) {
+    if (i.status !== 'rejected') continue;
+    if (!i.rejection_target) continue;
+    const t = i.responded_at ? new Date(i.responded_at).getTime() : null;
+    if (!t || t < new Date(range.start).getTime() || t > new Date(range.end).getTime()) continue;
+    counts.set(i.rejection_target, (counts.get(i.rejection_target) || 0) + 1);
+  }
+  return [...counts.entries()].map(([target, count]) => ({ target, count }));
+}
+
+async function ranking(range) {
+  const [rates, producerMap] = await Promise.all([
+    firstApprovalRate(range),
+    producersWithDeliveriesIn(range),
+  ]);
+  const rateByUser = new Map(rates.map((r) => [r.producerId, r]));
+  const out = [];
+  for (const [userId, deliveryIds] of producerMap.entries()) {
+    const user = await loadUser(userId);
+    const r = rateByUser.get(userId);
+    out.push({
+      producerId: userId,
+      producerName: user.name,
+      producerType: user.producer_type,
+      volume: deliveryIds.size,
+      firstApprovalRate: r ? r.rate : null,
+      score: deliveryIds.size * (r ? r.rate : 0),
+    });
+  }
+  out.sort((a, b) => b.volume - a.volume);
+  return out;
+}
+
+function bucketKey(date, granularity) {
+  const d = new Date(date);
+  if (granularity === 'year') return `${d.getUTCFullYear()}`;
+  if (granularity === 'month') return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  if (granularity === 'week') {
+    // ISO week start: Monday. UTC-only computation.
+    const copy = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    const dayOfWeek = (copy.getUTCDay() + 6) % 7;
+    copy.setUTCDate(copy.getUTCDate() - dayOfWeek);
+    return copy.toISOString().slice(0, 10);
+  }
+  return d.toISOString().slice(0, 10); // day
+}
+
+async function volumeTimeseries({ start, end, granularity = 'day', producerId }) {
+  const producerMap = await producersWithDeliveriesIn({ start, end });
+  const deliveries = await db('deliveries');
+  const byDelivery = new Map(deliveries.map((d) => [d.id, d]));
+  const counts = new Map();
+  for (const [userId, deliveryIds] of producerMap.entries()) {
+    if (producerId && userId !== producerId) continue;
+    for (const deliveryId of deliveryIds) {
+      const d = byDelivery.get(deliveryId);
+      if (!d) continue;
+      const ref = d.completed_at || d.updated_at;
+      if (!ref) continue;
+      const key = `${userId}|${bucketKey(ref, granularity)}`;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+  }
+  return [...counts.entries()].map(([k, count]) => {
+    const [pid, bucket] = k.split('|');
+    return { producerId: pid, bucket, count };
+  });
+}
+
+module.exports = {
+  firstApprovalRate,
+  rejectionRate,
+  reworkPerTask,
+  rejectionByCategory,
+  rejectionByPostType,
+  rejectionByTarget,
+  ranking,
+  volumeTimeseries,
+  PRODUCTION_PHASES,
+};
