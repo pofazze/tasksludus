@@ -112,7 +112,7 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
         ...form,
         status: asDraft ? 'draft' : 'scheduled',
         thumbnail_url: form.post_type === 'reel' ? (form.thumbnail_url || null) : null,
-        media_urls: JSON.stringify(form.media_urls),
+        media_urls: form.media_urls,
         platforms: form.platforms,
       };
       if (form.platforms.length > 1) {
