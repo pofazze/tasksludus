@@ -433,6 +433,235 @@ async function avgWorkTimeseries(range) {
   }));
 }
 
+const CLIENT_PLATFORMS = ['instagram', 'tiktok', 'youtube'];
+const CLIENT_POST_TYPES_ALL = ['reel', 'image', 'carousel', 'carrossel', 'story', 'tiktok_video', 'tiktok_photo', 'yt_shorts', 'feed', 'video'];
+
+async function clientSummary({ start, end, clientId }) {
+  const posts = await db('scheduled_posts');
+  const filtered = posts.filter((p) => {
+    if (p.client_id !== clientId) return false;
+    if (p.status !== 'published') return false;
+    const t = p.published_at ? new Date(p.published_at).getTime() : null;
+    if (!t) return false;
+    return t >= new Date(start).getTime() && t <= new Date(end).getTime();
+  });
+  const byPlatform = Object.fromEntries(CLIENT_PLATFORMS.map((pl) => [pl, 0]));
+  const byPostType = {};
+  for (const p of filtered) {
+    byPlatform[p.platform] = (byPlatform[p.platform] || 0) + 1;
+    const key = p.post_type || 'outro';
+    byPostType[key] = (byPostType[key] || 0) + 1;
+  }
+  return {
+    totalPublished: filtered.length,
+    byPlatform,
+    byPostType,
+  };
+}
+
+async function publishedList({ start, end, clientId }) {
+  const posts = await db('scheduled_posts');
+  const deliveries = await db('deliveries');
+  const byDelivery = new Map(deliveries.map((d) => [d.id, d]));
+  const phases = await db('delivery_phases');
+  const items = await db('approval_items');
+
+  const filtered = posts.filter((p) => {
+    if (p.client_id !== clientId) return false;
+    if (p.status !== 'published') return false;
+    const t = p.published_at ? new Date(p.published_at).getTime() : null;
+    if (!t) return false;
+    return t >= new Date(start).getTime() && t <= new Date(end).getTime();
+  });
+
+  const results = [];
+  for (const p of filtered) {
+    const delivery = byDelivery.get(p.delivery_id);
+    const producersByPhase = {};
+    const deliveryPhaseRows = phases
+      .filter((ph) => ph.delivery_id === p.delivery_id)
+      .sort((a, b) => new Date(b.entered_at).getTime() - new Date(a.entered_at).getTime());
+    for (const row of deliveryPhaseRows) {
+      if (!producersByPhase[row.phase] && row.user_id) {
+        const user = await loadUser(row.user_id);
+        producersByPhase[row.phase] = user.name;
+      }
+    }
+    const deliveryItems = items.filter((i) => i.delivery_id === p.delivery_id);
+    const hasRejection = deliveryItems.some((i) => i.status === 'rejected');
+    const hasApproval = deliveryItems.some((i) => i.status === 'approved');
+    const firstApproval = hasApproval && !hasRejection;
+    const permalink = p.platform === 'instagram' ? p.ig_permalink : p.platform === 'tiktok' ? p.tiktok_permalink : null;
+    results.push({
+      deliveryId: p.delivery_id,
+      title: delivery?.title || p.caption?.slice(0, 80) || p.delivery_id,
+      publishedAt: p.published_at,
+      platform: p.platform,
+      permalink,
+      postType: p.post_type,
+      producersByPhase,
+      firstApproval,
+    });
+  }
+  results.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  return results;
+}
+
+async function clientFirstApprovalRate({ start, end, clientId }) {
+  const deliveries = await db('deliveries');
+  const items = await db('approval_items');
+  const clientDeliveries = deliveries.filter((d) => d.client_id === clientId);
+  const deliveryIds = new Set(clientDeliveries.map((d) => d.id));
+
+  let total = 0;
+  let firstApproved = 0;
+  for (const deliveryId of deliveryIds) {
+    const forDelivery = items.filter((i) => {
+      if (i.delivery_id !== deliveryId) return false;
+      const t = i.responded_at ? new Date(i.responded_at).getTime() : null;
+      if (!t) return false;
+      return t >= new Date(start).getTime() && t <= new Date(end).getTime();
+    });
+    if (forDelivery.length === 0) continue;
+    total += 1;
+    const hasReject = forDelivery.some((i) => i.status === 'rejected');
+    const hasApprove = forDelivery.some((i) => i.status === 'approved');
+    if (hasApprove && !hasReject) firstApproved += 1;
+  }
+  return { total, firstApproved, rate: total ? firstApproved / total : 0 };
+}
+
+async function clientRejectionVolume({ start, end, clientId }) {
+  const items = await db('approval_items');
+  const deliveries = await db('deliveries');
+  const clientDeliveryIds = new Set(deliveries.filter((d) => d.client_id === clientId).map((d) => d.id));
+
+  const counts = new Map();
+  let total = 0;
+  for (const i of items) {
+    if (i.status !== 'rejected') continue;
+    if (!clientDeliveryIds.has(i.delivery_id)) continue;
+    const t = i.responded_at ? new Date(i.responded_at).getTime() : null;
+    if (!t) continue;
+    if (t < new Date(start).getTime() || t > new Date(end).getTime()) continue;
+    total += 1;
+    const key = i.rejection_category || 'outro';
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return {
+    total,
+    byCategory: [...counts.entries()].map(([category, count]) => ({ category, count })),
+  };
+}
+
+async function clientAvgCycleTime({ start, end, clientId }) {
+  const deliveries = await db('deliveries');
+  const phases = await db('delivery_phases');
+  const byDeliveryPhases = new Map();
+  for (const p of phases) {
+    if (!byDeliveryPhases.has(p.delivery_id)) byDeliveryPhases.set(p.delivery_id, []);
+    byDeliveryPhases.get(p.delivery_id).push(p);
+  }
+  const durations = [];
+  const byTypeMap = new Map();
+  for (const d of deliveries) {
+    if (d.client_id !== clientId) continue;
+    const completed = d.completed_at ? new Date(d.completed_at).getTime() : null;
+    if (!completed) continue;
+    if (completed < new Date(start).getTime() || completed > new Date(end).getTime()) continue;
+    let startedMs = d.started_at ? new Date(d.started_at).getTime() : null;
+    if (!startedMs) {
+      const rows = byDeliveryPhases.get(d.id) || [];
+      if (rows.length) {
+        const earliest = rows.reduce((lo, r) => Math.min(lo, new Date(r.entered_at).getTime()), Infinity);
+        if (Number.isFinite(earliest)) startedMs = earliest;
+      }
+    }
+    if (!startedMs) continue;
+    const days = Math.max(0, Math.round((completed - startedMs) / (24 * 60 * 60 * 1000)));
+    durations.push(days);
+    const key = d.content_type || 'outro';
+    if (!byTypeMap.has(key)) byTypeMap.set(key, []);
+    byTypeMap.get(key).push(days);
+  }
+  const avg = durations.length ? Math.round(durations.reduce((s, n) => s + n, 0) / durations.length) : 0;
+  return {
+    avgDaysStartToPublish: avg,
+    medianDays: median(durations),
+    byPostType: [...byTypeMap.entries()].map(([postType, arr]) => ({
+      postType,
+      avgDays: Math.round(arr.reduce((s, n) => s + n, 0) / arr.length),
+    })),
+  };
+}
+
+async function clientResponsibilityHistory({ start, end, clientId }) {
+  const deliveries = await db('deliveries');
+  const phases = await db('delivery_phases');
+  const inRange = new Set(
+    deliveries
+      .filter((d) => d.client_id === clientId)
+      .filter((d) => {
+        const t = d.completed_at ? new Date(d.completed_at).getTime() : null;
+        if (!t) return true;
+        return t >= new Date(start).getTime() && t <= new Date(end).getTime();
+      })
+      .map((d) => d.id),
+  );
+  const rows = phases.filter((p) => inRange.has(p.delivery_id) && p.user_id);
+  const byUser = new Map();
+  for (const row of rows) {
+    if (!byUser.has(row.user_id)) byUser.set(row.user_id, { deliveryIds: new Set(), phases: new Set() });
+    const entry = byUser.get(row.user_id);
+    entry.deliveryIds.add(row.delivery_id);
+    entry.phases.add(row.phase);
+  }
+  const results = [];
+  for (const [userId, { deliveryIds, phases: phaseSet }] of byUser.entries()) {
+    const user = await loadUser(userId);
+    results.push({
+      producerId: userId,
+      producerName: user.name,
+      producerType: user.producer_type,
+      taskCount: deliveryIds.size,
+      phases: [...phaseSet],
+    });
+  }
+  results.sort((a, b) => b.taskCount - a.taskCount);
+  return results;
+}
+
+function publishedListToCsv(rows) {
+  const headers = ['data_publicacao', 'titulo', 'plataforma', 'tipo', 'link', 'designer', 'editor_video', 'aprovacao_primeira'];
+  const lines = [headers.join(',')];
+  for (const r of rows) {
+    const date = r.publishedAt ? new Date(r.publishedAt).toISOString().slice(0, 10) : '';
+    const designer = r.producersByPhase?.em_producao_design || r.producersByPhase?.design || '';
+    const editor = r.producersByPhase?.em_producao_video || r.producersByPhase?.edicao_de_video || '';
+    const row = [
+      date,
+      csvEscape(r.title),
+      r.platform || '',
+      r.postType || '',
+      csvEscape(r.permalink || ''),
+      csvEscape(designer),
+      csvEscape(editor),
+      r.firstApproval ? 'sim' : 'nao',
+    ];
+    lines.push(row.join(','));
+  }
+  return lines.join('\n') + '\n';
+}
+
+function csvEscape(value) {
+  if (value === null || value === undefined) return '';
+  const s = String(value);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
 module.exports = {
   firstApprovalRate,
   rejectionRate,
@@ -449,5 +678,12 @@ module.exports = {
   phaseDistribution,
   weeklyHeatmap,
   avgWorkTimeseries,
+  clientSummary,
+  publishedList,
+  clientFirstApprovalRate,
+  clientRejectionVolume,
+  clientAvgCycleTime,
+  clientResponsibilityHistory,
+  publishedListToCsv,
   PRODUCTION_PHASES,
 };

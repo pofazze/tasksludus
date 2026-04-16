@@ -5,6 +5,8 @@ const state = {
   deliveries: {},
   approval_items: [],
   delivery_phases: [],
+  clients: {},
+  scheduled_posts: [],
 };
 
 jest.mock('../../config/db', () => {
@@ -29,6 +31,9 @@ jest.mock('../../config/db', () => {
         if (this._table === 'users' && this._where?.id) {
           return Promise.resolve(state.users[this._where.id] || null);
         }
+        if (this._table === 'clients' && this._where?.id) {
+          return Promise.resolve(state.clients[this._where.id] || null);
+        }
         return Promise.resolve(null);
       },
       then(resolve) {
@@ -37,6 +42,8 @@ jest.mock('../../config/db', () => {
         else if (this._table === 'approval_items') rows = state.approval_items;
         else if (this._table === 'deliveries') rows = Object.values(state.deliveries);
         else if (this._table === 'users') rows = Object.values(state.users);
+        else if (this._table === 'scheduled_posts') rows = state.scheduled_posts || [];
+        else if (this._table === 'clients') rows = Object.values(state.clients || {});
         else rows = [];
 
         if (this._where) {
@@ -74,9 +81,27 @@ beforeEach(() => {
   state.deliveries = {};
   state.approval_items = [];
   state.delivery_phases = [];
+  state.clients = {};
+  state.scheduled_posts = [];
 });
 
 function seedUser(u) { state.users[u.id] = { producer_type: 'designer', ...u }; }
+function seedClient(c) { state.clients = state.clients || {}; state.clients[c.id] = { name: c.name || 'Cliente', account_manager_id: null, ...c }; }
+function seedScheduledPost(p) {
+  state.scheduled_posts = state.scheduled_posts || [];
+  state.scheduled_posts.push({
+    status: 'published',
+    platform: 'instagram',
+    post_type: 'reel',
+    ig_permalink: null,
+    tiktok_permalink: null,
+    published_at: new Date('2026-04-15T12:00:00Z'),
+    client_id: 'c1',
+    delivery_id: null,
+    caption: null,
+    ...p,
+  });
+}
 function seedDelivery(d) { state.deliveries[d.id] = { content_type: 'reel', client_id: 'c1', completed_at: new Date('2026-04-15T12:00:00Z'), ...d }; }
 function seedPhase(p) { state.delivery_phases.push({ exited_at: null, duration_seconds: null, ...p }); }
 function seedApproval(a) { state.approval_items.push({ status: 'approved', rejection_category: null, rejection_target: null, responded_at: new Date('2026-04-15T12:00:00Z'), ...a }); }
@@ -336,5 +361,105 @@ describe('avgWorkTimeseries', () => {
     const apr11 = out.find((r) => r.producerId === 'u1' && r.bucket === '2026-04-11');
     expect(apr10.avgSeconds).toBe(Math.round((7200 + 3600) / 2));  // (2h + 1h) / 2 sessions = 5400
     expect(apr11.avgSeconds).toBe(3600);
+  });
+});
+
+describe('clientSummary', () => {
+  test('counts published posts per platform and per post_type', async () => {
+    seedClient({ id: 'c1', name: 'Dr X' });
+    seedScheduledPost({ client_id: 'c1', platform: 'instagram', post_type: 'reel', published_at: new Date('2026-04-10T10:00:00Z') });
+    seedScheduledPost({ client_id: 'c1', platform: 'tiktok', post_type: 'reel', published_at: new Date('2026-04-12T10:00:00Z') });
+    seedScheduledPost({ client_id: 'c1', platform: 'instagram', post_type: 'carousel', published_at: new Date('2026-04-13T10:00:00Z') });
+    seedScheduledPost({ client_id: 'c1', platform: 'instagram', post_type: 'reel', published_at: new Date('2026-03-10T10:00:00Z') });  // outside range
+    const out = await reports.clientSummary({ ...RANGE, clientId: 'c1' });
+    expect(out.totalPublished).toBe(3);
+    expect(out.byPlatform).toEqual({ instagram: 2, tiktok: 1, youtube: 0 });
+    expect(out.byPostType.reel).toBe(2);
+    expect(out.byPostType.carousel).toBe(1);
+  });
+});
+
+describe('publishedList', () => {
+  test('returns detailed rows with producersByPhase and firstApproval flag', async () => {
+    seedClient({ id: 'c1', name: 'Dr X' });
+    seedDelivery({ id: 'd1', client_id: 'c1', clickup_task_id: 't1', title: 'Reel 1', content_type: 'reel' });
+    seedScheduledPost({ client_id: 'c1', delivery_id: 'd1', platform: 'instagram', post_type: 'reel', ig_permalink: 'https://instagram.com/p/1', published_at: new Date('2026-04-10T10:00:00Z') });
+    seedUser({ id: 'u1', name: 'Ana', producer_type: 'designer' });
+    seedUser({ id: 'u2', name: 'Bia', producer_type: 'video_editor' });
+    seedPhase({ delivery_id: 'd1', user_id: 'u1', phase: 'design', entered_at: new Date('2026-04-01T10:00:00Z'), exited_at: new Date('2026-04-02T10:00:00Z') });
+    seedPhase({ delivery_id: 'd1', user_id: 'u2', phase: 'em_producao_video', entered_at: new Date('2026-04-03T10:00:00Z'), exited_at: new Date('2026-04-03T12:00:00Z') });
+    seedApproval({ delivery_id: 'd1', status: 'approved', responded_at: new Date('2026-04-05T10:00:00Z') });
+    const out = await reports.publishedList({ ...RANGE, clientId: 'c1' });
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      deliveryId: 'd1',
+      title: 'Reel 1',
+      platform: 'instagram',
+      postType: 'reel',
+      permalink: 'https://instagram.com/p/1',
+      firstApproval: true,
+    });
+    expect(out[0].producersByPhase.design).toBe('Ana');
+    expect(out[0].producersByPhase.em_producao_video).toBe('Bia');
+  });
+});
+
+describe('clientFirstApprovalRate', () => {
+  test('ratio of deliveries approved without any rejections', async () => {
+    seedDelivery({ id: 'd1', client_id: 'c1' });
+    seedDelivery({ id: 'd2', client_id: 'c1' });
+    seedApproval({ delivery_id: 'd1', status: 'approved', responded_at: new Date('2026-04-10T10:00:00Z') });
+    seedApproval({ delivery_id: 'd2', status: 'rejected', responded_at: new Date('2026-04-10T10:00:00Z') });
+    seedApproval({ delivery_id: 'd2', status: 'approved', responded_at: new Date('2026-04-11T10:00:00Z') });
+    const out = await reports.clientFirstApprovalRate({ ...RANGE, clientId: 'c1' });
+    expect(out).toMatchObject({ total: 2, firstApproved: 1, rate: 0.5 });
+  });
+});
+
+describe('clientRejectionVolume', () => {
+  test('counts rejections in range by category', async () => {
+    seedDelivery({ id: 'd1', client_id: 'c1' });
+    seedApproval({ delivery_id: 'd1', status: 'rejected', rejection_category: 'capa', responded_at: new Date('2026-04-10T10:00:00Z') });
+    seedApproval({ delivery_id: 'd1', status: 'rejected', rejection_category: 'edicao', responded_at: new Date('2026-04-11T10:00:00Z') });
+    seedApproval({ delivery_id: 'd1', status: 'rejected', rejection_category: 'capa', responded_at: new Date('2026-04-12T10:00:00Z') });
+    const out = await reports.clientRejectionVolume({ ...RANGE, clientId: 'c1' });
+    expect(out.total).toBe(3);
+    const capa = out.byCategory.find((r) => r.category === 'capa');
+    const edicao = out.byCategory.find((r) => r.category === 'edicao');
+    expect(capa.count).toBe(2);
+    expect(edicao.count).toBe(1);
+  });
+});
+
+describe('clientAvgCycleTime', () => {
+  test('averages completed minus started in days, and breakdowns by postType', async () => {
+    seedDelivery({ id: 'd1', client_id: 'c1', content_type: 'reel', started_at: new Date('2026-04-01T00:00:00Z'), completed_at: new Date('2026-04-04T00:00:00Z') });  // 3d
+    seedDelivery({ id: 'd2', client_id: 'c1', content_type: 'reel', started_at: new Date('2026-04-02T00:00:00Z'), completed_at: new Date('2026-04-09T00:00:00Z') });  // 7d
+    seedDelivery({ id: 'd3', client_id: 'c1', content_type: 'carrossel', started_at: new Date('2026-04-05T00:00:00Z'), completed_at: new Date('2026-04-07T00:00:00Z') });  // 2d
+    const out = await reports.clientAvgCycleTime({ ...RANGE, clientId: 'c1' });
+    expect(out.avgDaysStartToPublish).toBe(4);  // (3+7+2)/3 = 4
+    expect(out.medianDays).toBe(3);
+    const reel = out.byPostType.find((r) => r.postType === 'reel');
+    expect(reel.avgDays).toBe(5);
+  });
+});
+
+describe('clientResponsibilityHistory', () => {
+  test('aggregates distinct producers across the clients deliveries in range', async () => {
+    seedClient({ id: 'c1' });
+    seedDelivery({ id: 'd1', client_id: 'c1', completed_at: new Date('2026-04-10T10:00:00Z') });
+    seedDelivery({ id: 'd2', client_id: 'c1', completed_at: new Date('2026-04-12T10:00:00Z') });
+    seedUser({ id: 'u1', name: 'Ana', producer_type: 'designer' });
+    seedUser({ id: 'u2', name: 'Bia', producer_type: 'video_editor' });
+    seedPhase({ delivery_id: 'd1', user_id: 'u1', phase: 'design', entered_at: new Date('2026-04-09T10:00:00Z') });
+    seedPhase({ delivery_id: 'd2', user_id: 'u1', phase: 'design', entered_at: new Date('2026-04-11T10:00:00Z') });
+    seedPhase({ delivery_id: 'd2', user_id: 'u2', phase: 'em_producao_video', entered_at: new Date('2026-04-11T12:00:00Z') });
+    const out = await reports.clientResponsibilityHistory({ ...RANGE, clientId: 'c1' });
+    const ana = out.find((r) => r.producerId === 'u1');
+    const bia = out.find((r) => r.producerId === 'u2');
+    expect(ana).toMatchObject({ producerName: 'Ana', producerType: 'designer', taskCount: 2 });
+    expect(ana.phases).toEqual(expect.arrayContaining(['design']));
+    expect(bia).toMatchObject({ producerName: 'Bia', taskCount: 1 });
+    expect(bia.phases).toEqual(expect.arrayContaining(['em_producao_video']));
   });
 });
