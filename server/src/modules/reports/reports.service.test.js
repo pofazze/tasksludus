@@ -80,6 +80,18 @@ function seedUser(u) { state.users[u.id] = { producer_type: 'designer', ...u }; 
 function seedDelivery(d) { state.deliveries[d.id] = { content_type: 'reel', client_id: 'c1', completed_at: new Date('2026-04-15T12:00:00Z'), ...d }; }
 function seedPhase(p) { state.delivery_phases.push({ exited_at: null, duration_seconds: null, ...p }); }
 function seedApproval(a) { state.approval_items.push({ status: 'approved', rejection_category: null, rejection_target: null, responded_at: new Date('2026-04-15T12:00:00Z'), ...a }); }
+function seedClosedProductionPhase({ deliveryId, userId, phase, enteredAt, exitedAt }) {
+  const duration = Math.round((new Date(exitedAt).getTime() - new Date(enteredAt).getTime()) / 1000);
+  state.delivery_phases.push({
+    delivery_id: deliveryId,
+    user_id: userId,
+    phase,
+    entered_at: new Date(enteredAt),
+    exited_at: new Date(exitedAt),
+    duration_seconds: duration,
+    clickup_task_id: null,
+  });
+}
 
 const RANGE = { start: new Date('2026-04-01T00:00:00Z'), end: new Date('2026-04-30T23:59:59Z') };
 
@@ -204,5 +216,125 @@ describe('volumeTimeseries', () => {
     const apr11 = out.find((r) => r.bucket === '2026-04-11');
     expect(apr10.count).toBe(2);
     expect(apr11.count).toBe(1);
+  });
+});
+
+describe('activeTasks', () => {
+  test('returns open phases grouped by producer and phase', async () => {
+    seedUser({ id: 'u1', name: 'João' });
+    seedUser({ id: 'u2', name: 'Maria' });
+    seedDelivery({ id: 'd1', clickup_task_id: 't1', title: 'Post A' });
+    seedDelivery({ id: 'd2', clickup_task_id: 't2', title: 'Post B' });
+    seedPhase({ delivery_id: 'd1', user_id: 'u1', phase: 'em_producao_design', entered_at: new Date('2026-04-15T10:00:00Z'), exited_at: null });
+    seedPhase({ delivery_id: 'd2', user_id: 'u1', phase: 'em_producao_design', entered_at: new Date('2026-04-15T11:00:00Z'), exited_at: null });
+    seedPhase({ delivery_id: 'd2', user_id: 'u2', phase: 'em_producao_video', entered_at: new Date('2026-04-15T12:00:00Z'), exited_at: null });
+    const out = await reports.activeTasks(RANGE);
+    const u1 = out.find((r) => r.producerId === 'u1' && r.phase === 'em_producao_design');
+    const u2 = out.find((r) => r.producerId === 'u2' && r.phase === 'em_producao_video');
+    expect(u1.count).toBe(2);
+    expect(u1.tasks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ title: 'Post A', clickupUrl: 'https://app.clickup.com/t/t1' }),
+      expect.objectContaining({ title: 'Post B', clickupUrl: 'https://app.clickup.com/t/t2' }),
+    ]));
+    expect(u2.count).toBe(1);
+  });
+});
+
+describe('avgPhaseDuration', () => {
+  test('returns mean and median seconds per (producer, phase) with sample size', async () => {
+    seedUser({ id: 'u1', name: 'João' });
+    seedDelivery({ id: 'd1' });
+    seedClosedProductionPhase({ deliveryId: 'd1', userId: 'u1', phase: 'em_producao_design', enteredAt: '2026-04-10T10:00:00Z', exitedAt: '2026-04-10T11:00:00Z' });  // 3600
+    seedClosedProductionPhase({ deliveryId: 'd1', userId: 'u1', phase: 'em_producao_design', enteredAt: '2026-04-11T10:00:00Z', exitedAt: '2026-04-11T13:00:00Z' }); // 10800
+    seedClosedProductionPhase({ deliveryId: 'd1', userId: 'u1', phase: 'em_producao_design', enteredAt: '2026-04-12T10:00:00Z', exitedAt: '2026-04-12T12:00:00Z' }); // 7200
+    const out = await reports.avgPhaseDuration(RANGE);
+    const row = out.find((r) => r.producerId === 'u1' && r.phase === 'em_producao_design');
+    expect(row.sampleSize).toBe(3);
+    expect(row.avgSeconds).toBe(7200);
+    expect(row.medianSeconds).toBe(7200);
+  });
+
+  test('ignores phases that are still open', async () => {
+    seedUser({ id: 'u1', name: 'João' });
+    seedDelivery({ id: 'd1' });
+    seedClosedProductionPhase({ deliveryId: 'd1', userId: 'u1', phase: 'em_producao_design', enteredAt: '2026-04-10T10:00:00Z', exitedAt: '2026-04-10T11:00:00Z' });
+    seedPhase({ delivery_id: 'd1', user_id: 'u1', phase: 'em_producao_design', entered_at: new Date('2026-04-15T10:00:00Z'), exited_at: null });
+    const out = await reports.avgPhaseDuration(RANGE);
+    expect(out.find((r) => r.producerId === 'u1').sampleSize).toBe(1);
+  });
+});
+
+describe('totalHours', () => {
+  test('sums duration_seconds across em_producao_* phases only', async () => {
+    seedUser({ id: 'u1', name: 'João' });
+    seedDelivery({ id: 'd1' });
+    seedClosedProductionPhase({ deliveryId: 'd1', userId: 'u1', phase: 'em_producao_design', enteredAt: '2026-04-10T10:00:00Z', exitedAt: '2026-04-10T11:00:00Z' });
+    seedClosedProductionPhase({ deliveryId: 'd1', userId: 'u1', phase: 'em_producao_video', enteredAt: '2026-04-11T10:00:00Z', exitedAt: '2026-04-11T12:00:00Z' });
+    // Queue phase — must be excluded
+    seedClosedProductionPhase({ deliveryId: 'd1', userId: 'u1', phase: 'design', enteredAt: '2026-04-09T00:00:00Z', exitedAt: '2026-04-10T00:00:00Z' });
+    const out = await reports.totalHours(RANGE);
+    expect(out.find((r) => r.producerId === 'u1').productionSeconds).toBe(3600 + 7200);
+  });
+});
+
+describe('overdue', () => {
+  test('returns deliveries past due_date that are not published, grouped by responsible producer', async () => {
+    const now = new Date('2026-04-16T00:00:00Z');
+    seedUser({ id: 'u1', name: 'João' });
+    seedDelivery({ id: 'd1', clickup_task_id: 't1', title: 'Post A', due_date: new Date('2026-04-10T00:00:00Z'), status: 'aprovacao' });
+    seedDelivery({ id: 'd2', clickup_task_id: 't2', title: 'Post B', due_date: new Date('2026-04-08T00:00:00Z'), status: 'publicado' });  // excluded
+    seedPhase({ delivery_id: 'd1', user_id: 'u1', phase: 'em_producao_design', entered_at: new Date('2026-04-09T10:00:00Z'), exited_at: null });
+    const out = await reports.overdue({ ...RANGE, now });
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ producerId: 'u1', count: 1 });
+    expect(out[0].tasks[0]).toMatchObject({ title: 'Post A', clickupUrl: 'https://app.clickup.com/t/t1' });
+  });
+});
+
+describe('phaseDistribution', () => {
+  test('counts open phases per producer per phase', async () => {
+    seedUser({ id: 'u1', name: 'João' });
+    seedDelivery({ id: 'd1' });
+    seedDelivery({ id: 'd2' });
+    seedDelivery({ id: 'd3' });
+    seedPhase({ delivery_id: 'd1', user_id: 'u1', phase: 'em_producao_design', entered_at: new Date('2026-04-15T10:00:00Z'), exited_at: null });
+    seedPhase({ delivery_id: 'd2', user_id: 'u1', phase: 'em_producao_design', entered_at: new Date('2026-04-15T11:00:00Z'), exited_at: null });
+    seedPhase({ delivery_id: 'd3', user_id: 'u1', phase: 'correcao', entered_at: new Date('2026-04-15T12:00:00Z'), exited_at: null });
+    const out = await reports.phaseDistribution(RANGE);
+    const emProd = out.find((r) => r.producerId === 'u1' && r.phase === 'em_producao_design');
+    const correcao = out.find((r) => r.producerId === 'u1' && r.phase === 'correcao');
+    expect(emProd.count).toBe(2);
+    expect(correcao.count).toBe(1);
+  });
+});
+
+describe('weeklyHeatmap', () => {
+  test('attributes phase seconds to the buckets they span when crossing hour boundaries', async () => {
+    seedUser({ id: 'u1', name: 'João' });
+    seedDelivery({ id: 'd1' });
+    // 2026-04-13 is a Monday (getUTCDay()=1). Phase from 10:30 to 12:45 → 30min in 10h + 60min in 11h + 45min in 12h.
+    seedClosedProductionPhase({ deliveryId: 'd1', userId: 'u1', phase: 'em_producao_design', enteredAt: '2026-04-13T10:30:00Z', exitedAt: '2026-04-13T12:45:00Z' });
+    const out = await reports.weeklyHeatmap({ ...RANGE, producerId: 'u1' });
+    const h10 = out.find((r) => r.dayOfWeek === 1 && r.hour === 10);
+    const h11 = out.find((r) => r.dayOfWeek === 1 && r.hour === 11);
+    const h12 = out.find((r) => r.dayOfWeek === 1 && r.hour === 12);
+    expect(h10.seconds).toBe(30 * 60);
+    expect(h11.seconds).toBe(60 * 60);
+    expect(h12.seconds).toBe(45 * 60);
+  });
+});
+
+describe('avgWorkTimeseries', () => {
+  test('averages production seconds per day bucket per producer', async () => {
+    seedUser({ id: 'u1', name: 'João' });
+    seedDelivery({ id: 'd1' });
+    seedClosedProductionPhase({ deliveryId: 'd1', userId: 'u1', phase: 'em_producao_design', enteredAt: '2026-04-10T10:00:00Z', exitedAt: '2026-04-10T12:00:00Z' });  // 2h
+    seedClosedProductionPhase({ deliveryId: 'd1', userId: 'u1', phase: 'em_producao_design', enteredAt: '2026-04-10T14:00:00Z', exitedAt: '2026-04-10T15:00:00Z' });  // 1h  (avg on day 10 = 1.5h)
+    seedClosedProductionPhase({ deliveryId: 'd1', userId: 'u1', phase: 'em_producao_video', enteredAt: '2026-04-11T09:00:00Z', exitedAt: '2026-04-11T10:00:00Z' });  // 1h
+    const out = await reports.avgWorkTimeseries({ ...RANGE, granularity: 'day' });
+    const apr10 = out.find((r) => r.producerId === 'u1' && r.bucket === '2026-04-10');
+    const apr11 = out.find((r) => r.producerId === 'u1' && r.bucket === '2026-04-11');
+    expect(apr10.avgSeconds).toBe(Math.round((7200 + 3600) / 2));  // (2h + 1h) / 2 sessions = 5400
+    expect(apr11.avgSeconds).toBe(3600);
   });
 });
