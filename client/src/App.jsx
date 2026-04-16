@@ -15,6 +15,7 @@ import ApprovalsPage from '@/pages/ApprovalsPage';
 import GoalsPage from '@/pages/GoalsPage';
 import CalculationsPage from '@/pages/CalculationsPage';
 import RankingPage from '@/pages/RankingPage';
+import ReportsPage from '@/pages/ReportsPage';
 import SettingsPage from '@/pages/SettingsPage';
 import SimulatorPage from '@/pages/SimulatorPage';
 import PortalPage from '@/pages/PortalPage';
@@ -73,6 +74,9 @@ function App() {
           } />
           <Route path="/boost" element={
             <ProtectedRoute roles={['dev']}><CalculationsPage /></ProtectedRoute>
+          } />
+          <Route path="/relatorios" element={
+            <ProtectedRoute roles={ALL_INTERNAL}><ReportsPage /></ProtectedRoute>
           } />
           <Route path="/ranking" element={
             <ProtectedRoute roles={ALL_INTERNAL}><RankingPage /></ProtectedRoute>
