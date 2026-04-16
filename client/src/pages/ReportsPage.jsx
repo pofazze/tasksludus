@@ -2,6 +2,7 @@ import { useState } from 'react';
 import FilterBar from '@/components/reports/FilterBar';
 import QualityTab from '@/components/reports/QualityTab';
 import CapacityTab from '@/components/reports/CapacityTab';
+import ClientTab from '@/components/reports/ClientTab';
 
 const TABS = [
   { key: 'quality', label: 'Qualidade' },
@@ -37,7 +38,7 @@ export default function ReportsPage() {
 
       {activeTab === 'quality' && <QualityTab filters={filters} />}
       {activeTab === 'capacity' && <CapacityTab filters={filters} />}
-      {activeTab === 'client' && <p className="text-muted-foreground text-sm py-12 text-center">Em construção (Fase 3).</p>}
+      {activeTab === 'client' && <ClientTab filters={filters} />}
     </div>
   );
 }
