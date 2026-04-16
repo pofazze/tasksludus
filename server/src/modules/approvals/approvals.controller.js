@@ -167,6 +167,7 @@ class ApprovalsController {
         status: value.status,
         rejectionReason: value.rejection_reason,
         rejectionTarget: value.rejection_target,
+        rejectionCategory: value.rejection_category,
         mediaUrls: value.media_urls,
       });
       res.json(result);

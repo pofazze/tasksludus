@@ -27,6 +27,8 @@ const sendToClientSchema = Joi.object({
   })).min(1).required(),
 });
 
+const REJECTION_CATEGORIES = ['capa', 'edicao', 'audio_musica', 'texto', 'tom_voz', 'tecnico', 'outro'];
+
 const clientRespondSchema = Joi.object({
   status: Joi.string().valid('approved', 'rejected').required(),
   rejection_reason: Joi.string().max(2000).when('status', {
@@ -35,6 +37,11 @@ const clientRespondSchema = Joi.object({
     otherwise: Joi.allow(null, '').optional(),
   }),
   rejection_target: Joi.string().valid('cover', 'video').optional(),
+  rejection_category: Joi.string().valid(...REJECTION_CATEGORIES).when('status', {
+    is: 'rejected',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
   media_urls: Joi.array().items(Joi.object({
     url: Joi.string().required(),
     type: Joi.string().valid('image', 'video').required(),
@@ -46,4 +53,5 @@ module.exports = {
   smApproveSchema,
   sendToClientSchema,
   clientRespondSchema,
+  REJECTION_CATEGORIES,
 };

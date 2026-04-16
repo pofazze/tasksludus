@@ -489,7 +489,7 @@ class ApprovalsService {
   /**
    * Public endpoint: client approves or rejects an item in the batch
    */
-  async clientRespond({ token, itemId, status, rejectionReason, rejectionTarget, mediaUrls }) {
+  async clientRespond({ token, itemId, status, rejectionReason, rejectionTarget, rejectionCategory, mediaUrls }) {
     // Verify batch is pending
     const batch = await db('approval_batches')
       .join('clients', 'approval_batches.client_id', 'clients.id')
@@ -525,6 +525,7 @@ class ApprovalsService {
       status: itemStatus,
       rejection_reason: rejectionReason || null,
       rejection_target: rejectionTarget || null,
+      rejection_category: rejectionCategory || null,
       responded_at: new Date(),
       updated_at: new Date(),
     };

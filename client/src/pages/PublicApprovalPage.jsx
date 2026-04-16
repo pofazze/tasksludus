@@ -4,6 +4,16 @@ import { getPublicBatch, clientRespond } from '@/services/approvals';
 import InstagramPostPreview from '@/components/approvals/InstagramPostPreview';
 import { Loader2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 
+const REJECTION_CATEGORY_OPTIONS = [
+  { value: 'capa', label: 'Capa' },
+  { value: 'edicao', label: 'Edição' },
+  { value: 'audio_musica', label: 'Áudio / Música' },
+  { value: 'texto', label: 'Texto' },
+  { value: 'tom_voz', label: 'Tom de voz' },
+  { value: 'tecnico', label: 'Técnico' },
+  { value: 'outro', label: 'Outro' },
+];
+
 export default function PublicApprovalPage() {
   const { token } = useParams();
   const [data, setData] = useState(null);
@@ -12,6 +22,7 @@ export default function PublicApprovalPage() {
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectionTarget, setRejectionTarget] = useState(null);
+  const [rejectionCategory, setRejectionCategory] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [mediaChanges, setMediaChanges] = useState({}); // { itemId: updatedMedia[] }
 
@@ -78,6 +89,7 @@ export default function PublicApprovalPage() {
     setRejectingId(itemId);
     setRejectionReason('');
     setRejectionTarget(null);
+    setRejectionCategory('');
   };
 
   const handleRejectConfirm = async () => {
@@ -87,6 +99,7 @@ export default function PublicApprovalPage() {
       const body = {
         status: 'rejected',
         rejection_reason: rejectionReason.trim(),
+        rejection_category: rejectionCategory,
       };
       if (rejectionTarget) body.rejection_target = rejectionTarget;
       const result = await clientRespond(token, rejectingId, body);
@@ -94,6 +107,7 @@ export default function PublicApprovalPage() {
       setRejectingId(null);
       setRejectionReason('');
       setRejectionTarget(null);
+      setRejectionCategory('');
       if (!result.allResponded) {
         await fetchBatch();
       }
@@ -207,6 +221,19 @@ export default function PublicApprovalPage() {
             {/* Rejection modal inline */}
             {rejectingId === item.id && (
               <div className="mt-3 p-4 rounded-xl bg-card border border-border">
+                <div className="mb-3">
+                  <p className="text-sm text-foreground mb-2 font-medium">Categoria do problema:</p>
+                  <select
+                    value={rejectionCategory}
+                    onChange={(e) => setRejectionCategory(e.target.value)}
+                    className="w-full bg-muted border border-border rounded-lg p-2 text-sm text-foreground"
+                  >
+                    <option value="">Selecione...</option>
+                    {REJECTION_CATEGORY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
                 {needsTarget(item) && (
                   <div className="mb-3">
                     <p className="text-sm text-foreground mb-2 font-medium">Onde está o problema?</p>
@@ -245,14 +272,14 @@ export default function PublicApprovalPage() {
                 />
                 <div className="flex gap-2 mt-3">
                   <button
-                    onClick={() => setRejectingId(null)}
+                    onClick={() => { setRejectingId(null); setRejectionCategory(''); }}
                     className="flex-1 py-2.5 rounded-lg bg-muted hover:bg-surface-3 text-foreground text-sm font-medium transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={handleRejectConfirm}
-                    disabled={!rejectionReason.trim() || submitting || (needsTarget(item) && !rejectionTarget)}
+                    disabled={!rejectionReason.trim() || submitting || !rejectionCategory || (needsTarget(item) && !rejectionTarget)}
                     className="flex-1 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
                   >
                     {submitting ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Confirmar'}
