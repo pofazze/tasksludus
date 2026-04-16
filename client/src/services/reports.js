@@ -21,4 +21,14 @@ export const reportsApi = {
   phaseDistribution: (params) => api.get('/reports/capacity/phase-distribution', { params: qs(params) }).then((r) => r.data),
   weeklyHeatmap: (params) => api.get('/reports/capacity/weekly-heatmap', { params: qs(params) }).then((r) => r.data),
   avgWorkTimeseries: (params) => api.get('/reports/capacity/avg-work-timeseries', { params: qs(params) }).then((r) => r.data),
+  clientSummary: (clientId, params) => api.get(`/reports/client/${clientId}/summary`, { params: qs(params) }).then((r) => r.data),
+  publishedList: (clientId, params) => api.get(`/reports/client/${clientId}/published-list`, { params: qs(params) }).then((r) => r.data),
+  clientFirstApprovalRate: (clientId, params) => api.get(`/reports/client/${clientId}/first-approval-rate`, { params: qs(params) }).then((r) => r.data),
+  clientRejectionVolume: (clientId, params) => api.get(`/reports/client/${clientId}/rejection-volume`, { params: qs(params) }).then((r) => r.data),
+  clientAvgCycleTime: (clientId, params) => api.get(`/reports/client/${clientId}/avg-cycle-time`, { params: qs(params) }).then((r) => r.data),
+  clientResponsibilityHistory: (clientId, params) => api.get(`/reports/client/${clientId}/responsibility-history`, { params: qs(params) }).then((r) => r.data),
+  publishedListCsvUrl: (clientId, params) => {
+    const search = new URLSearchParams(qs(params)).toString();
+    return `/api/reports/client/${clientId}/published-list.csv${search ? `?${search}` : ''}`;
+  },
 };
