@@ -23,6 +23,7 @@ const instagramRoutes = require('./modules/instagram/instagram.routes');
 const tiktokRoutes = require('./modules/tiktok/tiktok.routes');
 const eventsRoutes = require('./modules/events/events.routes');
 const approvalsRoutes = require('./modules/approvals/approvals.routes');
+const reportsRoutes = require('./modules/reports/reports.routes');
 
 const app = express();
 
@@ -107,6 +108,7 @@ app.use('/api/instagram', instagramRoutes);
 app.use('/api/tiktok', tiktokRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/approvals', approvalsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // 404 handler
 app.use((_req, res) => {
