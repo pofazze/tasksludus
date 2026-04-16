@@ -11,6 +11,7 @@ export default function PublicApprovalPage() {
   const [error, setError] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionTarget, setRejectionTarget] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [mediaChanges, setMediaChanges] = useState({}); // { itemId: updatedMedia[] }
 
@@ -76,19 +77,23 @@ export default function PublicApprovalPage() {
   const handleRejectStart = (itemId) => {
     setRejectingId(itemId);
     setRejectionReason('');
+    setRejectionTarget(null);
   };
 
   const handleRejectConfirm = async () => {
     if (!rejectionReason.trim()) return;
     setSubmitting(true);
     try {
-      const result = await clientRespond(token, rejectingId, {
+      const body = {
         status: 'rejected',
         rejection_reason: rejectionReason.trim(),
-      });
+      };
+      if (rejectionTarget) body.rejection_target = rejectionTarget;
+      const result = await clientRespond(token, rejectingId, body);
       updateItemLocally(rejectingId, 'rejected', rejectionReason.trim());
       setRejectingId(null);
       setRejectionReason('');
+      setRejectionTarget(null);
       if (!result.allResponded) {
         await fetchBatch();
       }
@@ -97,6 +102,11 @@ export default function PublicApprovalPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const needsTarget = (item) => {
+    const isReelLike = ['reel', 'video', 'tiktok_video'].includes(item.post_type);
+    return isReelLike && Boolean(item.thumbnail_url);
   };
 
   if (loading) {
@@ -197,6 +207,33 @@ export default function PublicApprovalPage() {
             {/* Rejection modal inline */}
             {rejectingId === item.id && (
               <div className="mt-3 p-4 rounded-xl bg-card border border-border">
+                {needsTarget(item) && (
+                  <div className="mb-3">
+                    <p className="text-sm text-foreground mb-2 font-medium">Onde está o problema?</p>
+                    <div className="flex gap-2">
+                      <label className="flex-1 flex items-center justify-center gap-2 p-2 rounded-lg bg-muted border border-border cursor-pointer">
+                        <input
+                          type="radio"
+                          name={`target-${item.id}`}
+                          value="cover"
+                          checked={rejectionTarget === 'cover'}
+                          onChange={() => setRejectionTarget('cover')}
+                        />
+                        <span className="text-sm">Capa</span>
+                      </label>
+                      <label className="flex-1 flex items-center justify-center gap-2 p-2 rounded-lg bg-muted border border-border cursor-pointer">
+                        <input
+                          type="radio"
+                          name={`target-${item.id}`}
+                          value="video"
+                          checked={rejectionTarget === 'video'}
+                          onChange={() => setRejectionTarget('video')}
+                        />
+                        <span className="text-sm">Vídeo</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
                 <p className="text-sm text-foreground mb-2 font-medium">Motivo da reprovacao:</p>
                 <textarea
                   value={rejectionReason}
@@ -215,7 +252,7 @@ export default function PublicApprovalPage() {
                   </button>
                   <button
                     onClick={handleRejectConfirm}
-                    disabled={!rejectionReason.trim() || submitting}
+                    disabled={!rejectionReason.trim() || submitting || (needsTarget(item) && !rejectionTarget)}
                     className="flex-1 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
                   >
                     {submitting ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Confirmar'}
