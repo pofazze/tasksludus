@@ -43,6 +43,10 @@ async function resolveProducer(deliveryId, phaseName) {
       const user = await db('users').where({ id: row.user_id }).first();
       if (user) return user;
     }
+    if (row.assignee_clickup_id) {
+      const user = await db('users').where({ clickup_id: row.assignee_clickup_id }).first();
+      if (user) return user;
+    }
   }
   return null;
 }

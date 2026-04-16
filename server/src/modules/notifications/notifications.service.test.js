@@ -29,6 +29,7 @@ const mockDbState = {
   },
   delivery_phases: [],
   deliveries: {},
+  scheduled_posts: [],
 };
 
 jest.mock('../../config/db', () => {
@@ -84,7 +85,10 @@ jest.mock('../../config/db', () => {
           return Promise.resolve(rows).then(resolve);
         }
         if (this._table === 'scheduled_posts') {
-          return Promise.resolve([]).then(resolve);
+          const rows = mockDbState.scheduled_posts.filter((s) =>
+            Object.keys(this._where || {}).every((k) => s[k] === this._where[k])
+          );
+          return Promise.resolve(rows).then(resolve);
         }
         return Promise.resolve([]).then(resolve);
       },
@@ -100,6 +104,7 @@ beforeEach(() => {
   mockBuildPersonalJid.mockClear();
   mockDbState.delivery_phases = [];
   mockDbState.deliveries = {};
+  mockDbState.scheduled_posts = [];
   mockDbState.users.d1 = { id: 'd1', clickup_id: 'cu-d1', whatsapp: '5511999000002' };
   mockDbState.app_settings.category_whatsapp_groups = { health: '120363425760405482@g.us' };
 });
@@ -297,33 +302,13 @@ describe('notifyPublishSuccess', () => {
   });
 
   test('multi-platform: lists every platform with its permalink', async () => {
-    const groupId = 'group-1';
-    // Sibling rows are read by the dispatcher via post_group_id
-    let dbModule;
-    jest.isolateModules(() => { dbModule = require('../../config/db'); });
-    // Use the existing mock — extend the `then` path for scheduled_posts
-    // (the fixture below stays in test scope)
-    const siblings = [
-      { platform: 'instagram', ig_permalink: 'https://instagram.com/p/A', tiktok_permalink: null, status: 'published' },
-      { platform: 'tiktok', ig_permalink: null, tiktok_permalink: 'https://www.tiktok.com/@x/video/1', status: 'published' },
+    mockDbState.scheduled_posts = [
+      { post_group_id: 'group-1', platform: 'instagram', ig_permalink: 'https://instagram.com/p/A', tiktok_permalink: null, status: 'published' },
+      { post_group_id: 'group-1', platform: 'tiktok', ig_permalink: null, tiktok_permalink: 'https://www.tiktok.com/@x/video/1', status: 'published' },
     ];
-    const original = require('../../config/db');
-    jest.doMock('../../config/db', () => {
-      return jest.fn((table) => {
-        if (table === 'scheduled_posts') {
-          return {
-            where() { return this; },
-            then(resolve) { return Promise.resolve(siblings).then(resolve); },
-          };
-        }
-        return original(table);
-      });
-    });
-    jest.resetModules();
-    const dispatcher = require('./notifications.service');
-    await dispatcher.notifyPublishSuccess({
+    await notifications.notifyPublishSuccess({
       client_id: 'c1',
-      post_group_id: groupId,
+      post_group_id: 'group-1',
       delivery_title: 'Combo',
       platform: 'instagram',
       ig_permalink: 'https://instagram.com/p/A',
