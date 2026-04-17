@@ -161,9 +161,21 @@ async function notifyPublishSuccess(post) {
     const siblings = await db('scheduled_posts').where({ post_group_id: post.post_group_id });
     platformLinks = siblings
       .filter((s) => s.status === 'published')
-      .map((s) => ({ platform: s.platform, url: s.platform === 'instagram' ? s.ig_permalink : s.platform === 'tiktok' ? s.tiktok_permalink : null }));
+      .map((s) => ({
+        platform: s.platform,
+        url: s.platform === 'instagram' ? s.ig_permalink
+          : s.platform === 'tiktok' ? s.tiktok_permalink
+          : s.platform === 'youtube' ? s.youtube_permalink
+          : null,
+      }));
   } else {
-    platformLinks = [{ platform: post.platform, url: post.platform === 'instagram' ? post.ig_permalink : post.platform === 'tiktok' ? post.tiktok_permalink : null }];
+    platformLinks = [{
+      platform: post.platform,
+      url: post.platform === 'instagram' ? post.ig_permalink
+        : post.platform === 'tiktok' ? post.tiktok_permalink
+        : post.platform === 'youtube' ? post.youtube_permalink
+        : null,
+    }];
   }
 
   const title = post.delivery_title || post.caption?.slice(0, 80) || 'post';
