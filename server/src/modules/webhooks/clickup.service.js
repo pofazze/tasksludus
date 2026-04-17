@@ -13,6 +13,7 @@ const PUBLISHABLE_FORMATS = new Set([
 const PLATFORM_TAGS = {
   'instagram': 'instagram', 'insta': 'instagram', 'ig': 'instagram',
   'tiktok': 'tiktok', 'tik tok': 'tiktok', 'tt': 'tiktok',
+  'youtube': 'youtube', 'yt': 'youtube',
 };
 
 function extractPlatformsFromTags(tags) {

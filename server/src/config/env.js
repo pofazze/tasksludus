@@ -57,6 +57,12 @@ module.exports = {
     defaultPrivacyLevel: process.env.TIKTOK_DEFAULT_PRIVACY || 'SELF_ONLY',
   },
 
+  youtube: {
+    clientId: process.env.YOUTUBE_CLIENT_ID,
+    clientSecret: process.env.YOUTUBE_CLIENT_SECRET,
+    redirectUri: process.env.YOUTUBE_REDIRECT_URI || 'https://apitasks.pofazze.com/api/youtube/oauth/callback',
+  },
+
   evolution: {
     apiUrl: process.env.EVOLUTION_API_URL,
     apiKey: process.env.EVOLUTION_API_KEY,

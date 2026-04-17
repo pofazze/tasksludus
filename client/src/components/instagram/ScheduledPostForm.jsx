@@ -14,12 +14,13 @@ import { cn } from '@/lib/utils';
 
 const POST_TYPES = [
   { value: 'image', label: 'Imagem', icon: Image, platforms: ['instagram'] },
-  { value: 'reel', label: 'Reel', icon: Film, platforms: ['instagram', 'tiktok'] },
+  { value: 'reel', label: 'Reel', icon: Film, platforms: ['instagram', 'tiktok', 'youtube'] },
   { value: 'story', label: 'Story', icon: MessageCircle, platforms: ['instagram'] },
   { value: 'carousel', label: 'Carrossel', icon: Layers, platforms: ['instagram', 'tiktok'] },
   { value: 'tiktok_video', label: 'Vídeo TikTok', icon: Film, platforms: ['tiktok'] },
   { value: 'tiktok_photo', label: 'Foto TikTok', icon: Image, platforms: ['tiktok'] },
   { value: 'yt_shorts', label: 'YouTube Shorts', icon: Film, platforms: ['youtube'] },
+  { value: 'yt_video', label: 'Vídeo YouTube', icon: Film, platforms: ['youtube'] },
 ];
 
 const VIDEO_EXT = /\.(mp4|mov|avi|wmv|flv|mkv|webm|m4v)(\?|$)/i;
@@ -178,6 +179,7 @@ export default function ScheduledPostForm({ open, onOpenChange, post, clients, o
                 {[
                   { value: 'instagram', label: 'Instagram' },
                   { value: 'tiktok', label: 'TikTok' },
+                  { value: 'youtube', label: 'YouTube' },
                 ].map(({ value, label }) => (
                   <button
                     key={value}

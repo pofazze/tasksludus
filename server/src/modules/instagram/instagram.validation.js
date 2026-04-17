@@ -1,6 +1,6 @@
 const Joi = require('joi');
 
-const POST_TYPES = ['image', 'video', 'reel', 'story', 'carousel', 'tiktok_video', 'tiktok_photo', 'yt_shorts'];
+const POST_TYPES = ['image', 'video', 'reel', 'story', 'carousel', 'tiktok_video', 'tiktok_photo', 'yt_shorts', 'yt_video'];
 
 const createScheduledPostSchema = Joi.object({
   client_id: Joi.string().uuid().required(),
@@ -15,10 +15,10 @@ const createScheduledPostSchema = Joi.object({
   })).min(1).required(),
   thumbnail_url: Joi.string().uri().allow(null, '').optional(),
   scheduled_at: Joi.date().iso().allow(null).optional(),
-  platform: Joi.string().valid('instagram', 'tiktok').default('instagram'),
-  platforms: Joi.array().items(Joi.string().valid('instagram', 'tiktok')).optional(),
+  platform: Joi.string().valid('instagram', 'tiktok', 'youtube').default('instagram'),
+  platforms: Joi.array().items(Joi.string().valid('instagram', 'tiktok', 'youtube')).optional(),
   platform_overrides: Joi.object().pattern(
-    Joi.string().valid('instagram', 'tiktok'),
+    Joi.string().valid('instagram', 'tiktok', 'youtube'),
     Joi.object({
       caption: Joi.string().max(2200).optional(),
       scheduled_at: Joi.date().iso().optional(),
@@ -41,10 +41,10 @@ const updateScheduledPostSchema = Joi.object({
   delivery_id: Joi.string().uuid().allow(null).strip(),
   clickup_task_id: Joi.string().max(50).allow(null, '').strip(),
   status: Joi.string().strip(),
-  platform: Joi.string().valid('instagram', 'tiktok').strip(),
-  platforms: Joi.array().items(Joi.string().valid('instagram', 'tiktok')).min(1).optional(),
+  platform: Joi.string().valid('instagram', 'tiktok', 'youtube').strip(),
+  platforms: Joi.array().items(Joi.string().valid('instagram', 'tiktok', 'youtube')).min(1).optional(),
   platform_overrides: Joi.object().pattern(
-    Joi.string().valid('instagram', 'tiktok'),
+    Joi.string().valid('instagram', 'tiktok', 'youtube'),
     Joi.object({
       caption: Joi.string().max(2200).optional(),
       scheduled_at: Joi.date().iso().optional(),

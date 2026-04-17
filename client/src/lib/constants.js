@@ -14,6 +14,7 @@ export const CONTENT_TYPE_LABELS = {
   tiktok_video: 'Vídeo TikTok',
   tiktok_photo: 'Foto TikTok',
   yt_shorts: 'YouTube Shorts',
+  yt_video: 'Vídeo YouTube',
 };
 
 // Production pipeline statuses matching ClickUp workflow
