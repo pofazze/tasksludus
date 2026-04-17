@@ -95,7 +95,7 @@ export default function PostReviewSheet({ post, open, onOpenChange, onUpdated })
     setCoverConfirmed(!!post.thumbnail_url);
     setCoverMode(null);
     setSelectedPostType(post.post_type || null);
-    setSelectedPlatforms(post.platform ? [post.platform] : ['instagram']);
+    setSelectedPlatforms(post.platforms || (post.platform ? [post.platform] : ['instagram']));
   }
 
   const readOnly = post && ['published', 'publishing'].includes(post.status);
