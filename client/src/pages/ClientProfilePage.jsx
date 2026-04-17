@@ -528,6 +528,10 @@ export default function ClientProfilePage() {
             setTkConnection={setTkConnection}
             tkConnecting={tkConnecting}
             setTkConnecting={setTkConnecting}
+            ytConnection={ytConnection}
+            setYtConnection={setYtConnection}
+            ytConnecting={ytConnecting}
+            setYtConnecting={setYtConnecting}
           />
         </TabsContent>
       </Tabs>
@@ -572,7 +576,7 @@ function MonthPill({ active, onClick, children }) {
 }
 
 // ─── Instagram Section ────────────────────────────────────
-function InstagramSection({ clientId, canManage, igConnection, setIgConnection, igConnecting, setIgConnecting, igSyncing, syncInstagram, igPosts, tkConnection, setTkConnection, tkConnecting, setTkConnecting }) {
+function InstagramSection({ clientId, canManage, igConnection, setIgConnection, igConnecting, setIgConnecting, igSyncing, syncInstagram, igPosts, tkConnection, setTkConnection, tkConnecting, setTkConnecting, ytConnection, setYtConnection, ytConnecting, setYtConnecting }) {
   return (
     <div className="space-y-5">
       {canManage && (
