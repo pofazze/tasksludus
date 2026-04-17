@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import api from '@/services/api';
 import { getConnectionStatus, getOAuthUrl, disconnectInstagram, listScheduledPosts } from '@/services/instagram';
 import { getOAuthUrl as getTikTokOAuthUrl, getConnectionStatus as getTikTokConnectionStatus, disconnectTikTok } from '@/services/tiktok';
+import { getYouTubeOAuthUrl, getYouTubeConnectionStatus, disconnectYouTube } from '@/services/youtube';
 import useAuthStore from '@/stores/authStore';
 import { isManagement } from '@/lib/roles';
 import {
@@ -88,6 +89,8 @@ export default function ClientProfilePage() {
   const [igConnecting, setIgConnecting] = useState(false);
   const [tkConnection, setTkConnection] = useState(null);
   const [tkConnecting, setTkConnecting] = useState(false);
+  const [ytConnection, setYtConnection] = useState(null);
+  const [ytConnecting, setYtConnecting] = useState(false);
   const [kanbanMonth, setKanbanMonth] = useState(getCurrentMonth());
 
   const fetchProfile = async () => {
@@ -125,6 +128,7 @@ export default function ClientProfilePage() {
     } else {
       getTikTokConnectionStatus(id).then(setTkConnection).catch(() => setTkConnection(null));
     }
+    getYouTubeConnectionStatus(id).then(setYtConnection).catch(() => setYtConnection({ connected: false }));
     if (params.get('instagram_connected') === 'true') {
       toast.success('Instagram conectado com sucesso!');
       getConnectionStatus(id).then(setIgConnection);
@@ -133,6 +137,11 @@ export default function ClientProfilePage() {
     if (params.get('tiktok_connected') === 'true') {
       toast.success('TikTok conectado com sucesso!');
       getTikTokConnectionStatus(id).then(setTkConnection);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (params.get('youtube_connected') === 'true') {
+      toast.success('YouTube conectado com sucesso!');
+      getYouTubeConnectionStatus(id).then(setYtConnection).catch(() => setYtConnection({ connected: false }));
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, [id]);
@@ -707,6 +716,76 @@ function InstagramSection({ clientId, canManage, igConnection, setIgConnection, 
                     >
                       {tkConnecting ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <span className="mr-1.5 text-xs font-black">TK</span>}
                       Conectar TikTok
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="py-4 px-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                    ytConnection?.connected ? 'bg-red-500/15' : 'bg-muted'
+                  }`}>
+                    <span className={`text-sm font-black ${ytConnection?.connected ? 'text-red-500' : 'text-muted-foreground'}`}>YT</span>
+                  </div>
+                  <div>
+                    {ytConnection?.connected ? (
+                      <>
+                        <p className="text-sm font-medium text-red-500">Conectado</p>
+                        <p className="text-xs text-muted-foreground">{ytConnection.channelTitle}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium">YouTube</p>
+                        <p className="text-xs text-muted-foreground">Conecte para publicar automaticamente</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {ytConnection?.connected ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                      disabled={ytConnecting}
+                      onClick={async () => {
+                        if (!confirm('Desconectar o YouTube deste cliente?')) return;
+                        setYtConnecting(true);
+                        try {
+                          await disconnectYouTube(clientId);
+                          setYtConnection({ connected: false });
+                          toast.success('YouTube desconectado');
+                        } catch {
+                          toast.error('Erro ao desconectar');
+                        } finally {
+                          setYtConnecting(false);
+                        }
+                      }}
+                    >
+                      Desconectar
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled={ytConnecting}
+                      onClick={async () => {
+                        setYtConnecting(true);
+                        try {
+                          const { url } = await getYouTubeOAuthUrl(clientId);
+                          window.location.href = url;
+                        } catch {
+                          toast.error('Erro ao iniciar conexão');
+                          setYtConnecting(false);
+                        }
+                      }}
+                    >
+                      {ytConnecting ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <span className="mr-1.5 text-xs font-black">YT</span>}
+                      Conectar YouTube
                     </Button>
                   )}
                 </div>
