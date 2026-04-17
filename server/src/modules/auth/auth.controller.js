@@ -37,7 +37,7 @@ class AuthController {
         value.role,
         value.producer_type,
         req.user.id,
-        { name: value.name, password: value.password, whatsapp: value.whatsapp }
+        { name: value.name, password: value.password, whatsapp: value.whatsapp, clientId: value.client_id }
       );
       res.status(201).json(result);
     } catch (err) {

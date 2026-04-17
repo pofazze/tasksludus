@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const db = require('../../config/db');
 const env = require('../../config/env');
+const logger = require('../../utils/logger');
 
 class AuthService {
   async login(email, password) {
@@ -53,10 +54,15 @@ class AuthService {
 
     await db('invite_tokens').where({ id: invite.id }).update({ used_at: new Date() });
 
+    if (invite.client_id) {
+      await db('clients').where({ id: invite.client_id }).update({ user_id: user.id, updated_at: new Date() });
+      logger.info('Linked client to user on invite registration', { clientId: invite.client_id, userId: user.id });
+    }
+
     return this._generateTokens(user);
   }
 
-  async createInvite(email, role, producerType, invitedBy, { name, password, whatsapp } = {}) {
+  async createInvite(email, role, producerType, invitedBy, { name, password, whatsapp, clientId } = {}) {
     const existing = await db('users').where({ email }).first();
     if (existing) {
       throw Object.assign(new Error('User with this email already exists'), { status: 409 });
@@ -76,6 +82,11 @@ class AuthService {
         })
         .returning('*');
 
+      if (clientId) {
+        await db('clients').where({ id: clientId }).update({ user_id: user.id, updated_at: new Date() });
+        logger.info('Linked client to user on direct creation', { clientId, userId: user.id });
+      }
+
       return { user, directCreation: true };
     }
 
@@ -91,6 +102,7 @@ class AuthService {
         invited_by: invitedBy,
         token,
         expires_at: expiresAt,
+        client_id: clientId || null,
       })
       .returning('*');
 

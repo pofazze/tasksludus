@@ -21,6 +21,11 @@ const createInviteSchema = Joi.object({
   name: Joi.string().min(2).max(100).optional(),
   password: Joi.string().min(6).optional(),
   whatsapp: Joi.string().max(20).optional().allow(''),
+  client_id: Joi.string().uuid().when('role', {
+    is: 'client',
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
 });
 
 module.exports = {
