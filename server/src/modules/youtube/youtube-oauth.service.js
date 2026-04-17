@@ -12,6 +12,8 @@ const YOUTUBE_CHANNELS_URL = 'https://www.googleapis.com/youtube/v3/channels?par
 const YOUTUBE_SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube',
+  'https://www.googleapis.com/auth/youtube.readonly',
+  'https://www.googleapis.com/auth/yt-analytics.readonly',
 ].join(' ');
 
 class YouTubeOAuthService {
