@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const { authenticate, managementLevel, managementOrSocialMedia } = require('../../middleware/auth');
+const { authenticate, managementLevel, managementOrSocialMedia, managementOrClientOwn } = require('../../middleware/auth');
 const controller = require('./instagram.controller');
 
 const router = express.Router();
@@ -19,9 +19,9 @@ router.get('/temp-media/:token', controller.serveTempMedia.bind(controller));
 // Authenticated endpoints
 router.use(authenticate);
 
-router.get('/oauth/url/:clientId', managementLevel, controller.getOAuthUrl.bind(controller));
-router.delete('/oauth/:clientId', managementLevel, controller.disconnectOAuth.bind(controller));
-router.get('/oauth/status/:clientId', controller.getConnectionStatus.bind(controller));
+router.get('/oauth/url/:clientId', managementOrClientOwn, controller.getOAuthUrl.bind(controller));
+router.delete('/oauth/:clientId', managementOrClientOwn, controller.disconnectOAuth.bind(controller));
+router.get('/oauth/status/:clientId', managementOrClientOwn, controller.getConnectionStatus.bind(controller));
 
 // Scheduled posts
 router.get('/scheduled', controller.listScheduledPosts.bind(controller));

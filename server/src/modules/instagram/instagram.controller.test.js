@@ -77,6 +77,7 @@ jest.mock('../../middleware/auth', () => ({
   authenticate: (req, _res, next) => { req.user = { id: 'user-1' }; next(); },
   managementLevel: (_req, _res, next) => next(),
   managementOrSocialMedia: (_req, _res, next) => next(),
+  managementOrClientOwn: (_req, _res, next) => next(),
 }));
 
 jest.mock('../../utils/logger', () => ({

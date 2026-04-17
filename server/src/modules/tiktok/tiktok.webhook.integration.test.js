@@ -22,6 +22,7 @@ jest.mock('./tiktok-webhook.service', () => ({
 jest.mock('../../middleware/auth', () => ({
   authenticate: (req, _res, next) => next(),
   managementLevel: (_req, _res, next) => next(),
+  managementOrClientOwn: (_req, _res, next) => next(),
 }));
 
 jest.mock('../../utils/logger', () => ({

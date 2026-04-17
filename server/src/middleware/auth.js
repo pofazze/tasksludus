@@ -88,6 +88,21 @@ function managementOrSocialMedia(req, res, next) {
   return res.status(403).json({ error: 'Management or Social Media access only' });
 }
 
+function managementOrClientOwn(req, res, next) {
+  if (req.user.role === 'dev') return next();
+  if (['ceo', 'director', 'manager'].includes(req.user.role)) return next();
+  if (req.user.role === 'producer' && req.user.producer_type === 'social_media') return next();
+  if (req.user.role === 'client') {
+    return db('clients').where({ user_id: req.user.id }).first()
+      .then((client) => {
+        if (client && client.id === req.params.clientId) return next();
+        return res.status(403).json({ error: 'You can only manage your own social accounts' });
+      })
+      .catch(() => res.status(500).json({ error: 'Internal error checking client ownership' }));
+  }
+  return res.status(403).json({ error: 'Management or account owner access only' });
+}
+
 module.exports = {
   authenticate,
   authorize,
@@ -95,4 +110,5 @@ module.exports = {
   adminLevel,
   managementLevel,
   managementOrSocialMedia,
+  managementOrClientOwn,
 };
