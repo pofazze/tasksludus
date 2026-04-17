@@ -34,6 +34,22 @@ const worker = new Worker('token-refresh', async () => {
   } catch (err) {
     logger.error('TikTok token refresh block failed', { error: err.message });
   }
+
+  try {
+    const youtubeOAuth = require('../modules/youtube/youtube-oauth.service');
+    const youtubeTokens = await youtubeOAuth.getTokensExpiringWithin(1);
+    logger.info(`Found ${youtubeTokens.length} YouTube tokens expiring within 1 day`);
+    for (const token of youtubeTokens) {
+      try {
+        await youtubeOAuth.refreshToken(token.client_id);
+        logger.info('YouTube token refreshed', { clientId: token.client_id });
+      } catch (err) {
+        logger.error('YouTube token refresh failed', { clientId: token.client_id, error: err.message });
+      }
+    }
+  } catch (err) {
+    logger.error('YouTube token refresh block failed', { error: err.message });
+  }
 }, {
   connection,
   concurrency: 1,

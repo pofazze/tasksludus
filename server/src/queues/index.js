@@ -9,6 +9,7 @@ const connection = {
 
 const instagramPublishQueue = new Queue('instagram-publish', { connection });
 const tiktokPublishQueue = new Queue('tiktok-publish', { connection });
+const youtubePublishQueue = new Queue('youtube-publish', { connection });
 const tokenRefreshQueue = new Queue('token-refresh', { connection });
 const deliverySyncQueue = new Queue('delivery-sync', { connection });
 const approvalReminderQueue = new Queue('approval-reminder', { connection });
@@ -18,7 +19,8 @@ async function schedulePost(postId, scheduledAt, platform = 'instagram') {
   const delay = new Date(scheduledAt).getTime() - Date.now();
   // Use unique jobId per attempt to avoid BullMQ deduplication with stale failed/completed jobs
   const jobId = `post-${postId}-${Date.now()}`;
-  const queue = platform === 'tiktok' ? tiktokPublishQueue : instagramPublishQueue;
+  const QUEUE_BY_PLATFORM = { tiktok: tiktokPublishQueue, youtube: youtubePublishQueue };
+  const queue = QUEUE_BY_PLATFORM[platform] || instagramPublishQueue;
   if (delay <= 0) {
     await queue.add('publish', { postId }, { jobId });
   } else {
@@ -28,7 +30,7 @@ async function schedulePost(postId, scheduledAt, platform = 'instagram') {
 }
 
 async function cancelScheduledPost(postId) {
-  const queues = [instagramPublishQueue, tiktokPublishQueue];
+  const queues = [instagramPublishQueue, tiktokPublishQueue, youtubePublishQueue];
   for (const queue of queues) {
     try {
       // Find all jobs for this post (jobId format: post-{postId}-{timestamp})
@@ -103,6 +105,7 @@ async function promoteApprovalReviewWindow(batchId) {
 module.exports = {
   instagramPublishQueue,
   tiktokPublishQueue,
+  youtubePublishQueue,
   tokenRefreshQueue,
   deliverySyncQueue,
   approvalReminderQueue,

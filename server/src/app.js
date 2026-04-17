@@ -125,6 +125,7 @@ try {
   const { setupRepeatable } = require('./queues');
   require('./queues/instagram-publish.worker');
   require('./queues/tiktok-publish.worker');
+  require('./queues/youtube-publish.worker');
   require('./queues/token-refresh.worker');
   require('./queues/delivery-sync.worker');
   require('./queues/approval-reminder.worker');
